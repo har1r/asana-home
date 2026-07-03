@@ -1,0 +1,230 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  PENGINPUT
+  PENELITI
+  PENGARSIP
+  PENGIRIM
+  PEMANTAU
+  SUPERVISOR
+}
+
+enum JenisPermohonan {
+  MUTASI_SEBAGIAN
+  MUTASI_HABIS_UPDATE
+  MUTASI_HABIS_REGULER
+  OBJEK_PAJAK_BARU
+  PEMBETULAN
+  PENGAKTIFAN
+}
+
+enum StatusPermohonan {
+  SUBMITTED
+  REVISION
+  BUNDLED
+  ARCHIVED
+  COMPLETED
+  REJECTED
+}
+
+enum StatusBundle {
+  DRAFT
+  LOCKED
+  IN_MANIFEST
+  VOID
+}
+
+enum StatusManifest {
+  DRAFT
+  LOCKED
+  SENT
+}
+
+enum StatusArsipDigital {
+  ACTIVE
+  SUPERSEDED
+  INVALIDATED
+}
+
+enum StatusKoreksi {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  permohonan                  Permohonan[]
+  bundle                      Bundle[]
+  manifest                    Manifest[]
+  arsipDigital                ArsipDigital[]
+  permintaanKoreksiPengaju    PermintaanKoreksi[] @relation(name: "PengajuKoreksi")
+  permintaanKoreksiSupervisor PermintaanKoreksi[] @relation(name: "SupervisorKoreksi")
+  inAppNotification           InAppNotification[]
+}
+
+model Permohonan {
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  nomorPermohonan  String           @unique
+  jenisPermohonan  JenisPermohonan
+  status           StatusPermohonan @default(SUBMITTED)
+  bundleId         String?          @db.ObjectId
+  isFavorite       Boolean          @default(false)
+  
+  // Data wajib pajak (dengan namaWajibPajak dan alamat sebagai derived fields)
+  namaWajibPajak   String
+  nop              String
+  noWhatsapp       String           @map("nomorWhatsapp") // wajib, format 08xxx atau 628xxx
+  alamat           String
+  nomorPelayanan   String?
+
+  // Data Lama
+  namaPemilikLama      String?
+  alamatPemilikLama    String?
+  kecamatanPemilikLama String?
+  desaPemilikLama      String?
+  alamatObjekLama      String?
+  kecamatanObjekLama   String?
+  desaObjekLama        String?
+  luasTanahLama        Float?
+  luasBangunanLama     Float?
+  sertifikatLama       String?
+
+  // Data Baru (One-to-Many)
+  dataBaru             DataBaru[]
+  
+  // Relasi
+  penginputId      String           @db.ObjectId
+  
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  arsipDigital      ArsipDigital[]
+  permintaanKoreksi PermintaanKoreksi[]
+  bundle            Bundle?          @relation(fields: [bundleId], references: [id])
+  penginput         User             @relation(fields: [penginputId], references: [id])
+}
+
+model DataBaru {
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId         String     @db.ObjectId
+  namaPemilikBaru      String
+  alamatPemilikBaru    String
+  kecamatanPemilikBaru String
+  desaPemilikBaru      String
+  alamatObjekBaru      String
+  kecamatanObjekBaru   String
+  desaObjekBaru        String
+  luasTanahBaru        Float
+  luasBangunanBaru     Float
+  sertifikatBaru       String
+  
+  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
+}
+
+model Bundle {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  nomorBundle     String       @unique
+  status          StatusBundle @default(DRAFT)
+  manifestId      String?      @db.ObjectId
+  jenisPermohonan JenisPermohonan? // terkunci setelah Permohonan pertama dimasukkan
+  
+  penelitiId      String       @db.ObjectId
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  permohonan      Permohonan[]
+  manifest        Manifest?    @relation(fields: [manifestId], references: [id])
+  peneliti        User         @relation(fields: [penelitiId], references: [id])
+}
+
+model Manifest {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  nomorManifest  String         @unique
+  status         StatusManifest @default(DRAFT)
+  buktiTandaTerima String?      // URL Vercel Blob
+  
+  pengirimId     String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  bundle         Bundle[]
+  pengirim       User           @relation(fields: [pengirimId], references: [id])
+}
+
+model ArsipDigital {
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId  String             @db.ObjectId
+  urlBlob       String             // URL file di Vercel Blob
+  status        StatusArsipDigital @default(ACTIVE)
+  versi         Int                // nomor versi (increment per upload)
+  
+  pengarsipId   String             @db.ObjectId
+  createdAt     DateTime           @default(now())
+  
+  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
+  pengarsip     User               @relation(fields: [pengarsipId], references: [id])
+}
+
+model PermintaanKoreksi {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId     String        @db.ObjectId
+  jenisKoreksi     String        // e.g. "KELUARKAN_DARI_BUNDLE", "KEMBALIKAN_KE_PENELITI", dll.
+  status           StatusKoreksi @default(PENDING_APPROVAL)
+  
+  pengajuId        String        @db.ObjectId
+  supervisorId     String?       @db.ObjectId
+  catatanPengaju   String
+  catatanSupervisor String?
+  
+  reminderSentAt   DateTime?     // WAJIB ada — untuk cron timeout 72 jam
+  escalationSentAt DateTime?     // WAJIB ada — untuk cron timeout 168 jam
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  diputuskanAt     DateTime?
+
+  permohonan       Permohonan    @relation(fields: [permohonanId], references: [id])
+  pengaju          User          @relation(name: "PengajuKoreksi", fields: [pengajuId], references: [id])
+  supervisor       User?         @relation(name: "SupervisorKoreksi", fields: [supervisorId], references: [id])
+}
+
+model InAppNotification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  judul       String
+  pesan       String
+  isRead      Boolean  @default(false)
+  metadata    Json?    // data tambahan (idPermohonan, idBundle, dll.)
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  entityType      String   // "PERMOHONAN", "BUNDLE", "MANIFEST", "CRON"
+  entityId        String?  @db.ObjectId
+  aksi            String   // deskripsi aksi
+  statusSebelum   String?
+  statusSesudah   String?
+  pelakuId        String?  @db.ObjectId
+  correlationId   String?  // mengikat transisi atomik multi-langkah
+  metadata        Json?    // data tambahan sesuai jenis aksi
+  createdAt       DateTime @default(now())
+}

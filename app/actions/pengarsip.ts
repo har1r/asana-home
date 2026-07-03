@@ -1,0 +1,390 @@
+"use server";
+
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import fs from "fs";
+import path from "path";
+
+/**
+ * Action: Get all bundles that Pengarsip can work on.
+ * This includes:
+ * 1. Bundles in LOCKED status (main digitalization queue).
+ * 2. Bundles in IN_MANIFEST status that contain at least one permohonan with BUNDLED status
+ *    and a SUPERSEDED digital archive version (indicating it was returned from Fase 4 for re-upload).
+ */
+export async function getDigitizationBundles() {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Fetch all LOCKED and IN_MANIFEST bundles
+    const list = await prisma.bundle.findMany({
+      where: {
+        status: { in: ["LOCKED", "IN_MANIFEST"] }
+      },
+      include: {
+        permohonan: {
+          include: {
+            arsipDigital: {
+              orderBy: { versi: "desc" }
+            }
+          }
+        },
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    // Filter in JS to strictly show LOCKED bundles,
+    // and IN_MANIFEST bundles only if they have a permohonan in BUNDLED status with SUPERSEDED archives.
+    const filteredList = list.filter((bundle) => {
+      if (bundle.status === "LOCKED") {
+        return true;
+      }
+      if (bundle.status === "IN_MANIFEST") {
+        return bundle.permohonan.some(
+          (p) => p.status === "BUNDLED" && p.arsipDigital.some((ad) => ad.status === "SUPERSEDED")
+        );
+      }
+      return false;
+    });
+
+    return { success: true, list: filteredList };
+  } catch (error: any) {
+    console.error("[ACTION-GET-DIGIT-BUNDLES-ERR]", error);
+    return { success: false, list: [], error: "Gagal mengambil daftar bundle digitalisasi." };
+  }
+}
+
+/**
+ * Action: Retrieve details of a specific bundle, including its permohonan list,
+ * digital archives list, and pending supervisor correction requests.
+ */
+export async function getBundleDetails(bundleId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const bundle = await prisma.bundle.findUnique({
+      where: { id: bundleId },
+      include: {
+        permohonan: {
+          include: {
+            arsipDigital: {
+              orderBy: { versi: "desc" }
+            },
+            permintaanKoreksi: {
+              where: { status: "PENDING_APPROVAL" }
+            }
+          }
+        },
+        peneliti: { select: { name: true } }
+      }
+    });
+
+    if (!bundle) {
+      return { success: false, error: "Bundle tidak ditemukan." };
+    }
+
+    return { success: true, bundle };
+  } catch (error: any) {
+    console.error("[ACTION-GET-BUNDLE-DETAILS-ERR]", error);
+    return { success: false, error: "Gagal mengambil detail bundle." };
+  }
+}
+
+/**
+ * Action: Upload scanned PDF file for a specific permohonan.
+ * Marks the application as ARCHIVED, registers version history, and handles re-upload logistik checks.
+ */
+export async function uploadArsipDigital(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== "PENGARSIP") {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const permohonanId = formData.get("permohonanId") as string;
+  const file = formData.get("file") as File;
+
+  if (!permohonanId) {
+    return { success: false, error: "Permohonan ID wajib diisi." };
+  }
+  if (!file || file.size === 0) {
+    return { success: false, error: "File PDF wajib diunggah." };
+  }
+
+  // Size limit validation (20MB)
+  const MAX_SIZE = 20 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    return { success: false, error: "Ukuran file tidak boleh melebihi 20 MB." };
+  }
+
+  // Validate that the file is PDF using file-type
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  let isPdf = false;
+  try {
+    const { fileTypeFromBuffer } = await (eval('import("file-type")') as any);
+    const type = await fileTypeFromBuffer(buffer);
+    if (type && type.mime === "application/pdf") {
+      isPdf = true;
+    }
+  } catch (e) {
+    console.warn("[UPLOAD-FILE-TYPE-WARN] file-type library fallback used.", e);
+    // Fallback: Check magic number for PDF: "%PDF-" which is "25 50 44 46" in hex
+    if (
+      buffer.length >= 4 &&
+      buffer[0] === 0x25 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x44 &&
+      buffer[3] === 0x46
+    ) {
+      isPdf = true;
+    }
+  }
+
+  if (!isPdf) {
+    return { success: false, error: "File wajib berupa dokumen PDF yang valid." };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // Fetch the permohonan and its bundle
+      const permohonan = await tx.permohonan.findUnique({
+        where: { id: permohonanId },
+        include: { bundle: true }
+      });
+
+      if (!permohonan) {
+        throw new Error("Permohonan tidak ditemukan.");
+      }
+
+      // Check if it's frozen
+      const pendingKoreksi = await tx.permintaanKoreksi.findFirst({
+        where: {
+          permohonanId,
+          status: "PENDING_APPROVAL"
+        }
+      });
+      if (pendingKoreksi) {
+        throw new Error("Permohonan dibekukan karena sedang menunggu persetujuan Supervisor.");
+      }
+
+      // Ensure directory exists
+      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      // Write file locally to simulate Vercel Blob
+      const fileName = `arsip_${permohonanId}_v${Date.now()}.pdf`;
+      const filePath = path.join(uploadsDir, fileName);
+      await fs.promises.writeFile(filePath, buffer);
+      
+      const urlBlob = `/uploads/${fileName}`;
+
+      // Find the last active archive version
+      const lastActive = await tx.arsipDigital.findFirst({
+        where: {
+          permohonanId,
+          status: "ACTIVE"
+        },
+        orderBy: { versi: "desc" }
+      });
+
+      const nextVersion = lastActive ? lastActive.versi + 1 : 1;
+
+      // Update old ACTIVE version to SUPERSEDED
+      if (lastActive) {
+        await tx.arsipDigital.update({
+          where: { id: lastActive.id },
+          data: { status: "SUPERSEDED" }
+        });
+      }
+
+      // Create new ACTIVE archive
+      const newArchive = await tx.arsipDigital.create({
+        data: {
+          permohonanId,
+          urlBlob,
+          status: "ACTIVE",
+          versi: nextVersion,
+          pengarsipId: session.user.id
+        }
+      });
+
+      const oldStatus = permohonan.status;
+      let newStatus = oldStatus;
+
+      // Update permohonan status to ARCHIVED if it was BUNDLED
+      if (oldStatus === "BUNDLED") {
+        newStatus = "ARCHIVED";
+        await tx.permohonan.update({
+          where: { id: permohonanId },
+          data: { status: "ARCHIVED" }
+        });
+      }
+
+      // Handle Re-upload check from Fase 4 (returned from logistik):
+      // If it was returned from Fase 4, it has an active version changed to SUPERSEDED
+      // and we need to notify the Pengirim who requested this correction.
+      const lastKoreksi = await tx.permintaanKoreksi.findFirst({
+        where: {
+          permohonanId,
+          status: "APPROVED",
+          jenisKoreksi: "KEMBALIKAN_KE_PENGARSIP"
+        },
+        orderBy: { updatedAt: "desc" }
+      });
+
+      if (lastKoreksi && lastKoreksi.pengajuId) {
+        // Send In-App Notification to the Pengirim
+        const notifPesan = `Permohonan ${permohonan.nomorPermohonan} telah selesai didigitalisasi ulang oleh Pengarsip dan kembali ke status Terarsip (ARCHIVED).`;
+        await tx.inAppNotification.create({
+          data: {
+            userId: lastKoreksi.pengajuId,
+            judul: "Arsip Diperbaiki",
+            pesan: notifPesan,
+            metadata: { permohonanId, bundleId: permohonan.bundleId }
+          }
+        });
+      }
+
+      // Create Audit Log
+      const isMinorCorrection = oldStatus === "ARCHIVED";
+      await tx.auditLog.create({
+        data: {
+          entityType: "PERMOHONAN",
+          entityId: permohonanId,
+          aksi: isMinorCorrection
+            ? "Upload Ulang Arsip Digital (Koreksi Minor)"
+            : "Mengunggah Arsip Digital (DRAFT -> ACTIVE)",
+          statusSebelum: oldStatus,
+          statusSesudah: newStatus,
+          pelakuId: session.user.id,
+          metadata: {
+            arsipDigitalLamaId: lastActive?.id || null,
+            arsipDigitalBaruId: newArchive.id,
+            versi: nextVersion,
+            urlBlob
+          }
+        }
+      });
+
+      return { success: true, archive: newArchive, permohonanStatus: newStatus };
+    });
+  } catch (error: any) {
+    console.error("[ACTION-UPLOAD-ARSIP-ERR]", error);
+    return { success: false, error: error.message || "Gagal menyimpan arsip digital." };
+  }
+}
+
+/**
+ * Action: Request "Kembalikan ke Peneliti" for major correction (physical file damage or wrong file details).
+ * This requires Supervisor approval, so status goes to PENDING_APPROVAL.
+ */
+export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== "PENGARSIP") {
+    throw new Error("Unauthorized");
+  }
+
+  if (!alasan || !alasan.trim()) {
+    return { success: false, error: "Alasan pengembalian wajib diisi." };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const permohonan = await tx.permohonan.findUnique({
+        where: { id: permohonanId },
+        include: { bundle: true }
+      });
+
+      if (!permohonan) {
+        throw new Error("Permohonan tidak ditemukan.");
+      }
+
+      if (permohonan.status !== "BUNDLED" && permohonan.status !== "ARCHIVED") {
+        throw new Error("Hanya permohonan berstatus Terbundel atau Terarsip yang dapat dikembalikan ke Peneliti.");
+      }
+
+      // Check if there is an existing pending request
+      const existingRequest = await tx.permintaanKoreksi.findFirst({
+        where: {
+          permohonanId,
+          status: "PENDING_APPROVAL",
+          jenisKoreksi: "KEMBALIKAN_KE_PENELITI"
+        }
+      });
+
+      if (existingRequest) {
+        throw new Error("Permintaan pengembalian permohonan ini sudah diajukan sebelumnya dan masih menunggu keputusan Supervisor.");
+      }
+
+      // Create PermintaanKoreksi
+      const request = await tx.permintaanKoreksi.create({
+        data: {
+          permohonanId,
+          jenisKoreksi: "KEMBALIKAN_KE_PENELITI",
+          status: "PENDING_APPROVAL",
+          pengajuId: session.user.id,
+          catatanPengaju: alasan
+        }
+      });
+
+      // Notify Supervisor
+      const notifTitle = "Persetujuan Koreksi";
+      const notifPesan = `Pengarsip mengajukan koreksi untuk mengembalikan Permohonan ${permohonan.nomorPermohonan} ke Peneliti. Alasan: "${alasan}"`;
+      
+      const activeSupervisors = await tx.user.findMany({
+        where: { role: "SUPERVISOR", isActive: true },
+        select: { id: true }
+      });
+
+      await Promise.all(
+        activeSupervisors.map((sup) =>
+          tx.inAppNotification.create({
+            data: {
+              userId: sup.id,
+              judul: notifTitle,
+              pesan: notifPesan,
+              metadata: {
+                koreksiId: request.id,
+                permohonanId,
+                bundleId: permohonan.bundleId
+              }
+            }
+          })
+        )
+      );
+
+      return { success: true, status: "PENDING_APPROVAL", request };
+    });
+  } catch (error: any) {
+    console.error("[ACTION-KEMBALIKAN-KE-PENELITI-ERR]", error);
+    return { success: false, error: error.message || "Gagal mengajukan pengembalian ke peneliti." };
+  }
+}
+
+/**
+ * Helper Action: Retrieve active koreksi requests for permohonan in locked bundles.
+ */
+export async function getPendingKoreksiForPermohonan(permohonanId: string) {
+  try {
+    const request = await prisma.permintaanKoreksi.findFirst({
+      where: {
+        permohonanId,
+        status: "PENDING_APPROVAL"
+      }
+    });
+    return { success: true, request };
+  } catch (e) {
+    return { success: false, request: null };
+  }
+}

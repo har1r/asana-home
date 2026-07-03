@@ -1,0 +1,6 @@
+{
+  "name": "Asana Home Dashboard",
+  "description": "An interactive, beautifully crafted replica of the Asana home team workspace dashboard featuring real-time task management, project status tracking, message streams, team selection, and rich UI interactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
