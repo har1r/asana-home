@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ChevronDown, 
   SendHorizontal, 
@@ -12,71 +12,8 @@ import {
   FileText
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-import { SkeletonBox, SkeletonCircle, SkeletonText } from '@/components/skeletons/SkeletonBase';
+import { MessageTeamCardSkeleton } from '@/components/skeletons/SkeletonBase';
 
-/** Skeleton yang mereplikasi layout MessageTeamCard: header + chat bubbles + input */
-function MessageTeamCardSkeleton() {
-  return (
-    <div className="w-full flex flex-col font-sans select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-[10px] border-b-2 border-gray-200/90 mb-3">
-        <SkeletonBox width="w-28" height="h-4" rounded="rounded-full" />
-        <div className="flex gap-0.5">
-          <div className="flex flex-col gap-0.5">
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-          </div>
-        </div>
-      </div>
-
-      {/* Team dropdown row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5">
-          <SkeletonBox width="w-32" height="h-4" rounded="rounded-full" />
-          <div className="w-4 h-4 bg-gray-200 animate-pulse rounded" />
-        </div>
-        <SkeletonBox width="w-24" height="h-3" rounded="rounded-full" />
-      </div>
-
-      {/* Chat bubble area */}
-      <div className="flex flex-col gap-3.5 min-h-[140px] mb-3">
-        {/* Bubble left */}
-        <div className="flex gap-2 items-start">
-          <SkeletonCircle size="w-7 h-7" />
-          <div className="flex flex-col gap-1.5 max-w-[75%]">
-            <SkeletonText width="w-48" height="h-3.5" />
-            <SkeletonText width="w-32" height="h-3" />
-          </div>
-        </div>
-        {/* Bubble right */}
-        <div className="flex gap-2 items-start flex-row-reverse">
-          <SkeletonCircle size="w-7 h-7" />
-          <div className="flex flex-col gap-1.5 items-end max-w-[75%]">
-            <SkeletonText width="w-56" height="h-3.5" />
-            <SkeletonText width="w-28" height="h-3" />
-          </div>
-        </div>
-        {/* Bubble left short */}
-        <div className="flex gap-2 items-start">
-          <SkeletonCircle size="w-7 h-7" />
-          <div className="flex flex-col gap-1.5 max-w-[55%]">
-            <SkeletonText width="w-24" height="h-3.5" />
-          </div>
-        </div>
-      </div>
-
-      {/* Input bar */}
-      <div className="border border-gray-200/80 rounded-xl p-3 flex items-center gap-2.5 bg-white">
-        <SkeletonBox width="flex-1" height="h-4" rounded="rounded-full" className="flex-1" />
-        <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-lg shrink-0" />
-      </div>
-    </div>
-  );
-}
 
 export default function MessageTeamCard() {
   const {
@@ -103,28 +40,27 @@ export default function MessageTeamCard() {
   const activeTeam = teams.find(t => t.id === selectedTeamId) || teams[0];
   const activeMessages = messages.filter(m => m.teamId === selectedTeamId);
 
-  // Show skeleton while teams/messages are loading
-  if (teams.length === 0) return <MessageTeamCardSkeleton />;
-
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = useCallback((e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
-
     handleSendMessage(selectedTeamId, inputText.trim());
     setInputText('');
     setShowEmojis(false);
-  };
+  }, [inputText, handleSendMessage, selectedTeamId]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  };
+  }, [handleSend]);
 
-  const appendEmoji = (emoji: string) => {
+  const appendEmoji = useCallback((emoji: string) => {
     setInputText(prev => prev + emoji);
-  };
+  }, []);
+
+  // Show skeleton while teams/messages are loading
+  if (teams.length === 0) return <MessageTeamCardSkeleton />;
 
   const emojiShortcuts = ['👍', '🙌', '❤️', '🔥', '🎉', '💡', '✅', '👀'];
 

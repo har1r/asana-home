@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText,
   RefreshCw,
@@ -11,66 +11,37 @@ import {
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getLatestPermohonans } from '@/app/actions/penginput';
-import { SkeletonBox, SkeletonText, SkeletonAvatarStack } from '@/components/skeletons/SkeletonBase';
+import { RecentTasksCardSkeleton } from '@/components/skeletons/SkeletonBase';
 
-/** Skeleton yang mereplikasi layout RecentProjectsCard: 5 baris — identik pixel-per-pixel */
-function RecentTasksCardSkeleton() {
-  return (
-    <div className="w-full flex flex-col font-sans select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-[10px] border-b-2 border-gray-200/90 mb-3">
-        <SkeletonBox width="w-40" height="h-4" rounded="rounded-full" />
-        <div className="flex items-center gap-3.5">
-          <SkeletonBox width="w-20" height="h-3" rounded="rounded-full" />
-          <div className="flex gap-0.5">
-            <div className="flex flex-col gap-0.5">
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Item rows */}
-      <div className="flex flex-col gap-1">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between pb-1.5 pt-1.5 border-b border-[#eceff1]"
-          >
-            {/* Left: icon + title */}
-            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              {/* Icon box 7x7 */}
-              <div className="w-7 h-7 rounded-lg bg-gray-200 animate-pulse shrink-0" />
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <SkeletonText width={i % 2 === 0 ? 'w-40' : 'w-32'} height="h-3" />
-                <SkeletonText width="w-24" height="h-2" />
-              </div>
-            </div>
-            {/* Right: avatars */}
-            <div className="shrink-0 pl-2">
-              <SkeletonAvatarStack count={1} size="w-5 h-5" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// ── Pure module-level helpers (no closure captures) ─────────────────────────
+const toTitleCase = (str: string) =>
+  str
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
 
-// Warna & ikon untuk setiap jenis permohonan
-const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
-  'MUTASI_SEBAGIAN':    { icon: FolderEdit, bg: 'bg-indigo-500' },
-  'MUTASI_HABIS_UPDATE': { icon: RefreshCw,  bg: 'bg-emerald-500' },
-  'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
-  'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
-  'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
-  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
+const getInitials = (name: string) => {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : parts[0][0].toUpperCase();
 };
+
+const getAvatarBg = (name: string) => {
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
+  return colors[hash % colors.length];
+};
+
+const formatDate = (dateString: string | Date) => {
+  const date = new Date(dateString);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void }) {
   const { searchQuery } = useDashboard();
@@ -94,48 +65,32 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
     fetchLatest();
   }, []);
 
-  // Converts DB uppercase key like "MUTASI_SEBAGIAN" → "Mutasi Sebagian"
-  const toTitleCase = (str: string) =>
-    str
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase());
+// Warna & ikon untuk setiap jenis permohonan
+const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
+  'MUTASI_SEBAGIAN':    { icon: FolderEdit, bg: 'bg-indigo-500' },
+  'MUTASI_HABIS_UPDATE': { icon: RefreshCw,  bg: 'bg-emerald-500' },
+  'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
+  'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
+  'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
+  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
+};
 
-  const getInitials = (name: string) => {
-    if (!name) return '?';
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
-  };
+  // Memoized filter – only recomputes when tasks list or searchQuery change
+  const filteredTasks = useMemo(() =>
+    tasks.filter(item => {
+      const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
+        ? (item.namaPemilikLama || '')
+        : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
 
-  const getAvatarBg = (name: string) => {
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
-    return colors[hash % colors.length];
-  };
-
-  const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
-
-  // Filter berdasarkan searchQuery
-  const filteredTasks = tasks.filter(item => {
-    const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
-      ? (item.namaPemilikLama || '')
-      : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
-
-    return (
-      namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+      return (
+        namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }),
+    [tasks, searchQuery]
+  );
 
   if (isLoading) return <RecentTasksCardSkeleton />;
 

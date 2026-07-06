@@ -20,20 +20,58 @@ import {
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import TasksRevisionCard from '@/components/TasksRevisionCard';
-import FavoritesCard from '@/components/FavoritesCard';
-import RecentTasksCard from '@/components/RecentTasksCard';
-import MessageTeamCard from '@/components/MessageTeamCard';
-import CalendarCard from '@/components/CalendarCard';
+import dynamic from 'next/dynamic';
 import ProjectDetailsDrawer from '@/components/ProjectDetailsDrawer';
 import { useSession, signOut } from 'next-auth/react';
-import PenginputWorkspace, { PenginputSkeleton } from '@/components/workspaces/PenginputWorkspace';
-import PenelitiWorkspace, { PenelitiSkeleton } from '@/components/workspaces/PenelitiWorkspace';
-import PengarsipWorkspace, { PengarsipSkeleton } from '@/components/workspaces/PengarsipWorkspace';
-import PengirimWorkspace, { PengirimSkeleton } from '@/components/workspaces/PengirimWorkspace';
-import PemantauWorkspace, { PemantauSkeleton } from '@/components/workspaces/PemantauWorkspace';
+import {
+  SkeletonBox, SkeletonCircle, SkeletonText, SkeletonProgressBar, SkeletonBadge,
+  PenginputSkeleton, PenelitiSkeleton, PengarsipSkeleton, PengirimSkeleton, PemantauSkeleton,
+  TasksRevisionCardSkeleton, FavoritesCardSkeleton, RecentTasksCardSkeleton,
+  MessageTeamCardSkeleton, CalendarCardSkeleton
+} from '@/components/skeletons/SkeletonBase';
+
+const TasksRevisionCard = dynamic(() => import('@/components/TasksRevisionCard'), {
+  ssr: false,
+  loading: () => <TasksRevisionCardSkeleton />
+});
+const FavoritesCard = dynamic(() => import('@/components/FavoritesCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+const RecentTasksCard = dynamic(() => import('@/components/RecentTasksCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+const MessageTeamCard = dynamic(() => import('@/components/MessageTeamCard'), {
+  ssr: false,
+  loading: () => <MessageTeamCardSkeleton />
+});
+const CalendarCard = dynamic(() => import('@/components/CalendarCard'), {
+  ssr: false,
+  loading: () => <CalendarCardSkeleton />
+});
+
+const PenginputWorkspace = dynamic(() => import('@/components/workspaces/PenginputWorkspace'), {
+  ssr: false,
+  loading: () => <PenginputSkeleton />
+});
+const PenelitiWorkspace = dynamic(() => import('@/components/workspaces/PenelitiWorkspace'), {
+  ssr: false,
+  loading: () => <PenelitiSkeleton />
+});
+const PengarsipWorkspace = dynamic(() => import('@/components/workspaces/PengarsipWorkspace'), {
+  ssr: false,
+  loading: () => <PengarsipSkeleton />
+});
+const PengirimWorkspace = dynamic(() => import('@/components/workspaces/PengirimWorkspace'), {
+  ssr: false,
+  loading: () => <PengirimSkeleton />
+});
+const PemantauWorkspace = dynamic(() => import('@/components/workspaces/PemantauWorkspace'), {
+  ssr: false,
+  loading: () => <PemantauSkeleton />
+});
 import NotificationSystem from '@/components/NotificationSystem';
-import { SkeletonBox, SkeletonCircle, SkeletonText, SkeletonProgressBar, SkeletonBadge } from '@/components/skeletons/SkeletonBase';
 
 /** Skeleton untuk tab Inbox — 3 notification card shimmer */
 function InboxSkeleton() {
@@ -125,7 +163,7 @@ function WorkspaceLoadingSkeleton() {
         <div className="w-full h-full rounded-full border-[3px] border-slate-100" />
         <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
       </div>
-      <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider animate-pulse">
+      <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">
         Memuat Halaman Kerja...
       </span>
     </div>
@@ -165,10 +203,6 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
 
     showAddTeamModal,
     setShowAddTeamModal,
-    newTeamName,
-    setNewTeamName,
-    selectedNewTeamMembers,
-    setSelectedNewTeamMembers,
     showAddProjectModal,
     setShowAddProjectModal,
 
@@ -181,12 +215,37 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
     handleSelectProjectByTitle,
     handleSendMessage,
     handleCreateTeam,
-    toggleSelectNewTeamMember,
     getTasksForProject,
     favoriteProjectsList,
     resetDatabase,
     isInitialized
   } = useDashboard();
+
+  const [localNewTeamName, setLocalNewTeamName] = useState('');
+  const [localSelectedNewTeamMembers, setLocalSelectedNewTeamMembers] = useState<string[]>(['member-1']);
+
+  const toggleSelectLocalNewTeamMember = (memberId: string) => {
+    setLocalSelectedNewTeamMembers(prev =>
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
+
+  const handleSubmitTeam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localNewTeamName.trim()) return;
+    handleCreateTeam(localNewTeamName, localSelectedNewTeamMembers);
+    setLocalNewTeamName('');
+    setLocalSelectedNewTeamMembers(['member-1']);
+  };
+
+  useEffect(() => {
+    if (!showAddTeamModal) {
+      setLocalNewTeamName('');
+      setLocalSelectedNewTeamMembers(['member-1']);
+    }
+  }, [showAddTeamModal]);
 
   return (
     <div id="app-root" className="flex bg-[#f3f6f9] min-h-screen text-gray-800 font-sans relative overflow-x-hidden antialiased">
@@ -327,7 +386,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
                         <h3 className="text-xs font-bold text-gray-800">
                           Pierre Meyer <span className="font-semibold text-gray-500">shared the project board</span> Website Launch Runthrough <span className="font-semibold text-gray-500">with you.</span>
                         </h3>
-                        <p className="text-[10px] text-gray-400 mt-1 font-semibold uppercase">5min ago • Team marketing</p>
+                        <p className="text-[10px] text-gray-400 mt-1 font-semibold capitalize">5min ago • Team marketing</p>
                         <div className="mt-2 text-xs bg-white text-gray-600 rounded-lg p-2.5 border border-slate-100 leading-relaxed font-medium">
                           "Hey everyone! Let's utilize the connected deliverables container to populate the Web Design milestones before Thursdays call! Thank you"
                         </div>
@@ -343,7 +402,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
                         <h3 className="text-xs font-bold text-gray-800">
                           Dhanesh Gopalan <span className="font-semibold text-gray-500">dispatched message inside thread</span> Team Marketing.
                         </h3>
-                        <p className="text-[10px] text-gray-400 mt-1 font-semibold uppercase">2min ago • Chat stream</p>
+                        <p className="text-[10px] text-gray-400 mt-1 font-semibold capitalize">2min ago • Chat stream</p>
                         <p className="mt-1 text-xs text-slate-500 italic">"Cool 👍"</p>
                       </div>
                     </div>
@@ -357,7 +416,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
                         <h3 className="text-xs font-bold text-gray-800">
                           System notification: <span className="font-semibold text-gray-500">Dev server initialized on host port</span> 3000.
                         </h3>
-                        <p className="text-[10px] text-gray-400 mt-1 font-semibold uppercase font-mono">Just now • System integration</p>
+                        <p className="text-[10px] text-gray-400 mt-1 font-semibold capitalize font-mono">Just now • System integration</p>
                       </div>
                     </div>
                   </div>
@@ -398,7 +457,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
                             </div>
                             <div>
                               <h3 className="text-xs font-bold text-gray-800 truncate w-36">{proj.title}</h3>
-                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{proj.category}</span>
+                              <span className="text-[10px] text-gray-400 font-bold capitalize tracking-wider">{proj.category}</span>
                             </div>
                           </div>
 
@@ -483,29 +542,29 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
               </button>
             </div>
 
-            <form onSubmit={handleCreateTeam} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmitTeam} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Team name</label>
+                <label className="text-[10px] font-bold text-slate-400 capitalize tracking-wider">Team name</label>
                 <input
                   type="text"
                   placeholder="e.g. Sleek engineers, brand force"
-                  value={newTeamName}
-                  onChange={(e) => setNewTeamName(e.target.value)}
+                  value={localNewTeamName}
+                  onChange={(e) => setLocalNewTeamName(e.target.value)}
                   className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 focus:bg-white"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select founding members</label>
+                <label className="text-[10px] font-bold text-slate-400 capitalize tracking-wider mb-1">Select founding members</label>
                 <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1">
                   {members.map(m => {
-                    const isSelected = selectedNewTeamMembers.includes(m.id);
+                    const isSelected = localSelectedNewTeamMembers.includes(m.id);
                     return (
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => toggleSelectNewTeamMember(m.id)}
+                        onClick={() => toggleSelectLocalNewTeamMember(m.id)}
                         className={`p-2 rounded-xl border text-xs text-left font-bold flex items-center gap-2 transition-all ${isSelected
                           ? 'bg-indigo-50/50 border-indigo-200 text-indigo-700'
                           : 'bg-white border-gray-200/70 text-gray-600 hover:shadow-xs'
@@ -562,8 +621,8 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-800">{session?.user?.name || 'Owner Developer Account'}</h4>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">{session?.user?.email || 'muftiharir3@gmail.com'}</p>
-                <div className="mt-1.5 inline-block bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">
+                <p className="text-xs text-gray-400 font-bold capitalize tracking-wider mt-0.5">{session?.user?.email || 'muftiharir3@gmail.com'}</p>
+                <div className="mt-1.5 inline-block bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full capitalize">
                   {(session?.user as any)?.role || 'DEVELOPER'}
                 </div>
               </div>
@@ -573,7 +632,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
               <div className="p-3 bg-violet-50/50 border border-violet-100 rounded-xl space-y-1">
                 <div className="flex items-center gap-1 text-violet-700">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Replica overview</span>
+                  <span className="text-[10px] font-bold capitalize tracking-wider">Replica overview</span>
                 </div>
                 <p className="text-[11px] text-violet-600 font-medium leading-relaxed">
                   Architax Home Team replica. Custom-crafted using React 19, tailwind CSS v4 and lucide icon sets. Optimized for high interactive speeds.

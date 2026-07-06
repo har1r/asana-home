@@ -1,67 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getRevisionPermohonans } from '@/app/actions/penginput';
-import { SkeletonBox, SkeletonText, SkeletonBadge } from '@/components/skeletons/SkeletonBase';
-
-/** Skeleton yang mereplikasi layout TasksRevisionCard secara akurat */
-function TasksRevisionCardSkeleton() {
-  return (
-    <div className="w-full flex flex-col font-sans select-none">
-      {/* Header bar */}
-      <div className="flex items-center justify-between pb-[10px] border-b-2 border-gray-200/90 mb-3">
-        <div className="flex items-center gap-2">
-          <SkeletonBox width="w-36" height="h-4" rounded="rounded-full" />
-          <SkeletonBox width="w-5" height="h-5" rounded="rounded-md" />
-        </div>
-        <div className="flex items-center gap-5">
-          <SkeletonBox width="w-16" height="h-3" rounded="rounded-full" />
-          <SkeletonBox width="w-14" height="h-3" rounded="rounded-full" />
-          {/* grip dots */}
-          <div className="flex gap-0.5">
-            <div className="flex flex-col gap-0.5">
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-              <span className="w-1 h-1 rounded-full bg-gray-200" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Table rows */}
-      <div className="flex flex-col gap-1 min-h-[160px]">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-12 gap-2 items-center pb-2.5 pt-2.5 border-b border-[#eceff1]"
-          >
-            {/* Title col */}
-            <div className="col-span-6 sm:col-span-5 pr-2">
-              <SkeletonText width={i % 2 === 0 ? 'w-4/5' : 'w-3/5'} height="h-3" />
-            </div>
-            {/* Date col */}
-            <div className="col-span-3 sm:col-span-2">
-              <SkeletonText width="w-12" height="h-2.5" />
-            </div>
-            {/* Badge col */}
-            <div className="col-span-3 sm:col-span-3">
-              <SkeletonBadge width="w-20" />
-            </div>
-            {/* Avatars col */}
-            <div className="hidden sm:flex sm:col-span-2 justify-end">
-              <div className="w-5 h-5 rounded-full bg-gray-200 animate-pulse ring-2 ring-white" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+import { TasksRevisionCardSkeleton } from '@/components/skeletons/SkeletonBase';
 
 const CATEGORY_STYLES: Record<string, string> = {
   'MUTASI_SEBAGIAN': 'bg-indigo-100 text-indigo-950 border-indigo-200/50',
@@ -95,54 +38,51 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
     fetchRevisions();
   }, []);
 
-  // Converts DB uppercase key like "MUTASI_SEBAGIAN" → "Mutasi Sebagian"
-  const toTitleCase = (str: string) =>
-    str
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase());
+// ── Pure module-level helpers (no closure captures) ─────────────────────────
+const toTitleCase = (str: string) =>
+  str
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
 
-  const getInitials = (name: string) => {
-    if (!name) return '?';
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
-  };
+const getInitials = (name: string) => {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : parts[0][0].toUpperCase();
+};
 
-  const getAvatarBg = (name: string) => {
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
-    return colors[hash % colors.length];
-  };
+const getAvatarBg = (name: string) => {
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
+  return colors[hash % colors.length];
+};
 
-  const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const formatDate = (dateString: string | Date) => {
+  const date = new Date(dateString);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
-    const dayName = days[date.getDay()];
-    const day = date.getDate();
-    const monthName = months[date.getMonth()];
+  // Memoized filter – only recomputes when revisions list or searchQuery change
+  const filteredRevisions = useMemo(() =>
+    revisions.filter(item => {
+      const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
+        ? (item.namaPemilikLama || '')
+        : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
 
-    return `${dayName} ${day} ${monthName}`;
-  };
-
-  // Filter and search revisions
-  const filteredRevisions = revisions.filter(item => {
-    const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
-      ? (item.namaPemilikLama || '')
-      : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
-
-    const matchesSearch =
-      namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesSearch;
-  });
+      return (
+        namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }),
+    [revisions, searchQuery]
+  );
 
   const activeCount = revisions.length;
 

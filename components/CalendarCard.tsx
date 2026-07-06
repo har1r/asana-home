@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -126,31 +126,31 @@ export default function CalendarCard() {
     return new Date(year, month, 1).getDay(); // 0 is Sunday
   };
 
-  const handlePrevMonth = () => {
+  const handlePrevMonth = useCallback(() => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(prev => prev - 1);
     } else {
       setCurrentMonth(prev => prev - 1);
     }
-  };
+  }, [currentMonth]);
 
-  const handleNextMonth = () => {
+  const handleNextMonth = useCallback(() => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(prev => prev + 1);
     } else {
-      setCurrentMonth(prev => prev + 1); // Fixed month bug!
+      setCurrentMonth(prev => prev + 1);
     }
-  };
+  }, [currentMonth]);
 
-  const handleJumpToToday = () => {
+  const handleJumpToToday = useCallback(() => {
     setCurrentYear(today.getFullYear());
     setCurrentMonth(today.getMonth());
     setSelectedDate(todayStr);
-  };
+  }, [todayStr]);
 
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteText.trim()) return;
 
@@ -169,15 +169,15 @@ export default function CalendarCard() {
     setNewNoteText('');
     setNewNoteCategory('kerja');
     setIsAddingNote(false);
-  };
+  }, [newNoteText, newNoteCategory, notes, selectedDate]);
 
-  const startEditNote = (note: CalendarNote) => {
+  const startEditNote = useCallback((note: CalendarNote) => {
     setEditingNoteId(note.id);
     setEditingText(note.text);
     setEditingCategory(note.category);
-  };
+  }, []);
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!editingText.trim() || !editingNoteId) return;
 
@@ -199,13 +199,13 @@ export default function CalendarCard() {
     };
     saveNotes(updatedNotes);
     setEditingNoteId(null);
-  };
+  }, [editingText, editingNoteId, notes, selectedDate, editingCategory]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingNoteId(null);
-  };
+  }, []);
 
-  const handleDeleteNote = (noteId: string) => {
+  const handleDeleteNote = useCallback((noteId: string) => {
     const dateNotes = notes[selectedDate] || [];
     const filtered = dateNotes.filter(note => note.id !== noteId);
     
@@ -216,9 +216,9 @@ export default function CalendarCard() {
       updatedNotes[selectedDate] = filtered;
     }
     saveNotes(updatedNotes);
-  };
+  }, [notes, selectedDate]);
 
-  const handleClearAllNotes = () => {
+  const handleClearAllNotes = useCallback(() => {
     showConfirm({
       title: "Hapus Semua Catatan",
       message: "Apakah Anda yakin ingin menghapus semua catatan pada tanggal ini? Tindakan ini tidak dapat dibatalkan.",
@@ -230,7 +230,7 @@ export default function CalendarCard() {
         saveNotes(updatedNotes);
       }
     });
-  };
+  }, [showConfirm, notes, selectedDate]);
 
   // Processing calendar grid cells (42 cells to complete the 6-row grid)
   const getGridCells = () => {
@@ -284,16 +284,16 @@ export default function CalendarCard() {
     return cells;
   };
 
-  const handleDayClick = (cell: { day: number; month: number; year: number; dateStr: string; isCurrentMonth: boolean }) => {
+  const handleDayClick = useCallback((cell: { day: number; month: number; year: number; dateStr: string; isCurrentMonth: boolean }) => {
     setSelectedDate(cell.dateStr);
     if (!cell.isCurrentMonth) {
       setCurrentMonth(cell.month);
       setCurrentYear(cell.year);
     }
-  };
+  }, []);
 
   // Helper to determine the dot color based on the highest priority category
-  const getDayDotClass = (dateStr: string) => {
+  const getDayDotClass = useCallback((dateStr: string) => {
     const dayNotes = notes[dateStr];
     if (!dayNotes || dayNotes.length === 0) return null;
     
@@ -301,22 +301,24 @@ export default function CalendarCard() {
     if (dayNotes.some(n => n.category === 'kerja')) return 'bg-indigo-500';
     if (dayNotes.some(n => n.category === 'pribadi')) return 'bg-emerald-500';
     return 'bg-amber-500';
-  };
+  }, [notes]);
 
-  const gridCells = getGridCells();
+  // Memoized calendar grid cells — 42 cells, only recomputes on month/year change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const gridCells = useMemo(() => getGridCells(), [currentYear, currentMonth]);
 
   // Selected date visual representation
-  const selectedDateObject = new Date(selectedDate);
-  const selectedDateLabel = selectedDateObject.toLocaleDateString('id-ID', {
+  const selectedDateObject = useMemo(() => new Date(selectedDate), [selectedDate]);
+  const selectedDateLabel = useMemo(() => selectedDateObject.toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
-  });
+  }), [selectedDateObject]);
 
-  const activeDayNotes = notes[selectedDate] || [];
-  const filteredNotes = activeDayNotes.filter(note => 
+  const activeDayNotes = useMemo(() => notes[selectedDate] || [], [notes, selectedDate]);
+  const filteredNotes = useMemo(() => activeDayNotes.filter(note => 
     note.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [activeDayNotes, searchQuery]);
 
   return (
     <div id="calendar-agenda-card" className="w-full flex flex-col font-sans select-none animate-fadeIn">
@@ -374,7 +376,7 @@ export default function CalendarCard() {
         <div className="md:col-span-7 flex flex-col justify-between">
           <div className="grid grid-cols-7 gap-1 text-center mb-2">
             {DAY_NAMES.map((day) => (
-              <span key={day} className="text-[10px] font-extrabold text-gray-400 py-1 uppercase tracking-wider font-display">
+              <span key={day} className="text-[10px] font-extrabold text-gray-400 py-1 capitalize tracking-wider font-display">
                 {day}
               </span>
             ))}
@@ -420,7 +422,7 @@ export default function CalendarCard() {
         <div className="md:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-4.5 flex flex-col gap-4 shadow-3xs">
           <div className="border-b border-slate-200/60 pb-3 flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider select-none font-display">
+              <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider select-none font-display">
                 Agenda & Catatan
               </span>
               <h3 className="text-xs font-bold text-gray-800 mt-0.5 truncate">{selectedDateLabel}</h3>
@@ -528,7 +530,7 @@ export default function CalendarCard() {
                           <p className="text-xs font-semibold text-gray-700 leading-relaxed break-words select-text">
                             {note.text}
                           </p>
-                          <span className={`inline-block text-[9px] font-bold uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded ${catConfig.text} bg-white/70 border border-slate-200/40`}>
+                          <span className={`inline-block text-[9px] font-bold capitalize tracking-wider mt-1 px-1.5 py-0.5 rounded ${catConfig.text} bg-white/70 border border-slate-200/40`}>
                             {catConfig.label}
                           </span>
                         </div>
@@ -581,7 +583,7 @@ export default function CalendarCard() {
               
               {/* Category selector */}
               <div className="flex flex-col gap-2">
-                <span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">Kategori:</span>
+                <span className="text-[9px] text-gray-400 font-extrabold capitalize tracking-wider">Kategori:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {CATEGORIES.map(cat => (
                     <button

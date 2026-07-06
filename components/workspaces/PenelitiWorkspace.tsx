@@ -423,7 +423,7 @@ export default function PenelitiWorkspace() {
             {/* Action Row: Search */}
             <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-black text-[11px] uppercase tracking-wider text-slate-700">
+                <span className="font-black text-[11px] capitalize tracking-wider text-slate-700">
                   Antrean Permohonan Masuk
                 </span>
               </div>
@@ -453,7 +453,7 @@ export default function PenelitiWorkspace() {
             <div className="flex-1 overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#f8fafc] border-b border-gray-200/60 text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none">
+                  <tr className="bg-[#f8fafc] border-b border-gray-200/60 text-[10px] font-bold text-gray-400 capitalize tracking-wider select-none">
                     <th className="py-3 px-5 w-12 text-left">No</th>
                     <th className="py-3 px-5 w-10 text-center">⭐</th>
                     <th className="py-3 px-5 w-28 text-left">Tanggal</th>
@@ -493,7 +493,7 @@ export default function PenelitiWorkspace() {
                             </div>
                           </td>
                           <td className="py-4 px-5 text-[#1e2022]">{item.namaWajibPajak}</td>
-                          <td className="py-4 px-5 text-gray-500 font-bold uppercase text-[10px]">
+                          <td className="py-4 px-5 text-gray-500 font-bold capitalize text-[10px]">
                             {item.jenisPermohonan.replace(/_/g, ' ')}
                           </td>
                           <td className="py-4 px-5 text-right pr-6">
@@ -601,7 +601,7 @@ export default function PenelitiWorkspace() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between w-full">
                         <span className="text-xs font-extrabold text-gray-800">{b.nomorBundle}</span>
-                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${b.status === 'LOCKED' ? 'bg-slate-900 text-white border-slate-950' : 'bg-indigo-100 text-indigo-800 border-indigo-200'}`}>
+                        <span className={`text-[8px] font-bold capitalize px-1.5 py-0.5 rounded-full border ${b.status === 'LOCKED' ? 'bg-slate-900 text-white border-slate-950' : 'bg-indigo-100 text-indigo-800 border-indigo-200'}`}>
                           {b.status}
                         </span>
                       </div>
@@ -648,7 +648,7 @@ export default function PenelitiWorkspace() {
                 {/* Header Info */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
                   <div>
-                    <span className="text-[9px] font-extrabold uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
                       Bundle {selectedBundle.status}
                     </span>
                     <h3 className="text-lg font-bold text-gray-900 tracking-tight mt-2">{selectedBundle.nomorBundle}</h3>
@@ -673,7 +673,7 @@ export default function PenelitiWorkspace() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   {/* Left: Cetak section */}
                   <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 space-y-4 h-fit">
-                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Cetak Dokumen Fisik (PDF)</h4>
+                    <h4 className="text-[11px] font-bold text-slate-500 capitalize tracking-widest">Cetak Dokumen Fisik (PDF)</h4>
 
                     <div className="flex flex-col gap-2.5">
                       <a
@@ -693,7 +693,7 @@ export default function PenelitiWorkspace() {
 
                   {/* Right: Berkas terbundel */}
                   <div className="lg:col-span-8 space-y-3">
-                    <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider pl-1">
+                    <h4 className="text-xs font-bold text-gray-800 capitalize tracking-wider pl-1">
                       Berkas Terbundel ({(selectedBundle.permohonan || []).length} berkas)
                     </h4>
 
@@ -714,7 +714,7 @@ export default function PenelitiWorkspace() {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-bold text-gray-800 truncate">{item.nomorPermohonan}</span>
                                 {isFrozen && (
-                                  <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                                     <Clock className="w-2.5 h-2.5 shrink-0" />
                                     Frozen
                                   </span>
@@ -812,7 +812,7 @@ export default function PenelitiWorkspace() {
 
             <form onSubmit={handleMintaRevisi} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-700 uppercase tracking-widest pl-1">Catatan / alasan kelengkapan</label>
+                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Catatan / alasan kelengkapan</label>
                 <textarea
                   placeholder="Contoh: Lampiran KTP buram, SPPT NOP tidak sesuai sertifikat..."
                   value={revisionNotes}
@@ -873,7 +873,7 @@ export default function PenelitiWorkspace() {
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-700 uppercase tracking-widest pl-1">Alasan pengeluaran berkas</label>
+                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Alasan pengeluaran berkas</label>
                 <textarea
                   placeholder="Tuliskan catatan alasan pengeluaran berkas untuk ditinjau oleh Supervisor..."
                   value={extractionNotes}

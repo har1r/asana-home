@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { Task, Project, Team, TeamMessage, TeamMember, FavoriteTile } from '@/types';
@@ -38,10 +38,6 @@ interface DashboardContextType {
   // Modals
   showAddTeamModal: boolean;
   setShowAddTeamModal: (show: boolean) => void;
-  newTeamName: string;
-  setNewTeamName: (name: string) => void;
-  selectedNewTeamMembers: string[];
-  setSelectedNewTeamMembers: (members: string[]) => void;
   showAddProjectModal: boolean;
   setShowAddProjectModal: (show: boolean) => void;
 
@@ -54,8 +50,7 @@ interface DashboardContextType {
   handleAddTaskToProject: (taskTitle: string, projectId: string) => void;
   handleSelectProjectByTitle: (title: string) => void;
   handleSendMessage: (teamId: string, messageText: string) => void;
-  handleCreateTeam: (e: React.FormEvent) => void;
-  toggleSelectNewTeamMember: (memberId: string) => void;
+  handleCreateTeam: (name: string, membersList: string[]) => void;
   getTasksForProject: (proj: Project | null) => Task[];
   favoriteProjectsList: Project[];
   resetDatabase: () => void;
@@ -101,8 +96,6 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
 
   // Modals state
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [selectedNewTeamMembers, setSelectedNewTeamMembers] = useState<string[]>(['member-1']);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
 
   // Universal Confirmation Modal State
@@ -120,7 +113,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     onConfirm: () => {},
   });
 
-  const showConfirm = ({
+  const showConfirm = useCallback(({
     title,
     message,
     onConfirm,
@@ -144,7 +137,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
-  };
+  }, []);
 
   // Hydration sync
   const isMounted = useRef(false);
@@ -273,42 +266,42 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   }, [messages]);
 
   // Actions
-  const handleAddTask = (newTaskParams: Omit<Task, 'id'>) => {
+  const handleAddTask = useCallback((newTaskParams: Omit<Task, 'id'>) => {
     const task: Task = {
       ...newTaskParams,
       id: `task-${Date.now()}`
     };
     setTasks(prev => [task, ...prev]);
-  };
+  }, []);
 
-  const handleToggleTask = (taskId: string) => {
+  const handleToggleTask = useCallback((taskId: string) => {
     setTasks(prev => prev.map(t =>
       t.id === taskId ? { ...t, completed: !t.completed } : t
     ));
-  };
+  }, []);
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = useCallback((taskId: string) => {
     setTasks(prev => prev.filter(t => t.id !== taskId));
-  };
+  }, []);
 
-  const handleAddProject = (newProjectParams: Omit<Project, 'id'>) => {
+  const handleAddProject = useCallback((newProjectParams: Omit<Project, 'id'>) => {
     const proj: Project = {
       ...newProjectParams,
       id: `project-${Date.now()}`
     };
     setProjects(prev => [proj, ...prev]);
-  };
+  }, []);
 
-  const handleUpdateProject = (projectId: string, updatedParams: Partial<Project>) => {
+  const handleUpdateProject = useCallback((projectId: string, updatedParams: Partial<Project>) => {
     setProjects(prev => prev.map(p =>
       p.id === projectId ? { ...p, ...updatedParams } : p
     ));
     if (selectedProject?.id === projectId) {
       setSelectedProject(prev => prev ? { ...prev, ...updatedParams } : null);
     }
-  };
+  }, [selectedProject]);
 
-  const handleAddTaskToProject = (taskTitle: string, projectId: string) => {
+  const handleAddTaskToProject = useCallback((taskTitle: string, projectId: string) => {
     const proj = projects.find(p => p.id === projectId);
     if (!proj) return;
 
@@ -329,9 +322,9 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     };
 
     setTasks(prev => [task, ...prev]);
-  };
+  }, [projects]);
 
-  const handleSelectProjectByTitle = (title: string) => {
+  const handleSelectProjectByTitle = useCallback((title: string) => {
     if (!title) return;
     const proj = projects.find(p =>
       p.title &&
@@ -343,9 +336,9 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     } else {
       alert(`Selected favorite "${title}" details. You can view tasks linked to this tag in the tasks list.`);
     }
-  };
+  }, [projects]);
 
-  const handleSendMessage = (teamId: string, messageText: string) => {
+  const handleSendMessage = useCallback((teamId: string, messageText: string) => {
     const newMsg: TeamMessage = {
       id: `msg-${Date.now()}`,
       teamId,
@@ -356,94 +349,110 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
       timestamp: 'Just now'
     };
     setMessages(prev => [...prev, newMsg]);
-  };
+  }, []);
 
-  const handleCreateTeam = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTeamName.trim()) return;
+  const handleCreateTeam = useCallback((name: string, membersList: string[]) => {
+    if (!name.trim()) return;
 
     const team: Team = {
       id: `team-${Date.now()}`,
-      name: newTeamName.trim(),
-      members: selectedNewTeamMembers
+      name: name.trim(),
+      members: membersList
     };
 
     setTeams(prev => [...prev, team]);
     setSelectedTeamId(team.id);
-    setNewTeamName('');
-    setSelectedNewTeamMembers(['member-1']);
     setShowAddTeamModal(false);
-  };
+  }, []);
 
-  const toggleSelectNewTeamMember = (memberId: string) => {
-    setSelectedNewTeamMembers(prev =>
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
-
-  const getTasksForProject = (proj: Project | null) => {
+  const getTasksForProject = useCallback((proj: Project | null) => {
     if (!proj) return [];
     return tasks.filter(t => t.projectId === proj.id || (t.category === proj.category && !t.projectId));
-  };
+  }, [tasks]);
 
-  const favoriteProjectsList = projects.filter(p => p.id === 'project-1' || p.id === 'project-2');
+  const favoriteProjectsList = useMemo(() => projects.filter(p => p.id === 'project-1' || p.id === 'project-2'), [projects]);
 
-  const resetDatabase = () => {
+  const resetDatabase = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.clear();
       window.location.reload();
     }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    members,
+    tasks,
+    projects,
+    favorites,
+    teams,
+    messages,
+
+    activeTab,
+    setActiveTab,
+    selectedTeamId,
+    setSelectedTeamId,
+    selectedProject,
+    setSelectedProject,
+    searchQuery,
+    setSearchQuery,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    isPersonalProfileDrawerOpen,
+    setIsPersonalProfileDrawerOpen,
+
+    showAddTeamModal,
+    setShowAddTeamModal,
+    showAddProjectModal,
+    setShowAddProjectModal,
+
+    handleAddTask,
+    handleToggleTask,
+    handleDeleteTask,
+    handleAddProject,
+    handleUpdateProject,
+    handleAddTaskToProject,
+    handleSelectProjectByTitle,
+    handleSendMessage,
+    handleCreateTeam,
+    getTasksForProject,
+    favoriteProjectsList,
+    resetDatabase,
+    showConfirm,
+    isInitialized
+  }), [
+    members,
+    tasks,
+    projects,
+    favorites,
+    teams,
+    messages,
+    activeTab,
+    setActiveTab,
+    selectedTeamId,
+    selectedProject,
+    searchQuery,
+    isMobileMenuOpen,
+    isPersonalProfileDrawerOpen,
+    showAddTeamModal,
+    showAddProjectModal,
+    handleAddTask,
+    handleToggleTask,
+    handleDeleteTask,
+    handleAddProject,
+    handleUpdateProject,
+    handleAddTaskToProject,
+    handleSelectProjectByTitle,
+    handleSendMessage,
+    handleCreateTeam,
+    getTasksForProject,
+    favoriteProjectsList,
+    resetDatabase,
+    showConfirm,
+    isInitialized
+  ]);
 
   return (
-    <DashboardContext.Provider value={{
-      members,
-      tasks,
-      projects,
-      favorites,
-      teams,
-      messages,
-
-      activeTab,
-      setActiveTab,
-      selectedTeamId,
-      setSelectedTeamId,
-      selectedProject,
-      setSelectedProject,
-      searchQuery,
-      setSearchQuery,
-      isMobileMenuOpen,
-      setIsMobileMenuOpen,
-      isPersonalProfileDrawerOpen,
-      setIsPersonalProfileDrawerOpen,
-
-      showAddTeamModal,
-      setShowAddTeamModal,
-      newTeamName,
-      setNewTeamName,
-      selectedNewTeamMembers,
-      setSelectedNewTeamMembers,
-      showAddProjectModal,
-      setShowAddProjectModal,
-
-      handleAddTask,
-      handleToggleTask,
-      handleDeleteTask,
-      handleAddProject,
-      handleUpdateProject,
-      handleAddTaskToProject,
-      handleSelectProjectByTitle,
-      handleSendMessage,
-      handleCreateTeam,
-      toggleSelectNewTeamMember,
-      getTasksForProject,
-      favoriteProjectsList,
-      resetDatabase,
-      showConfirm,
-      isInitialized
-    }}>
+    <DashboardContext.Provider value={contextValue}>
       {children}
 
       {/* GLOBAL UNIVERSAL CONFIRMATION MODAL */}

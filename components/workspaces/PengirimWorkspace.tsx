@@ -462,7 +462,7 @@ export default function PengirimWorkspace() {
       {/* Header card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm select-none">
         <div>
-          <span className="text-[9px] font-extrabold uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
+          <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
             Fase 5
           </span>
           <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 tracking-tight mt-1.5">
@@ -514,7 +514,7 @@ export default function PengirimWorkspace() {
         {workspaceTab === "daftar-manifest" && (
           <div className="flex flex-col gap-4 flex-1">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider select-none">
+              <h2 className="text-xs font-black text-slate-500 capitalize tracking-wider select-none">
                 Manifest Pengiriman
               </h2>
               <button
@@ -585,7 +585,7 @@ export default function PengirimWorkspace() {
                         <span className="text-xs font-black truncate max-w-[190px]">
                           {m.nomorManifest}
                         </span>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase select-none ${
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full capitalize select-none ${
                           isSelected
                             ? "bg-white/20 text-white"
                             : m.status === "SENT"
@@ -618,7 +618,7 @@ export default function PengirimWorkspace() {
         {workspaceTab === "antrean-bundle" && (
           <div className="flex flex-col gap-4 flex-1 select-none">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider">
+              <h2 className="text-xs font-black text-slate-500 capitalize tracking-wider">
                 Antrean Bundle Locked
               </h2>
               <button
@@ -747,14 +747,14 @@ export default function PengirimWorkspace() {
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[55vh] flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              <h4 className="text-xs font-bold text-slate-500 capitalize tracking-widest">
                 Daftar Permohonan ({selectedBundle.permohonan?.length})
               </h4>
               {selectedBundle.permohonan?.map((p: any) => (
                 <div key={p.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl text-xs flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-800">NOP: {formatNop(p.nop)}</span>
-                    <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase">
+                    <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full capitalize">
                       {p.status}
                     </span>
                   </div>
@@ -824,7 +824,7 @@ export default function PengirimWorkspace() {
 
             {/* List of Bundles inside Manifest */}
             <div className="flex-1 overflow-y-auto max-h-[55vh] flex flex-col gap-4">
-              <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest select-none">
+              <h4 className="text-xs font-black text-slate-500 capitalize tracking-widest select-none">
                 Daftar Bundle didalam Manifest ({selectedManifest.bundle?.length || 0})
               </h4>
 
@@ -885,7 +885,7 @@ export default function PengirimWorkspace() {
                       {/* Display Applications details inside bundle (for SENT manifest) */}
                       {selectedManifest.status === "SENT" && b.permohonan && b.permohonan.length > 0 && (
                         <div className="border-t border-slate-50 pt-3 flex flex-col gap-2">
-                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                          <span className="text-[10px] font-extrabold text-slate-400 capitalize tracking-wider block">
                             Status Berkas (Permohonan)
                           </span>
                           <div className="flex flex-col gap-2">
@@ -919,7 +919,7 @@ export default function PengirimWorkspace() {
                                   </div>
 
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase select-none ${
+                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full capitalize select-none ${
                                       p.status === "ARCHIVED" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"
                                     }`}>
                                       {p.status === "ARCHIVED" ? "Terarsip" : p.status}
@@ -949,7 +949,7 @@ export default function PengirimWorkspace() {
               {/* Add Bundle interface in DRAFT status */}
               {selectedManifest.status === "DRAFT" && (
                 <div className="mt-4 border-t border-slate-100 pt-4 flex flex-col gap-3">
-                  <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest select-none">
+                  <h5 className="text-[10px] font-bold text-slate-500 capitalize tracking-widest select-none">
                     Masukkan Antrean Bundle
                   </h5>
                   {eligibleBundlesList.length === 0 ? (

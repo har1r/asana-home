@@ -33,6 +33,8 @@ const permohonanSchema = z.object({
     'PENGAKTIFAN'
   ] as const),
   nomorPelayanan: z.string().min(1, 'Nomor pelayanan wajib diisi'),
+  tanggalNoPelayanan: z.string().min(1, 'Tanggal pelayanan wajib diisi'),
+  tanggalPenyelesaian: z.string().min(1, 'Tanggal penyelesaian wajib diisi'),
   nop: z.string().regex(/^\d{18}$/, 'NOP harus terdiri dari 18 digit angka'),
   noWhatsapp: z.string().regex(/^(08|628)\d{8,12}$/, 'Nomor WhatsApp tidak valid (contoh: 08123456789)'),
 
@@ -171,6 +173,8 @@ export async function createPermohonan(rawInput: any) {
         noWhatsapp: validated.noWhatsapp,
         alamat: derivedAlamat,
         nomorPelayanan: validated.nomorPelayanan,
+        tanggalNoPelayanan: new Date(validated.tanggalNoPelayanan),
+        tanggalPenyelesaian: validated.tanggalPenyelesaian ? new Date(validated.tanggalPenyelesaian) : null,
 
         // Data Lama
         namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
@@ -299,6 +303,8 @@ export async function updatePermohonan(id: string, rawInput: any) {
           noWhatsapp: validated.noWhatsapp,
           alamat: derivedAlamat,
           nomorPelayanan: validated.nomorPelayanan,
+          tanggalNoPelayanan: new Date(validated.tanggalNoPelayanan),
+          tanggalPenyelesaian: validated.tanggalPenyelesaian ? new Date(validated.tanggalPenyelesaian) : null,
 
           // Data Lama
           namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
@@ -329,6 +335,9 @@ export async function updatePermohonan(id: string, rawInput: any) {
           } : undefined
         }
       });
+    }, {
+      maxWait: 15000,
+      timeout: 25000
     });
 
     // Create Audit Log if critical fields were updated

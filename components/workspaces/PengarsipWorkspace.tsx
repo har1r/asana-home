@@ -302,7 +302,7 @@ export default function PengarsipWorkspace() {
       {/* Header card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm select-none">
         <div>
-          <span className="text-[9px] font-extrabold uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
+          <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
             Fase 4
           </span>
           <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 tracking-tight mt-1.5">
@@ -477,8 +477,8 @@ export default function PengarsipWorkspace() {
                   Detail Bundle: <span className="text-indigo-600 font-black">{selectedBundle.nomorBundle}</span>
                 </h3>
                 <p className="text-[11px] text-gray-400 font-semibold mt-0.5">
-                  Status: <span className="font-bold text-gray-700 uppercase">{selectedBundle.status}</span> • 
-                  Jenis: <span className="font-bold text-gray-700 uppercase">{selectedBundle.jenisPermohonan?.replace(/_/g, " ") || "Campuran"}</span>
+                  Status: <span className="font-bold text-gray-700 capitalize">{selectedBundle.status}</span> • 
+                  Jenis: <span className="font-bold text-gray-700 capitalize">{selectedBundle.jenisPermohonan?.replace(/_/g, " ") || "Campuran"}</span>
                 </p>
               </div>
               <div className="text-[11px] font-semibold text-gray-400 text-left sm:text-right">
@@ -489,7 +489,7 @@ export default function PengarsipWorkspace() {
 
             {/* List of applications */}
             <div className="flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
-              <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+              <h4 className="text-xs font-extrabold text-slate-500 capitalize tracking-widest">
                 Daftar Permohonan ({selectedBundle.permohonan.length})
               </h4>
 
@@ -553,7 +553,7 @@ export default function PengarsipWorkspace() {
                               <AlertTriangle className="w-3 h-3 text-amber-600" /> Perlu Re-Upload
                             </span>
                           )}
-                          <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase select-none ${
+                          <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full capitalize select-none ${
                             p.status === "ARCHIVED"
                               ? "bg-emerald-100 text-emerald-800"
                               : p.status === "BUNDLED"
@@ -681,7 +681,7 @@ export default function PengarsipWorkspace() {
                             <div className="mt-2.5 overflow-x-auto rounded-xl border border-slate-100 shadow-inner">
                               <table className="w-full text-[10px] text-left text-gray-600 border-collapse">
                                 <thead>
-                                  <tr className="bg-[#f8fafc] text-gray-400 border-b border-gray-200/60 uppercase select-none font-bold">
+                                  <tr className="bg-[#f8fafc] text-gray-400 border-b border-gray-200/60 capitalize select-none font-bold">
                                     <th className="px-3 py-1.5 font-bold">Versi</th>
                                     <th className="px-3 py-1.5 font-bold">Status Versi</th>
                                     <th className="px-3 py-1.5 font-bold">Tanggal Upload</th>

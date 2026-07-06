@@ -256,7 +256,7 @@ export default function PemantauWorkspace() {
         {/* Header card */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm select-none">
           <div>
-            <span className="text-[9px] font-extrabold uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
+            <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
               Fase 6
             </span>
             <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 tracking-tight mt-1.5">
@@ -305,7 +305,7 @@ export default function PemantauWorkspace() {
         </div>
 
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider select-none">
+          <h2 className="text-xs font-black text-slate-500 capitalize tracking-wider select-none">
             {workspaceTab === "antrean-pemantauan" ? "Fase 5 - Antrean" : "Arsip Selesai"}
           </h2>
           <button
@@ -381,7 +381,7 @@ export default function PemantauWorkspace() {
                           Frozen
                         </span>
                       )}
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase select-none ${
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full capitalize select-none ${
                         isSelected
                           ? "bg-white/20 text-white"
                           : p.status === "COMPLETED"
@@ -450,12 +450,12 @@ export default function PemantauWorkspace() {
                   Permohonan: <span className="text-indigo-600 font-black">{selectedPermohonan.nomorPermohonan}</span>
                 </h3>
                 <p className="text-[11px] text-gray-400 font-semibold mt-0.5">
-                  Tipe: <span className="font-bold text-gray-700 uppercase">{selectedPermohonan.jenisPermohonan?.replace(/_/g, " ")}</span>
+                  Tipe: <span className="font-bold text-gray-700 capitalize">{selectedPermohonan.jenisPermohonan?.replace(/_/g, " ")}</span>
                 </p>
               </div>
 
               {/* Status Badge */}
-              <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase shrink-0 ${
+              <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full capitalize shrink-0 ${
                 selectedPermohonan.status === "COMPLETED"
                   ? "bg-emerald-100 text-emerald-800"
                   : "bg-sky-100 text-sky-800"
@@ -483,7 +483,7 @@ export default function PemantauWorkspace() {
               
               {/* Box 1: WP Info */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col gap-2.5">
-                <h5 className="font-extrabold text-slate-500 uppercase tracking-widest text-[9px]">
+                <h5 className="font-extrabold text-slate-500 capitalize tracking-widest text-[9px]">
                   Informasi Wajib Pajak
                 </h5>
                 <div className="flex flex-col gap-1.5">
@@ -496,7 +496,7 @@ export default function PemantauWorkspace() {
 
               {/* Box 2: Logistics Info */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col gap-2.5">
-                <h5 className="font-extrabold text-slate-500 uppercase tracking-widest text-[9px]">
+                <h5 className="font-extrabold text-slate-500 capitalize tracking-widest text-[9px]">
                   Informasi Logistik Pengiriman
                 </h5>
                 <div className="flex flex-col gap-1.5">

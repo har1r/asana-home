@@ -87,7 +87,7 @@ export default function ProjectDetailsDrawer() {
           <X className="w-4 h-4" />
         </button>
 
-        <span className="text-[10px] bg-white/20 text-white font-bold tracking-widest uppercase rounded-lg px-2 py-0.5 w-fit border border-white/10 leading-none">
+        <span className="text-[10px] bg-white/20 text-white font-bold tracking-widest capitalize rounded-lg px-2 py-0.5 w-fit border border-white/10 leading-none">
           {selectedProject.category}
         </span>
 
@@ -100,7 +100,7 @@ export default function ProjectDetailsDrawer() {
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
         {/* Project Status Selection */}
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Project Status</label>
+          <label className="text-[11px] font-bold text-gray-500 capitalize tracking-wider block">Project Status</label>
           <div className="flex items-center gap-3">
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusLabel.bg}`}>
               {statusLabel.text}
@@ -122,7 +122,7 @@ export default function ProjectDetailsDrawer() {
         <div className="space-y-2 select-none">
           <div className="flex items-center gap-1.5 text-gray-500">
             <Calendar className="w-4 h-4 text-gray-400" />
-            <label className="text-[11px] font-bold uppercase tracking-wider block">Target Delivery</label>
+            <label className="text-[11px] font-bold capitalize tracking-wider block">Target Delivery</label>
           </div>
           <p className="text-xs font-semibold text-gray-700 pl-5.5">
             {selectedProject.dueDate || 'Thursday, 29 Jan'}
@@ -133,7 +133,7 @@ export default function ProjectDetailsDrawer() {
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-gray-500 mb-1">
             <BookOpen className="w-4 h-4 text-gray-400" />
-            <label className="text-[11px] font-bold uppercase tracking-wider block">Brief & Description</label>
+            <label className="text-[11px] font-bold capitalize tracking-wider block">Brief & Description</label>
           </div>
           <textarea
             value={selectedProject.description}
@@ -148,7 +148,7 @@ export default function ProjectDetailsDrawer() {
           <div className="flex items-center justify-between border-b border-gray-100 pb-1">
             <div className="flex items-center gap-1.5 text-gray-500">
               <CheckSquare className="w-4 h-4 text-gray-400" />
-              <label className="text-[11px] font-bold uppercase tracking-wider block">Project Deliverables</label>
+              <label className="text-[11px] font-bold capitalize tracking-wider block">Project Deliverables</label>
             </div>
             <span className="text-[10px] font-bold text-gray-400">
               {projectTasks.filter(t => t.completed).length}/{projectTasks.length} Done
@@ -209,7 +209,7 @@ export default function ProjectDetailsDrawer() {
         <div className="space-y-3">
           <div className="flex items-center gap-1.5 text-gray-500 border-b border-gray-100 pb-1 mb-1">
             <Users className="w-4 h-4 text-gray-400" />
-            <label className="text-[11px] font-bold uppercase tracking-wider block">Project Circle Members</label>
+            <label className="text-[11px] font-bold capitalize tracking-wider block">Project Circle Members</label>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">

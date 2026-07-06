@@ -65,6 +65,19 @@ export default function NotificationBell() {
     return new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   };
 
+  if (status === 'loading') {
+    return (
+      <div className="relative shrink-0">
+        <button
+          disabled
+          className="relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/30 border border-amber-200/40 opacity-60 cursor-not-allowed"
+        >
+          <Bell className="w-4 h-4 text-amber-500/50 animate-pulse" />
+        </button>
+      </div>
+    );
+  }
+
   if (status !== 'authenticated') return null;
 
   const unreadCount = notifications.length;
@@ -74,10 +87,10 @@ export default function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={() => setPanelOpen(v => !v)}
-        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200/80 hover:bg-indigo-50 hover:border-indigo-200 transition-all"
+        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/50 border border-amber-200/60 hover:bg-amber-100/70 hover:border-amber-300/60 hover:shadow-xs hover:shadow-amber-200/30 transition-all duration-300"
         aria-label={`Notifikasi${unreadCount > 0 ? `, ${unreadCount} belum dibaca` : ''}`}
       >
-        <Bell className="w-4 h-4 text-gray-500" />
+        <Bell className="w-4 h-4 text-amber-600 fill-amber-550/20" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}

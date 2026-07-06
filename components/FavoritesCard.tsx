@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Inbox, 
   FileEdit, 
@@ -9,44 +9,8 @@ import {
   XCircle
 } from 'lucide-react';
 import { getPermohonanStats } from '@/app/actions/penginput';
-import { SkeletonBox, SkeletonText } from '@/components/skeletons/SkeletonBase';
+import { FavoritesCardSkeleton } from '@/components/skeletons/SkeletonBase';
 
-/** Skeleton yang mereplikasi layout FavoritesCard: 5 tile grid */
-function FavoritesCardSkeleton() {
-  return (
-    <div className="w-full flex flex-col font-sans select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-[10px] border-b-2 border-gray-200/90 mb-5">
-        <SkeletonBox width="w-24" height="h-4" rounded="rounded-full" />
-        <div className="flex gap-0.5">
-          <div className="flex flex-col gap-0.5">
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-            <span className="w-1 h-1 rounded-full bg-gray-200" />
-          </div>
-        </div>
-      </div>
-
-      {/* 5-tile grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 justify-items-center sm:justify-items-stretch">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center">
-            {/* Tile square 80×80 */}
-            <div className="w-[80px] h-[80px] rounded-[20px] bg-gray-200 animate-pulse" />
-            {/* Title */}
-            <div className="mt-2.5 flex flex-col items-center gap-1.5">
-              <SkeletonText width="w-20" height="h-3" />
-              <SkeletonText width="w-14" height="h-2" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function FavoritesCard() {
   const [stats, setStats] = useState({ total: 0, revision: 0, sent: 0, completed: 0, rejected: 0 });
@@ -69,9 +33,7 @@ export default function FavoritesCard() {
     fetchStats();
   }, []);
 
-  if (isLoading) return <FavoritesCardSkeleton />;
-
-  const statItems = [
+  const statItems = useMemo(() => [
     {
       title: "Masuk",
       count: stats.total,
@@ -102,7 +64,9 @@ export default function FavoritesCard() {
       icon: XCircle,
       bg: "bg-[#ff5ea6]"
     }
-  ];
+  ], [stats]);
+
+  if (isLoading) return <FavoritesCardSkeleton />;
 
   return (
     <div id="favorites-section" className="w-full flex flex-col font-sans select-none">

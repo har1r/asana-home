@@ -92,6 +92,8 @@ model Permohonan {
   noWhatsapp       String           @map("nomorWhatsapp") // wajib, format 08xxx atau 628xxx
   alamat           String
   nomorPelayanan   String?
+  tanggalNoPelayanan DateTime?        @default(now())
+  tanggalPenyelesaian DateTime?
 
   // Data Lama
   namaPemilikLama      String?

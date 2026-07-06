@@ -151,7 +151,7 @@ export default function LoginPage() {
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-700 uppercase tracking-widest pl-1">Email Karyawan</label>
+                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Email Karyawan</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -167,7 +167,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-700 uppercase tracking-widest pl-1">Password</label>
+                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -201,7 +201,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/20 text-center">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-500 capitalize tracking-wider">
               Sistem Pengelolaan Permohonan PBB Sipetra © 2026
             </span>
           </div>
@@ -212,7 +212,7 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-indigo-700" />
-              <h3 className="text-md font-bold text-gray-900 tracking-tight uppercase">Quick Login (Akun Uji Coba)</h3>
+              <h3 className="text-md font-bold text-gray-900 tracking-tight capitalize">Quick Login (Akun Uji Coba)</h3>
             </div>
             <p className="text-xs text-gray-600 font-semibold mb-6">Pilih salah satu peran di bawah ini untuk mensimulasikan login secara otomatis tanpa mengetik kata sandi.</p>
 
@@ -226,7 +226,7 @@ export default function LoginPage() {
                 >
                   <div className="flex items-center justify-between w-full mb-1.5">
                     <span className="text-xs font-bold text-gray-800 group-hover:text-indigo-800 transition-colors">{acc.role}</span>
-                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${acc.color}`}>
+                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full capitalize tracking-wider ${acc.color}`}>
                       {acc.badge}
                     </span>
                   </div>
@@ -238,7 +238,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 p-4 bg-[#eef2f6]/60 border border-[#e2e8f0]/40 rounded-2xl space-y-1.5 select-none">
-            <h4 className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">Catatan Uji Coba:</h4>
+            <h4 className="text-[10px] font-bold text-indigo-700 capitalize tracking-widest">Catatan Uji Coba:</h4>
             <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
               Semua preset akun menggunakan kata sandi default <strong>password123</strong>. Peran ini sesuai dengan skema Prisma UserRole di PRD v2.9.
             </p>
