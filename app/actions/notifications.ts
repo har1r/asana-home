@@ -14,7 +14,7 @@ export async function getUnreadNotifications() {
   try {
     const notifications = await prisma.inAppNotification.findMany({
       where: {
-        userId: (session.user as any).id,
+        userId: session.user.id,
         isRead: false,
       },
       orderBy: { createdAt: 'desc' },
@@ -30,17 +30,21 @@ export async function getUnreadNotifications() {
 
 /**
  * Tandai notifikasi sebagai sudah dibaca.
+ * Disertakan filter userId untuk mencegah IDOR (menandai notifikasi user lain).
  */
 export async function markNotificationAsRead(notificationId: string) {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false };
 
   try {
-    await prisma.inAppNotification.update({
-      where: { id: notificationId },
+    const res = await prisma.inAppNotification.updateMany({
+      where: { 
+        id: notificationId,
+        userId: session.user.id
+      },
       data: { isRead: true },
     });
-    return { success: true };
+    return { success: res.count > 0 };
   } catch (error) {
     console.error('[NOTIF-MARK-READ-ERR]', error);
     return { success: false };
@@ -57,7 +61,7 @@ export async function markAllNotificationsAsRead() {
   try {
     await prisma.inAppNotification.updateMany({
       where: {
-        userId: (session.user as any).id,
+        userId: session.user.id,
         isRead: false,
       },
       data: { isRead: true },

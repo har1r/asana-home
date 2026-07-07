@@ -1,9 +1,19 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Menu, Search, X } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import NotificationBell from '@/components/NotificationBell';
+import { useDebounce } from '@/lib/useDebounce';
+
+// Static lookup — avoids re-creating a switch function on every render
+const TAB_TITLES: Record<string, string> = {
+  beranda: 'Beranda',
+  'my-tasks': 'My Tasks Board',
+  inbox: 'Workspace Notification Feed',
+  portfolios: 'Team Portfolios Grid',
+  help: 'Help & Tutorial Guide',
+};
 
 export default function Header() {
   const {
@@ -15,22 +25,23 @@ export default function Header() {
     setIsPersonalProfileDrawerOpen
   } = useDashboard();
 
-  const getHeaderTitle = () => {
-    switch (activeTab) {
-      case 'beranda':
-        return 'Beranda';
-      case 'my-tasks':
-        return 'My Tasks Board';
-      case 'inbox':
-        return 'Workspace Notification Feed';
-      case 'portfolios':
-        return 'Team Portfolios Grid';
-      case 'help':
-        return 'Help & Tutorial Guide';
-      default:
-        return '';
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debouncedSearch = useDebounce(localSearch, 300);
+
+  // Sync debounced search value to global state
+  useEffect(() => {
+    setSearchQuery(debouncedSearch);
+  }, [debouncedSearch, setSearchQuery]);
+
+  // Sync local search when global searchQuery is modified from outside (e.g. clear filters)
+  useEffect(() => {
+    if (searchQuery !== localSearch) {
+      setLocalSearch(searchQuery);
     }
-  };
+  }, [searchQuery]);
+
+  // Only recomputes when activeTab actually changes
+  const headerTitle = useMemo(() => TAB_TITLES[activeTab] ?? '', [activeTab]);
 
   return (
     <header id="top-nav-bar" className="bg-[#f3f6f9] px-6 py-4 flex items-center justify-between shrink-0 select-none sticky top-0 z-30">
@@ -52,13 +63,13 @@ export default function Header() {
             id="search-input"
             type="text"
             placeholder="Search projects or tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200/80 hover:border-slate-300 focus:outline-none focus:border-indigo-500 focus:bg-white text-xs font-medium rounded-full pl-9 pr-4 py-2 transition-all text-gray-700"
           />
-          {searchQuery && (
+          {localSearch && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => setLocalSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-3.5 h-3.5" />

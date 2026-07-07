@@ -15,7 +15,7 @@ import { revalidatePath } from "next/cache";
  */
 export async function getMonitoringPermohonan() {
   const session = await getServerSession(authOptions);
-  if (!session || !["PEMANTAU", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PEMANTAU", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -63,7 +63,7 @@ export async function getMonitoringPermohonan() {
  */
 export async function completePermohonan(permohonanId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PEMANTAU") {
+  if (!session || session.user.role !== "PEMANTAU") {
     throw new Error("Unauthorized");
   }
 
@@ -141,7 +141,7 @@ export async function completePermohonan(permohonanId: string) {
  */
 export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PEMANTAU") {
+  if (!session || session.user.role !== "PEMANTAU") {
     throw new Error("Unauthorized");
   }
 
@@ -197,22 +197,20 @@ export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
         select: { id: true }
       });
 
-      await Promise.all(
-        activeSupervisors.map((sup) =>
-          tx.inAppNotification.create({
-            data: {
-              userId: sup.id,
-              judul: notifTitle,
-              pesan: notifPesan,
-              metadata: {
-                koreksiId: request.id,
-                permohonanId,
-                bundleId: permohonan.bundleId
-              }
+      if (activeSupervisors.length > 0) {
+        await tx.inAppNotification.createMany({
+          data: activeSupervisors.map((sup) => ({
+            userId: sup.id,
+            judul: notifTitle,
+            pesan: notifPesan,
+            metadata: {
+              koreksiId: request.id,
+              permohonanId,
+              bundleId: permohonan.bundleId
             }
-          })
-        )
-      );
+          }))
+        });
+      }
 
       return { success: true, status: "PENDING_APPROVAL", request };
     });

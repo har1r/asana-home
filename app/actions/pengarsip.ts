@@ -16,7 +16,7 @@ import path from "path";
  */
 export async function getDigitizationBundles() {
   const session = await getServerSession(authOptions);
-  if (!session || !["PENGARSIP", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -66,7 +66,7 @@ export async function getDigitizationBundles() {
  */
 export async function getBundleDetails(bundleId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !["PENGARSIP", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -105,7 +105,7 @@ export async function getBundleDetails(bundleId: string) {
  */
 export async function uploadArsipDigital(formData: FormData) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGARSIP") {
+  if (!session || session.user.role !== "PENGARSIP") {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -154,6 +154,19 @@ export async function uploadArsipDigital(formData: FormData) {
   }
 
   try {
+    // Ensure directory exists — disk check outside of transaction
+    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Write file locally — disk write outside of transaction
+    const fileName = `arsip_${permohonanId}_v${Date.now()}.pdf`;
+    const filePath = path.join(uploadsDir, fileName);
+    await fs.promises.writeFile(filePath, buffer);
+    
+    const urlBlob = `/uploads/${fileName}`;
+
     return await prisma.$transaction(async (tx) => {
       // Fetch the permohonan and its bundle
       const permohonan = await tx.permohonan.findUnique({
@@ -175,19 +188,6 @@ export async function uploadArsipDigital(formData: FormData) {
       if (pendingKoreksi) {
         throw new Error("Permohonan dibekukan karena sedang menunggu persetujuan Supervisor.");
       }
-
-      // Ensure directory exists
-      const uploadsDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      // Write file locally to simulate Vercel Blob
-      const fileName = `arsip_${permohonanId}_v${Date.now()}.pdf`;
-      const filePath = path.join(uploadsDir, fileName);
-      await fs.promises.writeFile(filePath, buffer);
-      
-      const urlBlob = `/uploads/${fileName}`;
 
       // Find the last active archive version
       const lastActive = await tx.arsipDigital.findFirst({
@@ -291,7 +291,7 @@ export async function uploadArsipDigital(formData: FormData) {
  */
 export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGARSIP") {
+  if (!session || session.user.role !== "PENGARSIP") {
     throw new Error("Unauthorized");
   }
 
@@ -347,22 +347,20 @@ export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: s
         select: { id: true }
       });
 
-      await Promise.all(
-        activeSupervisors.map((sup) =>
-          tx.inAppNotification.create({
-            data: {
-              userId: sup.id,
-              judul: notifTitle,
-              pesan: notifPesan,
-              metadata: {
-                koreksiId: request.id,
-                permohonanId,
-                bundleId: permohonan.bundleId
-              }
+      if (activeSupervisors.length > 0) {
+        await tx.inAppNotification.createMany({
+          data: activeSupervisors.map((sup) => ({
+            userId: sup.id,
+            judul: notifTitle,
+            pesan: notifPesan,
+            metadata: {
+              koreksiId: request.id,
+              permohonanId,
+              bundleId: permohonan.bundleId
             }
-          })
-        )
-      );
+          }))
+        });
+      }
 
       return { success: true, status: "PENDING_APPROVAL", request };
     });

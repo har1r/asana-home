@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getRevisionPermohonans } from '@/app/actions/penginput';
 import { TasksRevisionCardSkeleton } from '@/components/skeletons/SkeletonBase';
+import { toTitleCase, getInitials, getAvatarBg, formatDate } from '@/lib/displayHelpers';
 
 const CATEGORY_STYLES: Record<string, string> = {
   'MUTASI_SEBAGIAN': 'bg-indigo-100 text-indigo-950 border-indigo-200/50',
@@ -37,35 +38,6 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
     }
     fetchRevisions();
   }, []);
-
-// ── Pure module-level helpers (no closure captures) ─────────────────────────
-const toTitleCase = (str: string) =>
-  str
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
-
-const getInitials = (name: string) => {
-  if (!name) return '?';
-  const parts = name.split(' ');
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : parts[0][0].toUpperCase();
-};
-
-const getAvatarBg = (name: string) => {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
-  return colors[hash % colors.length];
-};
-
-const formatDate = (dateString: string | Date) => {
-  const date = new Date(dateString);
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-};
-// ─────────────────────────────────────────────────────────────────────────────
 
   // Memoized filter – only recomputes when revisions list or searchQuery change
   const filteredRevisions = useMemo(() =>

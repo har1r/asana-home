@@ -14,7 +14,7 @@ import path from "path";
  */
 export async function getEligibleBundles() {
   const session = await getServerSession(authOptions);
-  if (!session || !["PENGIRIM", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PENGIRIM", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -60,7 +60,7 @@ export async function getEligibleBundles() {
  */
 export async function getManifests() {
   const session = await getServerSession(authOptions);
-  if (!session || !["PENGIRIM", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PENGIRIM", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -89,7 +89,7 @@ export async function getManifests() {
  */
 export async function getManifestDetails(manifestId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !["PENGIRIM", "SUPERVISOR"].includes((session.user as any).role)) {
+  if (!session || !["PENGIRIM", "SUPERVISOR"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -133,7 +133,7 @@ export async function getManifestDetails(manifestId: string) {
  */
 export async function createManifest() {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -206,7 +206,7 @@ export async function createManifest() {
  */
 export async function addBundleToManifest(manifestId: string, bundleId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -282,7 +282,7 @@ export async function addBundleToManifest(manifestId: string, bundleId: string) 
  */
 export async function removeBundleFromManifest(manifestId: string, bundleId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -343,7 +343,7 @@ export async function removeBundleFromManifest(manifestId: string, bundleId: str
  */
 export async function lockManifest(manifestId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -397,7 +397,7 @@ export async function lockManifest(manifestId: string) {
  */
 export async function revisiManifest(manifestId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -446,7 +446,7 @@ export async function revisiManifest(manifestId: string) {
  */
 export async function uploadBuktiTandaTerima(manifestId: string, formData: FormData) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     return { success: false, error: "Unauthorized" };
   }
 
@@ -551,18 +551,16 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
       const notifTitle = "Manifest Baru Terkirim";
       const notifPesan = `Manifest ${manifest.nomorManifest} telah dikirim dan bukti tanda terima telah diunggah. Siap dipantau.`;
 
-      await Promise.all(
-        activePemantauList.map((pemantau) =>
-          tx.inAppNotification.create({
-            data: {
-              userId: pemantau.id,
-              judul: notifTitle,
-              pesan: notifPesan,
-              metadata: { manifestId }
-            }
-          })
-        )
-      );
+      if (activePemantauList.length > 0) {
+        await tx.inAppNotification.createMany({
+          data: activePemantauList.map((pemantau) => ({
+            userId: pemantau.id,
+            judul: notifTitle,
+            pesan: notifPesan,
+            metadata: { manifestId }
+          }))
+        });
+      }
 
       // 4. Send WhatsApp notifications to taxpayers of all permohonan in manifest
       // Collect all permohonan
@@ -607,7 +605,7 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
  */
 export async function laporkanBundleHilang(bundleId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -665,7 +663,7 @@ export async function laporkanBundleHilang(bundleId: string) {
  */
 export async function ajukanKembalikanKePengarsip(permohonanId: string, alasan: string) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "PENGIRIM") {
+  if (!session || session.user.role !== "PENGIRIM") {
     throw new Error("Unauthorized");
   }
 
@@ -727,22 +725,20 @@ export async function ajukanKembalikanKePengarsip(permohonanId: string, alasan: 
         select: { id: true }
       });
 
-      await Promise.all(
-        activeSupervisors.map((sup) =>
-          tx.inAppNotification.create({
-            data: {
-              userId: sup.id,
-              judul: notifTitle,
-              pesan: notifPesan,
-              metadata: {
-                koreksiId: request.id,
-                permohonanId,
-                bundleId: permohonan.bundleId
-              }
+      if (activeSupervisors.length > 0) {
+        await tx.inAppNotification.createMany({
+          data: activeSupervisors.map((sup) => ({
+            userId: sup.id,
+            judul: notifTitle,
+            pesan: notifPesan,
+            metadata: {
+              koreksiId: request.id,
+              permohonanId,
+              bundleId: permohonan.bundleId
             }
-          })
-        )
-      );
+          }))
+        });
+      }
 
       return { success: true, status: "PENDING_APPROVAL", request };
     });

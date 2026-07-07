@@ -287,13 +287,31 @@ export default function PenginputWorkspace() {
         try {
           const res = await resubmitPermohonan(id);
           if (res.success) {
-            alert('Resubmit berhasil! Status dialihkan kembali ke diajukan (SUBMITTED) & notifikasi terkirim.');
+            showConfirm({
+              title: 'Resubmit Berhasil',
+              message: 'Status dialihkan kembali ke diajukan (SUBMITTED) & notifikasi terkirim.',
+              onConfirm: () => {},
+              confirmText: 'Selesai',
+              cancelText: 'Tutup'
+            });
             fetchData();
           } else {
-            alert(res.error || 'Gagal melakukan resubmit.');
+            showConfirm({
+              title: 'Resubmit Gagal',
+              message: res.error || 'Gagal melakukan resubmit.',
+              onConfirm: () => {},
+              confirmText: 'Mengerti',
+              cancelText: 'Tutup'
+            });
           }
         } catch (err: any) {
-          alert(err.message || 'Terjadi kesalahan.');
+          showConfirm({
+            title: 'Terjadi Kesalahan',
+            message: err.message || 'Terjadi kesalahan sistem saat melakukan resubmit.',
+            onConfirm: () => {},
+            confirmText: 'Mengerti',
+            cancelText: 'Tutup'
+          });
         } finally {
           setLoading(false);
         }

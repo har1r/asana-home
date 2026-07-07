@@ -32,6 +32,12 @@ export async function createInAppNotification(
 
 /**
  * Creates In-App notification records for all active users of a specific role.
+ *
+ * Uses createMany() for a single bulk INSERT instead of N individual
+ * create() calls, reducing database round-trips from O(N) to O(1).
+ *
+ * Note: createMany does not return the created records — this is intentional
+ * as callers only need to know the operation succeeded.
  */
 export async function notifyAllUsersOfRole(
   role: UserRole,
@@ -41,28 +47,27 @@ export async function notifyAllUsersOfRole(
 ) {
   try {
     const activeUsers = await prisma.user.findMany({
-      where: { 
-        role, 
-        isActive: true 
+      where: {
+        role,
+        isActive: true
       },
       select: { id: true }
     });
 
-    const notifications = await Promise.all(
-      activeUsers.map((u) =>
-        prisma.inAppNotification.create({
-          data: {
-            userId: u.id,
-            judul,
-            pesan,
-            metadata: metadata || null,
-          },
-        })
-      )
-    );
-    
+    if (activeUsers.length === 0) return [];
+
+    // Single bulk INSERT — one round-trip regardless of user count
+    await prisma.inAppNotification.createMany({
+      data: activeUsers.map((u) => ({
+        userId: u.id,
+        judul,
+        pesan,
+        metadata: metadata || null,
+      })),
+    });
+
     console.log(`[NOTIF-INAPP] Broadcasted notif to ${activeUsers.length} active users of role ${role}`);
-    return notifications;
+    return activeUsers; // return IDs for audit purposes if needed
   } catch (error) {
     console.error(`[NOTIF-INAPP-ERR] Gagal mengirim broadcast ke role ${role}:`, error);
     return [];

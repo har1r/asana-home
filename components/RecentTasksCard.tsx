@@ -12,36 +12,19 @@ import {
 import { useDashboard } from '@/context/DashboardContext';
 import { getLatestPermohonans } from '@/app/actions/penginput';
 import { RecentTasksCardSkeleton } from '@/components/skeletons/SkeletonBase';
+import { toTitleCase, getInitials, getAvatarBg, formatDate } from '@/lib/displayHelpers';
 
 
-// ── Pure module-level helpers (no closure captures) ─────────────────────────
-const toTitleCase = (str: string) =>
-  str
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
-
-const getInitials = (name: string) => {
-  if (!name) return '?';
-  const parts = name.split(' ');
-  return parts.length >= 2
-    ? (parts[0][0] + parts[1][0]).toUpperCase()
-    : parts[0][0].toUpperCase();
+// Warna & ikon untuk setiap jenis permohonan
+// Module-level constant: tidak bergantung pada state, tidak perlu di dalam komponen
+const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
+  'MUTASI_SEBAGIAN':    { icon: FolderEdit, bg: 'bg-indigo-500' },
+  'MUTASI_HABIS_UPDATE': { icon: RefreshCw,  bg: 'bg-emerald-500' },
+  'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
+  'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
+  'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
+  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
 };
-
-const getAvatarBg = (name: string) => {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const colors = ['bg-[#ffb000]', 'bg-[#2adca2]', 'bg-[#ff5ea6]', 'bg-[#4e5bf2]', 'bg-[#8b5cf6]', 'bg-[#64748b]'];
-  return colors[hash % colors.length];
-};
-
-const formatDate = (dateString: string | Date) => {
-  const date = new Date(dateString);
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-};
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void }) {
   const { searchQuery } = useDashboard();
@@ -64,16 +47,6 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
     }
     fetchLatest();
   }, []);
-
-// Warna & ikon untuk setiap jenis permohonan
-const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
-  'MUTASI_SEBAGIAN':    { icon: FolderEdit, bg: 'bg-indigo-500' },
-  'MUTASI_HABIS_UPDATE': { icon: RefreshCw,  bg: 'bg-emerald-500' },
-  'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
-  'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
-  'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
-  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
-};
 
   // Memoized filter – only recomputes when tasks list or searchQuery change
   const filteredTasks = useMemo(() =>

@@ -12,7 +12,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function getSubmittedPermohonan() {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'PENELITI') {
+  if (!session || session.user.role !== 'PENELITI') {
     throw new Error('Unauthorized');
   }
 
@@ -53,7 +53,7 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const permohonan = await tx.permohonan.findUnique({
         where: { id: permohonanId },
         include: { bundle: true }
@@ -110,11 +110,6 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
       const notifPesan = `Permohonan Anda (${permohonan.nomorPermohonan}) dikembalikan untuk revisi. Catatan Peneliti: "${catatan}"`;
       await createInAppNotification(permohonan.penginputId, 'Permohonan Perlu Revisi', notifPesan, { permohonanId });
 
-      // Send WhatsApp Notification to the taxpayer
-      const readableJenis = permohonan.jenisPermohonan.replace(/_/g, ' ');
-      const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${permohonan.nomorPermohonan} memerlukan kelengkapan berkas. Harap segera hubungi petugas untuk informasi lebih lanjut.`;
-      await sendWhatsApp(permohonan.noWhatsapp, whatsappMessage);
-
       // Create Audit Log
       await tx.auditLog.create({
         data: {
@@ -128,8 +123,20 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
         }
       });
 
-      return { success: true, permohonan: updatedPermohonan };
+      return {
+        updatedPermohonan,
+        noWhatsapp: permohonan.noWhatsapp,
+        nomorPermohonan: permohonan.nomorPermohonan,
+        jenisPermohonan: permohonan.jenisPermohonan
+      };
     });
+
+    // Kirim notifikasi WhatsApp ke Wajib Pajak di luar transaction scope
+    const readableJenis = result.jenisPermohonan.replace(/_/g, ' ');
+    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${result.nomorPermohonan} memerlukan kelengkapan berkas. Harap segera hubungi petugas untuk informasi lebih lanjut.`;
+    await sendWhatsApp(result.noWhatsapp, whatsappMessage);
+
+    return { success: true, permohonan: result.updatedPermohonan };
   } catch (error: any) {
     console.error('[ACTION-MINTA-REVISI-ERR]', error);
     return { success: false, error: error.message || 'Gagal mengirim permohonan ke revisi.' };
@@ -145,36 +152,39 @@ export async function createBundle() {
     throw new Error('Unauthorized');
   }
 
-  let nomorBundle = '';
-  let isUnique = false;
-  let attempts = 0;
   const currentYear = new Date().getFullYear();
   const suffix = `/UPT.PD.WIL.IV/${currentYear}`;
 
   try {
-    // Generate unique bundle number starting from 1
-    while (!isUnique && attempts < 10) {
-      const existingBundles = await prisma.bundle.findMany({
-        where: {
-          nomorBundle: {
-            endsWith: suffix
-          }
-        },
-        select: { nomorBundle: true }
-      });
+    // Step 1: Fetch all existing bundles for this year ONCE to find the
+    // current maximum sequence number. This single query replaces the
+    // repeated findMany that previously ran on every loop iteration.
+    const existingBundles = await prisma.bundle.findMany({
+      where: {
+        nomorBundle: { endsWith: suffix }
+      },
+      select: { nomorBundle: true }
+    });
 
-      let maxSequence = 0;
-      for (const b of existingBundles) {
-        const parts = b.nomorBundle.split('/');
-        if (parts.length === 4 && parts[0] === '973' && parts[2] === 'UPT.PD.WIL.IV') {
-          const seq = parseInt(parts[1], 10);
-          if (!isNaN(seq) && seq > maxSequence) {
-            maxSequence = seq;
-          }
+    let maxSequence = 0;
+    for (const b of existingBundles) {
+      const parts = b.nomorBundle.split('/');
+      if (parts.length === 4 && parts[0] === '973' && parts[2] === 'UPT.PD.WIL.IV') {
+        const seq = parseInt(parts[1], 10);
+        if (!isNaN(seq) && seq > maxSequence) {
+          maxSequence = seq;
         }
       }
+    }
 
-      // Next sequence number starts from 1, adding attempt count offset on retry
+    // Step 2: Loop with lightweight findUnique only (no findMany inside loop)
+    // to handle the rare race-condition where another concurrent request
+    // already claimed the next sequence number.
+    let nomorBundle = '';
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
       const nextSequence = maxSequence + 1 + attempts;
       nomorBundle = `973/${nextSequence}/UPT.PD.WIL.IV/${currentYear}`;
 
@@ -182,7 +192,7 @@ export async function createBundle() {
         where: { nomorBundle },
         select: { id: true }
       });
-      
+
       if (!existing) {
         isUnique = true;
       } else {
@@ -209,6 +219,7 @@ export async function createBundle() {
     return { success: false, error: error.message || 'Gagal membuat bundle baru.' };
   }
 }
+
 
 /**
  * Action: Retrieve all active bundles (DRAFT and LOCKED)

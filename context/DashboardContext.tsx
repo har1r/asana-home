@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
+import { isValidTab } from '@/lib/constants';
+import { useSyncToLocalStorage } from '@/lib/useLocalStorage';
 import { Task, Project, Team, TeamMessage, TeamMember, FavoriteTile } from '@/types';
 import {
   INITIAL_MEMBERS,
@@ -205,10 +207,17 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
       // Prioritas: URL param → localStorage → default 'beranda'
       const urlTab = new URLSearchParams(window.location.search).get('tab');
       const localActiveTab = localStorage.getItem('architax_active_tab');
-      const resolvedTab = urlTab || localActiveTab || 'beranda';
+      
+      let resolvedTab = 'beranda';
+      if (isValidTab(urlTab)) {
+        resolvedTab = urlTab;
+      } else if (isValidTab(localActiveTab)) {
+        resolvedTab = localActiveTab;
+      }
+      
       setActiveTabState(resolvedTab);
       // Pastikan URL selalu mencerminkan tab aktif
-      if (!urlTab) {
+      if (!urlTab || !isValidTab(urlTab)) {
         const params = new URLSearchParams(window.location.search);
         params.set('tab', resolvedTab);
         router.replace(`?${params.toString()}`, { scroll: false });
@@ -223,47 +232,20 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   useEffect(() => {
     if (!isMounted.current) return;
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && tabFromUrl !== activeTab) {
+    if (tabFromUrl && isValidTab(tabFromUrl) && tabFromUrl !== activeTab) {
       setActiveTabState(tabFromUrl);
     }
   }, [searchParams]);
 
-  // Save to localStorage on change (only after initial mount load)
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_active_tab', activeTab);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_tasks', JSON.stringify(tasks));
-    }
-  }, [tasks]);
-
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_projects', JSON.stringify(projects));
-    }
-  }, [projects]);
-
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_favorites', JSON.stringify(favorites));
-    }
-  }, [favorites]);
-
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_teams', JSON.stringify(teams));
-    }
-  }, [teams]);
-
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem('architax_messages', JSON.stringify(messages));
-    }
-  }, [messages]);
+  // Sync all persisted state to localStorage after initial hydration.
+  // The custom hook skips the write until `isMounted.current` is true,
+  // preventing accidental overwrites of data just loaded from storage.
+  useSyncToLocalStorage('architax_active_tab', activeTab, isMounted.current);
+  useSyncToLocalStorage('architax_tasks', tasks, isMounted.current);
+  useSyncToLocalStorage('architax_projects', projects, isMounted.current);
+  useSyncToLocalStorage('architax_favorites', favorites, isMounted.current);
+  useSyncToLocalStorage('architax_teams', teams, isMounted.current);
+  useSyncToLocalStorage('architax_messages', messages, isMounted.current);
 
   // Actions
   const handleAddTask = useCallback((newTaskParams: Omit<Task, 'id'>) => {
@@ -334,9 +316,15 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     if (proj) {
       setSelectedProject(proj);
     } else {
-      alert(`Selected favorite "${title}" details. You can view tasks linked to this tag in the tasks list.`);
+      showConfirm({
+        title: 'Informasi Tag Favorit',
+        message: `Selected favorite "${title}" details. You can view tasks linked to this tag in the tasks list.`,
+        onConfirm: () => {},
+        confirmText: 'Mengerti',
+        cancelText: 'Tutup'
+      });
     }
-  }, [projects]);
+  }, [projects, showConfirm]);
 
   const handleSendMessage = useCallback((teamId: string, messageText: string) => {
     const newMsg: TeamMessage = {

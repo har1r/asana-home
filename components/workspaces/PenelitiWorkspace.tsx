@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Boxes, FileText, Lock, Printer,
   ArrowRight, Trash, Plus, Search, AlertCircle,
   CheckCircle, Clock, X, AlertTriangle, Star,
-  FileSpreadsheet
+  FileSpreadsheet, Filter, Check, ChevronLeft, ChevronRight,
+  User, Hash
 } from 'lucide-react';
 import {
   getSubmittedPermohonan,
@@ -91,6 +92,25 @@ const formatNop = (nop: string) => {
   return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
 };
 
+const getAbbreviatedJenis = (jenis: string) => {
+  switch (jenis) {
+    case 'OBJEK_PAJAK_BARU':
+      return 'OPB';
+    case 'MUTASI_SEBAGIAN':
+      return 'MS';
+    case 'MUTASI_HABIS_REGULER':
+      return 'MHR';
+    case 'MUTASI_HABIS_UPDATE':
+      return 'MHU';
+    case 'PEMBETULAN':
+      return 'PBT';
+    case 'PENGAKTIFAN':
+      return 'AKT';
+    default:
+      return jenis;
+  }
+};
+
 export default function PenelitiWorkspace() {
   const { showConfirm } = useDashboard();
   // Lists
@@ -108,8 +128,10 @@ export default function PenelitiWorkspace() {
   // Search & Pagination States for Submitted Queue
   const [searchSubmittedQuery, setSearchSubmittedQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [currentSubmittedPage, setCurrentSubmittedPage] = useState(1);
-  const itemsPerSubmittedPage = 5;
+  const itemsPerSubmittedPage = 10;
 
   // Modals / Dialogs
   const [revisionTarget, setRevisionTarget] = useState<any | null>(null);
@@ -120,10 +142,40 @@ export default function PenelitiWorkspace() {
   // Local verification checks for frozen state
   const [pendingKoreksiMap, setPendingKoreksiMap] = useState<Record<string, boolean>>({});
 
-  // Reset pagination when search changes
+  // Reset pagination when search or filters change
   useEffect(() => {
     setCurrentSubmittedPage(1);
-  }, [searchSubmittedQuery]);
+  }, [searchSubmittedQuery, filterJenisLayanan]);
+
+  // Search, Filter & Pagination States for Bundles Queue
+  const [searchBundleQuery, setSearchBundleQuery] = useState('');
+  const [isBundleSearchFocused, setIsBundleSearchFocused] = useState(false);
+  const [currentBundlePage, setCurrentBundlePage] = useState(1);
+  const itemsPerBundlePage = 8; // 8 bundle per halaman (2 baris x 4 kolom grid)
+
+  // Reset pagination when search bundle changes
+  useEffect(() => {
+    setCurrentBundlePage(1);
+  }, [searchBundleQuery]);
+
+  // Filter Bundles Client-side
+  const filteredBundlesList = useMemo(() => {
+    return bundlesList.filter((b) => {
+      const matchesSearch = b.nomorBundle.toLowerCase().includes(searchBundleQuery.toLowerCase()) ||
+        (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(searchBundleQuery.toLowerCase()));
+      return matchesSearch;
+    });
+  }, [bundlesList, searchBundleQuery]);
+
+  // Pagination computed variables for Bundles
+  const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
+  const activeBundlePage = currentBundlePage > totalBundlePages ? 1 : currentBundlePage;
+  const paginatedBundlesList = useMemo(() => {
+    return filteredBundlesList.slice(
+      (activeBundlePage - 1) * itemsPerBundlePage,
+      activeBundlePage * itemsPerBundlePage
+    );
+  }, [filteredBundlesList, activeBundlePage, itemsPerBundlePage]);
 
   // Fetch initial data
   const fetchData = async () => {
@@ -245,9 +297,21 @@ export default function PenelitiWorkspace() {
 
       if (res.success) {
         if (res.status === 'REMOVED_IMMEDIATELY') {
-          alert('Permohonan berhasil dikeluarkan dari bundle draf!');
+          showConfirm({
+            title: 'Berhasil Dikeluarkan',
+            message: 'Permohonan berhasil dikeluarkan dari bundle draf!',
+            onConfirm: () => { },
+            confirmText: 'Selesai',
+            cancelText: 'Tutup'
+          });
         } else if (res.status === 'PENDING_APPROVAL') {
-          alert('Pengajuan koreksi berhasil dikirim! Menunggu keputusan persetujuan dari Supervisor.');
+          showConfirm({
+            title: 'Koreksi Diajukan',
+            message: 'Pengajuan koreksi berhasil dikirim! Menunggu keputusan persetujuan dari Supervisor.',
+            onConfirm: () => { },
+            confirmText: 'Mengerti',
+            cancelText: 'Tutup'
+          });
         }
         setExtractionTarget(null);
         setExtractionNotes('');
@@ -272,7 +336,13 @@ export default function PenelitiWorkspace() {
     try {
       const res: any = await mintaRevisi(revisionTarget.id, revisionNotes);
       if (res.success) {
-        alert(`Status permohonan ${revisionTarget.nomorPermohonan} berhasil dialihkan ke REVISION.`);
+        showConfirm({
+          title: 'Permintaan Revisi Terkirim',
+          message: `Status permohonan ${revisionTarget.nomorPermohonan} berhasil dialihkan ke REVISION. Catatan pengembalian revisi telah dikirimkan ke Penginput dan Wajib Pajak terkait.`,
+          onConfirm: () => { },
+          confirmText: 'Selesai',
+          cancelText: 'Tutup'
+        });
         setRevisionTarget(null);
         setRevisionNotes('');
         await fetchData();
@@ -323,7 +393,9 @@ export default function PenelitiWorkspace() {
       item.nomorPermohonan.toLowerCase().includes(searchSubmittedQuery.toLowerCase()) ||
       (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(searchSubmittedQuery.toLowerCase()));
 
-    return matchesSearch;
+    const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
+
+    return matchesSearch && matchesJenis;
   });
 
   // Pagination computed variables
@@ -343,33 +415,48 @@ export default function PenelitiWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-6 ${listLoading ? 'hidden' : ''}`}>
 
-        {/* Header with View switcher toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 tracking-tight">
-              Workspace Petugas Peneliti
-            </h2>
+        {/* Header with View switcher toggle — aligned with Penginput style */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] p-5 rounded-2xl shadow-md shadow-indigo-200/20 transition-all duration-300">
+          <div className="flex items-center gap-2.5 text-[11px] font-bold tracking-wider font-display select-none">
+            <div className="flex items-center gap-1.5 text-[#2c333f]/65 hover:text-[#2c333f] transition-colors">
+              <span className="capitalize">my tasks</span>
+            </div>
+            <span className="text-[#2c333f]/40 font-medium select-none">&gt;</span>
+            <div className="flex items-center gap-1.5 bg-white/40 border border-white/50 px-2.5 py-1 rounded-lg shadow-3xs animate-fadeIn">
+              <span className="font-extrabold capitalize text-[#2c333f]">
+                {viewMode === 'bundle' ? 'daftar bundle' : viewMode === 'list' ? 'daftar antrean' : 'kunci & cetak'}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <div className="bg-slate-100 p-1 rounded-xl border-transparent/80 flex items-center">
+            <div className="bg-black/10 p-1 rounded-xl border border-black/5 flex items-center gap-1 shadow-3xs">
               <button
                 onClick={() => setViewMode('bundle')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'bundle' ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'bundle'
+                  ? 'bg-white text-[#2c333f] shadow-xs'
+                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
+                  }`}
               >
                 <Boxes className="w-3.5 h-3.5" />
                 <span>Daftar bundle</span>
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'list'
+                  ? 'bg-white text-[#2c333f] shadow-xs'
+                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
+                  }`}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 <span>Daftar Antrean</span>
               </button>
               <button
                 onClick={() => setViewMode('print')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'print' ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'print'
+                  ? 'bg-white text-[#2c333f] shadow-xs'
+                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
+                  }`}
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Kunci & Cetak</span>
@@ -420,10 +507,10 @@ export default function PenelitiWorkspace() {
               )}
             </div>
 
-            {/* Action Row: Search */}
+            {/* Action Row: Search & Filter — styled identical to Penginput */}
             <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-black text-[11px] capitalize tracking-wider text-slate-700">
+                <span className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display">
                   Antrean Permohonan Masuk
                 </span>
               </div>
@@ -446,38 +533,104 @@ export default function PenelitiWorkspace() {
                     </button>
                   )}
                 </div>
+
+                {/* Filter Jenis Layanan (Popover Icon) — identical to Penginput */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    className={`p-2 rounded-lg border border-transparent transition-all duration-200 flex items-center justify-center cursor-pointer ${filterJenisLayanan !== 'ALL'
+                      ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] font-bold scale-105 shadow-3xs'
+                      : 'bg-transparent hover:bg-slate-200/50 text-slate-500'
+                      }`}
+                    title="Filter Jenis Layanan"
+                  >
+                    <Filter className="w-4 h-4" />
+                    {filterJenisLayanan !== 'ALL' && (
+                      <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
+                    )}
+                  </button>
+
+                  {isFilterDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsFilterDropdownOpen(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-60 bg-white border border-slate-100 rounded-xl shadow-lg py-2 z-50 animate-fadeIn text-xs text-slate-700 font-semibold flex flex-col gap-0.5">
+                        <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 capitalize tracking-wider border-b border-slate-50 mb-1 select-none">
+                          Pilih Jenis Layanan
+                        </div>
+                        {[
+                          { val: 'ALL', label: 'Semua Layanan' },
+                          { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                          { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                          { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                          { val: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
+                          { val: 'PEMBETULAN', label: 'Pembetulan' },
+                          { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+                        ].map((item) => {
+                          const isSelected = filterJenisLayanan === item.val;
+                          return (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => {
+                                setFilterJenisLayanan(item.val);
+                                setCurrentSubmittedPage(1);
+                                setIsFilterDropdownOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'text-indigo-650 bg-indigo-50/30 font-bold' : ''
+                                }`}
+                            >
+                              <span>{item.label}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Table */}
+            {/* Table — Columns matching Penginput */}
             <div className="flex-1 overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#f8fafc] border-b border-gray-200/60 text-[10px] font-bold text-gray-400 capitalize tracking-wider select-none">
-                    <th className="py-3 px-5 w-12 text-left">No</th>
-                    <th className="py-3 px-5 w-10 text-center">⭐</th>
-                    <th className="py-3 px-5 w-28 text-left">Tanggal</th>
-                    <th className="py-3 px-5 text-left">No. Pelayanan / NOP</th>
-                    <th className="py-3 px-5 text-left">Wajib Pajak</th>
-                    <th className="py-3 px-5 text-left">Jenis Layanan</th>
-                    <th className="py-3 px-5 text-right pr-6">Aksi</th>
+                  <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-450 uppercase tracking-wider text-left border-b border-slate-200">
+                    <th className="py-3 px-5 w-12 text-center">No</th>
+                    <th className="py-3 px-5 w-10 text-center select-none">⭐</th>
+                    <th className="py-3 px-5">Tanggal Nopel</th>
+                    <th className="py-3 px-5">Tanggal Penyelesaian</th>
+                    <th className="py-3 px-5">No. Pelayanan / NOP</th>
+                    <th className="py-3 px-5">Nama WP</th>
+                    <th className="py-3 px-5">Jenis Layanan</th>
+                    <th className="py-3 px-5 text-center">Status</th>
+                    <th className="py-3 px-5 text-right pr-6 w-24">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredSubmittedList.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-xs text-gray-400 italic">
+                      <td colSpan={9} className="py-8 text-center text-xs text-gray-400 italic">
                         Belum ada data permohonan yang sesuai.
                       </td>
                     </tr>
                   ) : (
                     paginatedSubmittedList.map((item, index) => {
                       const itemNumber = (activeSubmittedPage - 1) * itemsPerSubmittedPage + index + 1;
-                      const tanggalText = new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                      const nopolDate = item.tanggalNoPelayanan
+                        ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : '—';
+                      const penyelesaianDate = item.tanggalPenyelesaian
+                        ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : '—';
 
                       return (
-                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors text-xs font-semibold text-gray-700">
-                          <td className="py-4 px-5 text-gray-400 font-medium">{itemNumber}</td>
+                        <tr key={item.id} className="hover:bg-indigo-50/20 transition-all text-xs font-semibold text-gray-700">
+                          <td className="py-4 px-5 text-center text-xs font-bold text-gray-400 font-mono">{itemNumber}</td>
                           <td className="py-4 px-5 text-center">
                             {item.isFavorite ? (
                               <Star className="w-4 h-4 text-amber-500 fill-amber-500 inline shadow-3xs" />
@@ -485,7 +638,8 @@ export default function PenelitiWorkspace() {
                               <Star className="w-4 h-4 text-slate-300 inline" />
                             )}
                           </td>
-                          <td className="py-4 px-5 text-[#1e2022] font-semibold">{tanggalText}</td>
+                          <td className="py-4 px-5 text-gray-500 font-semibold">{nopolDate}</td>
+                          <td className="py-4 px-5 text-gray-500 font-semibold">{penyelesaianDate}</td>
                           <td className="py-4 px-5">
                             <div className="flex flex-col gap-0.5">
                               <span className="font-bold text-[#1e2022] text-[12px]">{item.nomorPelayanan || item.nomorPermohonan}</span>
@@ -493,26 +647,50 @@ export default function PenelitiWorkspace() {
                             </div>
                           </td>
                           <td className="py-4 px-5 text-[#1e2022]">{item.namaWajibPajak}</td>
-                          <td className="py-4 px-5 text-gray-500 font-bold capitalize text-[10px]">
-                            {item.jenisPermohonan.replace(/_/g, ' ')}
+                          <td className="py-4 px-5">
+                            <span
+                              className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded capitalize font-sans tracking-wide select-none"
+                              title={item.jenisPermohonan.replace(/_/g, ' ')}
+                            >
+                              {getAbbreviatedJenis(item.jenisPermohonan)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            {(() => {
+                              const s = item.status;
+                              const cfg: Record<string, { bg: string; text: string; dot: string }> = {
+                                SUBMITTED: { bg: 'bg-sky-100', text: 'text-sky-700', dot: 'bg-sky-500' },
+                                REVISION: { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500 animate-pulse' },
+                                BUNDLED: { bg: 'bg-violet-100', text: 'text-violet-700', dot: 'bg-violet-500' },
+                                ARCHIVED: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
+                                COMPLETED: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+                                REJECTED: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
+                              };
+                              const c = cfg[s] ?? cfg.SUBMITTED;
+                              return (
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full capitalize ${c.bg} ${c.text}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{s.toLowerCase()}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="py-4 px-5 text-right pr-6">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleAddToBundle(item.id)}
                                 disabled={loading || !selectedBundle || selectedBundle.status !== 'DRAFT'}
-                                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-[10px] rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="p-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition-all cursor-pointer flex items-center justify-center shrink-0"
                                 title="Masukkan ke bundle"
                               >
-                                <span>Masukkan</span>
-                                <ArrowRight className="w-3 h-3" />
+                                <ArrowRight className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setRevisionTarget(item)}
                                 disabled={loading}
-                                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold text-[10px] rounded-lg transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                                className="p-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0"
+                                title="Kembalikan untuk revisi"
                               >
-                                Revisi
+                                <AlertTriangle className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -528,16 +706,16 @@ export default function PenelitiWorkspace() {
             {totalSubmittedPages > 1 && (
               <div className="px-5 py-3 border-t border-gray-200/60 flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-gray-400">
-                  Menampilkan {((activeSubmittedPage - 1) * itemsPerSubmittedPage) + 1} - {Math.min(activeSubmittedPage * itemsPerSubmittedPage, filteredSubmittedList.length)} dari {filteredSubmittedList.length}
+                  Menampilkan {((activeSubmittedPage - 1) * itemsPerSubmittedPage) + 1} - {Math.min(activeSubmittedPage * itemsPerSubmittedPage, filteredSubmittedList.length)} dari {filteredSubmittedList.length} permohonan
                 </span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setCurrentSubmittedPage(prev => Math.max(prev - 1, 1))}
                     disabled={activeSubmittedPage === 1}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-bold text-[#1e2022] transition-colors disabled:opacity-40 disabled:hover:bg-white cursor-pointer disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
                   >
-                    Sebelumnya
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   {Array.from({ length: totalSubmittedPages }, (_, i) => i + 1).map((page) => (
                     <button
@@ -546,7 +724,7 @@ export default function PenelitiWorkspace() {
                       onClick={() => setCurrentSubmittedPage(page)}
                       className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activeSubmittedPage === page
                         ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
-                        : 'border border-slate-200 bg-white hover:bg-slate-50 text-gray-500'
+                        : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
                         }`}
                     >
                       {page}
@@ -556,9 +734,9 @@ export default function PenelitiWorkspace() {
                     type="button"
                     onClick={() => setCurrentSubmittedPage(prev => Math.min(prev + 1, totalSubmittedPages))}
                     disabled={activeSubmittedPage === totalSubmittedPages}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-bold text-[#1e2022] transition-colors disabled:opacity-40 disabled:hover:bg-white cursor-pointer disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
                   >
-                    Selanjutnya
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -569,44 +747,76 @@ export default function PenelitiWorkspace() {
         {/* ==================== VIEW MODE: BUNDLE (Buat Bundle) ==================== */}
         {viewMode === 'bundle' && (
           <div className="bg-[#f3f6f9] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[500px]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 select-none">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4 select-none">
               <div>
-                <h2 className="text-md font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                  <Boxes className="w-5 h-5 text-indigo-600 shrink-0" />
+                <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display">
                   Daftar Bundle Operasional
                 </h2>
               </div>
-              <button
-                onClick={handleCreateBundle}
-                disabled={loading}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 self-start sm:self-auto"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Buat bundle baru</span>
-              </button>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                {/* Search input for Bundles */}
+                <div className={`relative w-full sm:w-56 p-[1.5px] rounded-lg transition-all duration-300 ${isBundleSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 z-10" />
+                  <input
+                    type="text"
+                    value={searchBundleQuery}
+                    onChange={(e) => setSearchBundleQuery(e.target.value)}
+                    onFocus={() => setIsBundleSearchFocused(true)}
+                    onBlur={() => setIsBundleSearchFocused(false)}
+                    className="w-full pl-7.5 pr-8 py-1 bg-white border-transparent rounded-[7px] text-[11px] font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
+                    placeholder="Cari nomor bundle, jenis..."
+                  />
+                  {searchBundleQuery && (
+                    <button onClick={() => setSearchBundleQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={handleCreateBundle}
+                  disabled={loading}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Buat</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {bundlesList.map((b) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {paginatedBundlesList.map((b) => {
                 const isSelected = selectedBundle?.id === b.id;
                 return (
                   <div
                     key={b.id}
                     onClick={() => setSelectedBundle(b)}
-                    className={`p-3.5 rounded-xl border flex flex-col justify-between gap-2.5 transition-all cursor-pointer bg-white relative overflow-hidden group ${isSelected
-                      ? 'border-indigo-400 shadow-sm ring-2 ring-indigo-500/10'
-                      : 'border-slate-200 hover:shadow-xs hover:border-slate-300'
+                    className={`p-4 rounded-2xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer bg-white relative overflow-hidden group min-h-[110px] ${isSelected
+                      ? 'border-indigo-400 shadow-md ring-2 ring-indigo-500/10'
+                      : 'border-slate-200 hover:shadow-sm hover:border-slate-350'
                       }`}
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-extrabold text-gray-800">{b.nomorBundle}</span>
-                        <span className={`text-[8px] font-bold capitalize px-1.5 py-0.5 rounded-full border ${b.status === 'LOCKED' ? 'bg-slate-900 text-white border-slate-950' : 'bg-indigo-100 text-indigo-800 border-indigo-200'}`}>
-                          {b.status}
-                        </span>
+                    {/* Ribbon status miring (DRAFT / LOCKED) */}
+                    <div className="absolute top-0 right-0 h-14 w-14 overflow-hidden select-none pointer-events-none z-10">
+                      <div className={`absolute transform rotate-45 text-center text-[7px] font-extrabold uppercase py-0.5 w-20 -right-6 top-2 shadow-2xs ${b.status === 'LOCKED'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-[#9cb4fe] text-[#2c333f]'
+                        }`}>
+                        {b.status.toLowerCase()}
                       </div>
-                      <div className="text-[10px] text-slate-500 font-semibold truncate">
-                        {b.permohonan.length} berkas • {b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'KOSONG / UMUM'}
+                    </div>
+
+                    <div className="space-y-2 pr-6">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider">Nomor Bundle</span>
+                        <span className="text-sm font-black text-gray-800 font-mono tracking-tight">{b.nomorBundle}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-indigo-650 font-bold select-none bg-indigo-50 px-2 py-0.5 rounded-lg w-fit border border-indigo-100/50">
+                          {b.permohonan.length} berkas
+                        </span>
+                        <span className="text-[9px] text-slate-500 font-bold capitalize truncate block">
+                          {b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ').toLowerCase() : 'Kosong / Umum'}
+                        </span>
                       </div>
                     </div>
 
@@ -621,7 +831,7 @@ export default function PenelitiWorkspace() {
                             e.stopPropagation();
                             setViewMode('print');
                           }}
-                          className="text-[9px] text-indigo-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[9px] text-indigo-600 font-extrabold hover:underline flex items-center gap-0.5 cursor-pointer"
                         >
                           <span>Kelola & Cetak</span>
                           <ArrowRight className="w-2.5 h-2.5" />
@@ -631,12 +841,52 @@ export default function PenelitiWorkspace() {
                   </div>
                 );
               })}
-              {bundlesList.length === 0 && (
+              {filteredBundlesList.length === 0 && (
                 <div className="col-span-full py-20 text-center text-xs text-gray-400 font-medium italic select-none">
-                  Belum ada bundle terdaftar. Silakan buat baru!
+                  Tidak ada bundle yang sesuai dengan kriteria pencarian.
                 </div>
               )}
             </div>
+
+            {/* Pagination for Bundles */}
+            {totalBundlePages > 1 && (
+              <div className="px-5 py-3 border-t border-slate-200/55 flex items-center justify-between mt-auto">
+                <span className="text-[11px] font-semibold text-gray-400 select-none">
+                  Menampilkan {((activeBundlePage - 1) * itemsPerBundlePage) + 1} - {Math.min(activeBundlePage * itemsPerBundlePage, filteredBundlesList.length)} dari {filteredBundlesList.length} bundle
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentBundlePage(prev => Math.max(prev - 1, 1))}
+                    disabled={activeBundlePage === 1}
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  {Array.from({ length: totalBundlePages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      type="button"
+                      key={page}
+                      onClick={() => setCurrentBundlePage(page)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activeBundlePage === page
+                        ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
+                        : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentBundlePage(prev => Math.min(prev + 1, totalBundlePages))}
+                    disabled={activeBundlePage === totalBundlePages}
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -644,17 +894,33 @@ export default function PenelitiWorkspace() {
         {viewMode === 'print' && (
           <div className="bg-[#f3f6f9] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[500px]">
             {selectedBundle ? (
-              <div className="flex flex-col gap-6">
-                {/* Header Info */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-                  <div>
-                    <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
-                      Bundle {selectedBundle.status}
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-900 tracking-tight mt-2">{selectedBundle.nomorBundle}</h3>
-                    <p className="text-xs text-gray-400 font-semibold mt-1">
-                      Layanan homogen: <strong className="text-gray-600">{selectedBundle.jenisPermohonan ? selectedBundle.jenisPermohonan.replace(/_/g, ' ') : 'belum ditentukan (homogen)'}</strong>
-                    </p>
+              <div className="flex flex-col gap-6 animate-fadeIn">
+                {/* Header Info — clean, structural and premium */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-3xs flex flex-col sm:flex-row sm:items-center justify-between gap-5 select-none relative overflow-hidden">
+                  <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe]" />
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(() => {
+                        const status = selectedBundle.status;
+                        const isLocked = status === 'LOCKED';
+                        return (
+                          <span className={`text-[8px] font-extrabold capitalize px-2.5 py-0.5 rounded-full border tracking-wide select-none ${
+                            isLocked 
+                              ? 'bg-slate-900 text-white border-slate-950 shadow-3xs' 
+                              : 'bg-indigo-50 border border-indigo-150 text-indigo-700'
+                          }`}>
+                            bundle {status.toLowerCase()}
+                          </span>
+                        );
+                      })()}
+                      <span className="text-[8px] font-bold capitalize bg-slate-100 border border-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full tracking-wide select-none">
+                        Layanan: {selectedBundle.jenisPermohonan ? selectedBundle.jenisPermohonan.replace(/_/g, ' ') : 'KOSONG / UMUM'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider select-none">Nomor Bundle</span>
+                      <h3 className="text-base md:text-lg font-black text-slate-800 font-mono tracking-wide mt-0.5">{selectedBundle.nomorBundle}</h3>
+                    </div>
                   </div>
 
                   {/* Bundle Lock button */}
@@ -662,42 +928,51 @@ export default function PenelitiWorkspace() {
                     <button
                       onClick={handleLockBundle}
                       disabled={loading || (selectedBundle.permohonan || []).length === 0}
-                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto"
+                      className="px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-slate-950 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto shrink-0 select-none"
                     >
                       <Lock className="w-3.5 h-3.5" />
-                      <span>Kunci & Kirim ke Pengarsip</span>
+                      <span>Kunci & Kirim</span>
                     </button>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   {/* Left: Cetak section */}
-                  <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 space-y-4 h-fit">
-                    <h4 className="text-[11px] font-bold text-slate-500 capitalize tracking-widest">Cetak Dokumen Fisik (PDF)</h4>
+                  <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-3xs">
+                    <div className="border-b border-slate-100 pb-2">
+                      <h4 className="text-[10px] font-extrabold text-indigo-650 tracking-widest capitalize select-none">Cetak Dokumen Fisik</h4>
+                    </div>
 
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-3">
                       <a
                         href={`/api/pdf/surat-pengantar-bundle/${selectedBundle.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px] rounded-xl transition-all flex items-center justify-between shadow-3xs"
+                        className="px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200/80 hover:border-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center justify-between shadow-3xs group/btn select-none"
                       >
-                        <div className="flex items-center gap-2">
-                          <Printer className="w-4 h-4 text-indigo-600" />
-                          <span>Surat Pengantar Bundle</span>
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                            <Printer className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col text-left">
+                            <span className="text-xs text-gray-800 font-extrabold">Surat Pengantar</span>
+                            <span className="text-[9px] text-gray-400 font-medium font-sans mt-0.5">Manifest bundle pdf</span>
+                          </div>
                         </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover/btn:translate-x-0.5 transition-transform" />
                       </a>
                     </div>
                   </div>
 
                   {/* Right: Berkas terbundel */}
                   <div className="lg:col-span-8 space-y-3">
-                    <h4 className="text-xs font-bold text-gray-800 capitalize tracking-wider pl-1">
-                      Berkas Terbundel ({(selectedBundle.permohonan || []).length} berkas)
-                    </h4>
+                    <div className="flex items-center justify-between pl-1 select-none">
+                      <h4 className="text-[11px] font-extrabold text-indigo-650 tracking-widest capitalize">
+                        Berkas Terbundel ({(selectedBundle.permohonan || []).length})
+                      </h4>
+                    </div>
 
-                    <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
+                    <div className="flex flex-col gap-3 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
                       {(selectedBundle.permohonan || []).map((item: any) => {
                         const isMutasiSebagian = item.jenisPermohonan === 'MUTASI_SEBAGIAN';
                         const isFrozen = pendingKoreksiMap[item.id] === true;
@@ -705,42 +980,54 @@ export default function PenelitiWorkspace() {
                         return (
                           <div
                             key={item.id}
-                            className={`p-4 border rounded-2xl flex items-center justify-between gap-4 transition-all ${isFrozen
-                              ? 'bg-amber-50/50 border-amber-200/80 opacity-90'
-                              : 'bg-white border-slate-200/80 hover:shadow-sm'
+                            className={`border bg-white rounded-2xl flex items-center justify-between gap-4 p-4 transition-all duration-300 border-slate-200/85 hover:shadow-xs hover:border-slate-300 relative overflow-hidden border-l-4 ${isFrozen
+                              ? 'bg-amber-50/50 border-amber-300 border-l-amber-500 opacity-95'
+                              : 'border-l-indigo-500'
                               }`}
                           >
-                            <div className="space-y-1 max-w-[70%]">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-gray-800 truncate">{item.nomorPermohonan}</span>
+                            <div className="space-y-2 max-w-[75%]">
+                              <div className="flex items-center gap-2 flex-wrap select-none">
+                                <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider">nomor permohonan</span>
+                                <span className="text-xs font-black text-slate-800 font-mono tracking-wide">{item.nomorPermohonan}</span>
                                 {isFrozen && (
                                   <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                    <Clock className="w-2.5 h-2.5 shrink-0" />
+                                    <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                                     Frozen
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 font-medium truncate">
-                                WP: <strong className="text-gray-700">{item.namaWajibPajak}</strong> | NOP: <strong className="text-gray-700">{formatNop(item.nop)}</strong>
-                              </p>
+                              
+                              {/* Grid layout for WP & NOP details to replace pipe separator */}
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-x-5 gap-y-1 text-[11px] text-gray-500 font-semibold">
+                                <div className="flex items-center gap-1.5">
+                                  <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="text-gray-400">WP:</span>
+                                  <span className="text-slate-700 font-bold">{item.namaWajibPajak}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Hash className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="text-gray-400">NOP:</span>
+                                  <span className="text-indigo-650 font-bold font-mono tracking-tight">{formatNop(item.nop)}</span>
+                                </div>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               {/* Kertas Kerja PDF link for Mutasi Sebagian */}
                               {isMutasiSebagian && (
                                 <a
                                   href={`/api/pdf/kertas-kerja/${item.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold"
+                                  className="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-slate-600 transition-all flex items-center gap-1.5 text-[10px] font-bold select-none shadow-3xs"
                                   title="Cetak Kertas Kerja Mutasi Sebagian"
                                 >
-                                  <FileText className="w-3.5 h-3.5" />
+                                  <FileText className="w-3.5 h-3.5 text-indigo-600" />
                                   <span className="hidden sm:inline">Kertas Kerja</span>
                                 </a>
                               )}
 
-                              {/* Extraction Action */}
+                              {/* Extraction Action — clean and modern rounded action button */}
                               <button
                                 onClick={() => {
                                   if (selectedBundle.status === 'LOCKED') {
@@ -756,7 +1043,7 @@ export default function PenelitiWorkspace() {
                                   }
                                 }}
                                 disabled={loading || isFrozen}
-                                className="p-2 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                                className="p-2 bg-slate-50 border border-slate-200/60 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-xl text-slate-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
                                 title={selectedBundle.status === 'LOCKED' ? "Ajukan keluarkan (acc supervisor)" : "Keluarkan"}
                               >
                                 <Trash className="w-3.5 h-3.5" />
@@ -776,12 +1063,17 @@ export default function PenelitiWorkspace() {
                 </div>
               </div>
             ) : (
-              <div className="py-24 text-center flex flex-col items-center justify-center gap-3">
-                <Boxes className="w-16 h-16 text-slate-300" />
-                <h3 className="text-sm font-bold text-gray-800">Detail Bundle & Cetak</h3>
-                <p className="text-xs text-slate-400 font-semibold max-w-xs leading-relaxed">
-                  Silakan pilih salah satu bundle di tab 'Buat bundle' terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
-                </p>
+              /* Clean & Premium Empty Placeholder */
+              <div className="py-24 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn">
+                <div className="w-20 h-20 rounded-3xl bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-500 shadow-3xs animate-pulse">
+                  <Boxes className="w-10 h-10 stroke-[1.5]" />
+                </div>
+                <div className="space-y-1.5 max-w-sm">
+                  <h3 className="text-sm font-black text-gray-800 tracking-tight">Detail Bundle & Cetak</h3>
+                  <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                    Silakan pilih salah satu bundle di tab <strong className="text-slate-500">Daftar bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
+                  </p>
+                </div>
               </div>
             )}
           </div>

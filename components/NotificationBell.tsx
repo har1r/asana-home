@@ -34,18 +34,18 @@ export default function NotificationBell() {
     if (res.success) setNotifications(res.notifications as Notification[]);
   }, [status]);
 
-  // Subscribe ke event bus agar toast bisa trigger re-fetch
+  // Subscribe ke event bus agar NotificationSystem bisa trigger re-fetch
+  // saat ada notifikasi baru masuk — tidak perlu polling mandiri di sini.
   useEffect(() => {
     notifBus.subscribe(fetchNotifs);
     return () => notifBus.unsubscribe(fetchNotifs);
   }, [fetchNotifs]);
 
-  // Polling mandiri — update badge setiap 5 detik tanpa perlu refresh
+  // Fetch sekali saat mount untuk populate badge count awal.
+  // Update selanjutnya ditangani oleh notifBus dari NotificationSystem.
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 5000);
-    return () => clearInterval(interval);
   }, [status, fetchNotifs]);
 
   const handleMarkRead = async (id: string) => {
