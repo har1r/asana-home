@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { isValidTab } from '@/lib/constants';
 import { useSyncToLocalStorage } from '@/lib/useLocalStorage';
 import { Task, Project, Team, TeamMessage, TeamMember, FavoriteTile } from '@/types';
+import { getFavoritePermohonans } from '@/app/actions/penginput';
 import {
   INITIAL_MEMBERS,
   INITIAL_TASKS,
@@ -32,6 +33,8 @@ interface DashboardContextType {
   setSelectedProject: (proj: Project | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  globalSelectedRequest: any | null;
+  setGlobalSelectedRequest: (request: any | null) => void;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
   isPersonalProfileDrawerOpen: boolean;
@@ -63,6 +66,8 @@ interface DashboardContextType {
     confirmText?: string;
     cancelText?: string;
   }) => void;
+  favoritePermohonans: any[];
+  refreshFavorites: () => Promise<void>;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -74,6 +79,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   const [favorites, setFavorites] = useState<FavoriteTile[]>(INITIAL_FAVORITES);
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [messages, setMessages] = useState<TeamMessage[]>(INITIAL_MESSAGES);
+  const [favoritePermohonans, setFavoritePermohonans] = useState<any[]>([]);
 
   // UI state
   const router = useRouter();
@@ -93,6 +99,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   const [selectedTeamId, setSelectedTeamId] = useState('team-marketing');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [globalSelectedRequest, setGlobalSelectedRequest] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPersonalProfileDrawerOpen, setIsPersonalProfileDrawerOpen] = useState(false);
 
@@ -367,6 +374,21 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     }
   }, []);
 
+  const refreshFavorites = useCallback(async () => {
+    try {
+      const res = await getFavoritePermohonans();
+      if (res.success) {
+        setFavoritePermohonans(res.list || []);
+      }
+    } catch (err) {
+      console.error('Failed to load favorite permohonans:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFavorites();
+  }, [refreshFavorites]);
+
   const contextValue = useMemo(() => ({
     members,
     tasks,
@@ -383,6 +405,8 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     setSelectedProject,
     searchQuery,
     setSearchQuery,
+    globalSelectedRequest,
+    setGlobalSelectedRequest,
     isMobileMenuOpen,
     setIsMobileMenuOpen,
     isPersonalProfileDrawerOpen,
@@ -406,7 +430,9 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     favoriteProjectsList,
     resetDatabase,
     showConfirm,
-    isInitialized
+    isInitialized,
+    favoritePermohonans,
+    refreshFavorites
   }), [
     members,
     tasks,
@@ -419,6 +445,8 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     selectedTeamId,
     selectedProject,
     searchQuery,
+    globalSelectedRequest,
+    setGlobalSelectedRequest,
     isMobileMenuOpen,
     isPersonalProfileDrawerOpen,
     showAddTeamModal,
@@ -436,7 +464,9 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     favoriteProjectsList,
     resetDatabase,
     showConfirm,
-    isInitialized
+    isInitialized,
+    favoritePermohonans,
+    refreshFavorites
   ]);
 
   return (

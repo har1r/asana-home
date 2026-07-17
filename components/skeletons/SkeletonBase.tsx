@@ -117,7 +117,7 @@ export function PenginputSkeleton() {
       </div>
 
       {/* Table card */}
-      <div className="bg-[#f3f6f9] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[500px]">
+      <div className="bg-[#f3f6f9] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
         {/* Action row: search */}
         <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <SkeletonBox width="w-36" height="h-4" rounded="rounded-full" />
@@ -200,7 +200,7 @@ export function PenelitiSkeleton() {
       </div>
 
       {/* Content card skeleton (default: table) */}
-      <div className="bg-[#f3f6f9] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[500px]">
+      <div className="bg-[#f3f6f9] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
         {/* Action row: search */}
         <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <SkeletonBox width="w-36" height="h-4" rounded="rounded-full" />
@@ -614,7 +614,7 @@ export function RecentTasksCardSkeleton() {
 
       {/* Item rows */}
       <div className="flex flex-col gap-1">
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
             className="flex items-center justify-between pb-1.5 pt-1.5 border-b border-[#eceff1]"
@@ -769,3 +769,4 @@ export function CalendarCardSkeleton() {
     </div>
   );
 }
+

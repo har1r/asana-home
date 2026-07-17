@@ -24,23 +24,20 @@ export default function Sidebar() {
     selectedTeamId,
     setSelectedTeamId,
     setShowAddTeamModal,
-    setSelectedProject
+    setSelectedProject,
+    favoritePermohonans,
+    setSearchQuery
   } = useDashboard();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showAllFavorites, setShowAllFavorites] = useState(false);
 
   const mainMenuItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
-    { id: 'my-tasks', label: 'My Tasks', icon: CheckSquare },
+    { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'portfolios', label: 'Portfolios', icon: Briefcase },
     { id: 'help', label: 'Help', icon: HelpCircle },
-  ];
-
-  const favoritesList = [
-    { id: 'fav-mob', label: 'Mobile App R...' },
-    { id: 'fav-launch', label: 'Launch 3.0' },
-    { id: 'fav-event', label: 'Event Proposals' },
   ];
 
   return (
@@ -65,13 +62,22 @@ export default function Sidebar() {
       <div className="flex flex-col gap-6">
         {/* Architax Branding Logo Section */}
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} pb-2`}>
-          {/* Architax 3 pink-coral dots logo */}
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f06e5b] inline-block shadow-sm animate-pulse" />
-            <div className="flex flex-col gap-0.5 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f06e5b] inline-block shadow-sm" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f06e5b] inline-block shadow-sm" />
-            </div>
+          {/* Architax Four Tiles Logo */}
+          <div className="w-8 h-8 shrink-0 transition-all duration-300 hover:scale-105">
+            <svg viewBox="34 34 132 132" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+              <g transform="translate(100,100) rotate(-8)">
+                {/* Top-left */}
+                <rect x="-56" y="-56" width="50" height="50" rx="12" fill="#3F72E6"/>
+                {/* Top-right */}
+                <rect x="6" y="-56" width="50" height="50" rx="12" fill="#0DC5B4"/>
+                {/* Bottom-left */}
+                <rect x="-56" y="6" width="50" height="50" rx="12" fill="#FF6355"/>
+                {/* Bottom-right */}
+                <rect x="6" y="6" width="50" height="50" rx="12" fill="#7C5CFC"/>
+              </g>
+              {/* Center connector dot */}
+              <circle cx="100" cy="100" r="6" fill="white"/>
+            </svg>
           </div>
           {!isCollapsed && (
             <span className="font-bold text-xl tracking-tight text-[#1e2022] font-display animate-fade-in">Architax</span>
@@ -113,33 +119,95 @@ export default function Sidebar() {
           <div className="flex flex-col gap-3">
             <span className="text-[11px] font-bold tracking-widest text-[#5a606d] font-sans">Favorites</span>
 
-            <div className="flex flex-col gap-3 pl-0.5">
-              {favoritesList.map((fav) => (
-                <button
-                  key={fav.id}
-                  className="w-full flex items-center gap-3 text-left text-sm text-[#4e535e] hover:text-[#1e2022] font-semibold transition-all"
-                >
-                  <Star className="w-[18px] h-[18px] text-[#5a606d] stroke-[2.2] shrink-0" />
-                  <span className="truncate flex-1">{fav.label}</span>
-                </button>
-              ))}
-              <button
-                className="w-full flex items-center gap-3 text-left text-sm text-[#4e535e] hover:text-[#1e2022] font-semibold transition-all pt-0.5"
-              >
-                <MoreHorizontal className="w-[18px] h-[18px] text-[#5a606d] stroke-[2.2] shrink-0" />
-                <span>Show more</span>
-              </button>
+            <div className="flex flex-col gap-2.5 pl-0.5">
+              {favoritePermohonans && favoritePermohonans.length > 0 ? (
+                <>
+                  {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => (
+                    <button
+                      key={fav.id}
+                      onClick={() => {
+                        setSearchQuery(fav.nomorPelayanan || fav.nomorPermohonan);
+                        setActiveTab('my-tasks');
+                      }}
+                      className="w-full flex items-center gap-3 text-left text-xs text-[#4e535e] hover:text-[#1e2022] font-semibold transition-all group/fav"
+                      title={`Lihat Permohonan: ${fav.nomorPelayanan || fav.nomorPermohonan}`}
+                    >
+                      <Star className="w-[16px] h-[16px] text-amber-500 fill-amber-500 drop-shadow-[0_0_4px_rgba(245,158,11,0.35)] shrink-0 group-hover/fav:scale-110 transition-transform" />
+                      <span className="truncate flex-1 font-sans text-[11px] text-[#2c333f] font-semibold">
+                        {fav.nomorPelayanan || fav.nomorPermohonan}
+                      </span>
+                    </button>
+                  ))}
+                  {favoritePermohonans.length > 5 && (
+                    <button
+                      onClick={() => setShowAllFavorites(!showAllFavorites)}
+                      className="w-full flex items-center gap-3 text-left text-xs text-[#4e535e] hover:text-[#1e2022] font-semibold transition-all pt-0.5"
+                    >
+                      <MoreHorizontal className="w-[16px] h-[16px] text-[#5a606d] stroke-[2.2] shrink-0" />
+                      <span>{showAllFavorites ? 'Tampilkan lebih sedikit' : 'Tampilkan lebih banyak'}</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2.5 px-1 py-0.5 text-[#5a606d]/60 select-none animate-fadeIn">
+                  <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-full h-full">
+                      <defs>
+                        <style>{`
+                          @keyframes starPulse {
+                            0%, 100% { transform: scale(1); opacity: 0.6; }
+                            50% { transform: scale(1.15); opacity: 1; }
+                          }
+                          @keyframes sparkleBlink {
+                            0%, 100% { opacity: 0.15; transform: scale(0.6) rotate(0deg); }
+                            50% { opacity: 0.95; transform: scale(1.1) rotate(45deg); }
+                          }
+                          .pulsing-star {
+                            transform-origin: center;
+                            animation: starPulse 3s ease-in-out infinite;
+                          }
+                          .sparkle-dot-1 {
+                            transform-origin: 18px 6px;
+                            animation: sparkleBlink 2.2s ease-in-out infinite;
+                          }
+                          .sparkle-dot-2 {
+                            transform-origin: 6px 18px;
+                            animation: sparkleBlink 2.5s ease-in-out infinite;
+                            animation-delay: 0.8s;
+                          }
+                        `}</style>
+                      </defs>
+                      <path
+                        className="pulsing-star"
+                        d="M12 2.5l2.2 6.8h7.2l-5.8 4.2 2.2 6.8-5.8-4.2-5.8 4.2 2.2-6.8-5.8-4.2h7.2z"
+                        fill="none"
+                        stroke="#5a606d"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path className="sparkle-dot-1" d="M18 6l1 1-1 1-1-1z" fill="#f59e0b" />
+                      <path className="sparkle-dot-2" d="M6 18l1 1-1 1-1-1z" fill="#f59e0b" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-semibold italic text-[#5a606d]/75">Belum ada favorit</span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            {favoritesList.map((fav) => (
+            {favoritePermohonans && favoritePermohonans.slice(0, 5).map((fav) => (
               <button
                 key={fav.id}
+                onClick={() => {
+                  setSearchQuery(fav.nomorPelayanan || fav.nomorPermohonan);
+                  setActiveTab('my-tasks');
+                }}
                 className="flex items-center justify-center p-1 text-[#4e535e] hover:text-[#1e2022] transition-all"
-                title={`Favorite: ${fav.label}`}
+                title={`Favorite: ${fav.nomorPelayanan || fav.nomorPermohonan}`}
               >
-                <Star className="w-[18px] h-[18px] text-[#5a606d] stroke-[2.2]" />
+                <Star className="w-[18px] h-[18px] text-amber-500 fill-amber-500 drop-shadow-[0_0_4px_rgba(245,158,11,0.35)]" />
               </button>
             ))}
           </div>

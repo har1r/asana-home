@@ -6,6 +6,9 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
+
 // PDF Styling layout matching kertas_kerja_ms.jpg
 const styles = StyleSheet.create({
   page: {

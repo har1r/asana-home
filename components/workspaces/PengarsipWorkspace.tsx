@@ -1,116 +1,107 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
-  FileText,
   Search,
   Upload,
-  History,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
+  CheckCircle,
   FileCheck,
-  RefreshCw,
-  FolderOpen,
   ArrowLeftRight,
-  ShieldAlert,
   Loader2,
   X,
-  Star
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Boxes,
+  FileSpreadsheet,
+  Clock,
+  ArrowRight,
+  FolderOpen,
+  Lock,
+  Unlock,
+  Send,
+  Folder,
+  FolderLock,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   getDigitizationBundles,
   getBundleDetails,
   uploadArsipDigital,
-  ajukanKembalikanKePeneliti
+  ajukanKembalikanKePeneliti,
 } from "@/app/actions/pengarsip";
 import { useDashboard } from "@/context/DashboardContext";
-import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from "@/components/skeletons/SkeletonBase";
+import {
+  SkeletonBox,
+  SkeletonText,
+  SkeletonBadge,
+} from "@/components/skeletons/SkeletonBase";
 
-/** Skeleton untuk PengarsipWorkspace — 2-panel flex layout */
+type ViewMode = "bundle" | "arsip";
+
+/** Skeleton untuk PengarsipWorkspace — premium tabbed layout (mengikuti PenelitiSkeleton) */
 export function PengarsipSkeleton() {
   return (
     <div className="w-full font-sans select-none flex flex-col gap-6 animate-fadeIn">
       {/* Header card skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm">
-        <div className="flex flex-col gap-2">
-          <SkeletonBox width="w-16" height="h-4" rounded="rounded-full" />
-          <SkeletonBox width="w-64" height="h-5" rounded="rounded-full" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#dde3ea] p-5 rounded-2xl shadow-sm">
+        <SkeletonBox width="w-56" height="h-5" rounded="rounded-full" />
+        <div className="flex items-center gap-2">
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+            <SkeletonBox width="w-28" height="h-7" rounded="rounded-lg" />
+            <SkeletonBox width="w-28" height="h-7" rounded="rounded-lg" />
+          </div>
         </div>
-        <SkeletonBox width="w-44" height="h-8" rounded="rounded-xl" />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 w-full">
-        {/* LEFT PANEL: Bundle List */}
-        <div className="w-full lg:w-96 flex flex-col gap-4 bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-gray-250/50 shadow-sm shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-gray-200 animate-pulse rounded" />
-              <SkeletonBox width="w-36" height="h-5" rounded="rounded-full" />
-            </div>
-            <div className="w-7 h-7 bg-gray-200 animate-pulse rounded-lg" />
-          </div>
-
-          {/* Search */}
-          <div className="h-10 bg-gray-200 animate-pulse rounded-xl" />
-
-          {/* Bundle cards */}
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <SkeletonText width="w-36" height="h-3" />
-                  <div className="flex gap-1.5">
-                    <SkeletonBadge width="w-12" />
-                    <SkeletonBadge width="w-16" />
-                  </div>
-                </div>
-                <SkeletonProgressBar />
-                <div className="flex justify-between">
-                  <SkeletonText width="w-20" height="h-2.5" />
-                  <SkeletonText width="w-16" height="h-2.5" />
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Content card skeleton */}
+      <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
+        <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <SkeletonBox width="w-36" height="h-4" rounded="rounded-full" />
+          <div className="w-72 h-8 bg-gray-200 animate-pulse rounded-lg" />
         </div>
-
-        {/* RIGHT PANEL: Detail placeholder */}
-        <div className="flex-1 flex flex-col gap-5 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-gray-250/50 shadow-sm min-w-0">
-          {/* Detail header shimmer */}
-          <div className="border-b border-gray-100 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <SkeletonBox width="w-48" height="h-5" rounded="rounded-full" />
-              <SkeletonBadge width="w-20" />
-            </div>
-            <div className="flex gap-4">
-              <SkeletonText width="w-32" height="h-3" />
-              <SkeletonText width="w-24" height="h-3" />
-            </div>
-          </div>
-
-          {/* Permohonan items */}
-          <div className="flex flex-col gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <SkeletonText width="w-44" height="h-3" />
-                  <SkeletonBadge width="w-20" />
-                </div>
-                <SkeletonText width="w-32" height="h-2.5" />
-                <div className="flex gap-2">
-                  <div className="h-8 w-28 bg-gray-200 animate-pulse rounded-lg" />
-                  <div className="h-8 w-24 bg-gray-200 animate-pulse rounded-lg" />
-                </div>
-              </div>
-            ))}
+        <div className="flex-1 overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f8fafc] border-b border-gray-200/60">
+                {["No", "⭐", "Tanggal", "No. Pelayanan", "NOP", "Wajib Pajak", "Layanan", "Status", "Aksi"].map((h) => (
+                  <th key={h} className="py-3 px-5">
+                    <SkeletonText width="w-16" height="h-2.5" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="py-4 px-5 w-12"><SkeletonText width="w-4" height="h-3" /></td>
+                  <td className="py-4 px-5 w-10 text-center"><SkeletonText width="w-4" height="h-3" /></td>
+                  <td className="py-4 px-5"><SkeletonText width="w-20" height="h-3" /></td>
+                  <td className="py-4 px-5 min-w-[140px]">
+                    <SkeletonText width="w-36" height="h-3" />
+                  </td>
+                  <td className="py-4 px-5 min-w-[140px]">
+                    <SkeletonText width="w-28" height="h-2.5" />
+                  </td>
+                  <td className="py-4 px-5"><SkeletonText width={i % 2 === 0 ? "w-28" : "w-24"} height="h-3" /></td>
+                  <td className="py-4 px-5"><SkeletonBadge width="w-10" /></td>
+                  <td className="py-4 px-5"><SkeletonBadge width="w-16" /></td>
+                  <td className="py-4 px-5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-gray-200 animate-pulse" />
+                      <div className="w-7 h-7 rounded-lg bg-gray-200 animate-pulse" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
   );
 }
 
@@ -119,33 +110,161 @@ const formatNop = (nop: string) => {
   return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
 };
 
+const getAbbreviatedJenis = (jenis: string) => {
+  switch (jenis) {
+    case "OBJEK_PAJAK_BARU": return "OPB";
+    case "MUTASI_SEBAGIAN": return "MS";
+    case "MUTASI_HABIS_REGULER": return "MHR";
+    case "MUTASI_HABIS_UPDATE": return "MHU";
+    case "PEMBETULAN": return "PBT";
+    case "PENGAKTIFAN": return "AKT";
+    default: return jenis;
+  }
+};
+
+const BUNDLE_TYPE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  MUTASI_SEBAGIAN: { bg: 'bg-indigo-50/80', text: 'text-indigo-700', border: 'border-indigo-150' },
+  MUTASI_HABIS_UPDATE: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-150' },
+  MUTASI_HABIS_REGULER: { bg: 'bg-sky-50/80', text: 'text-sky-750', border: 'border-sky-150' },
+  OBJEK_PAJAK_BARU: { bg: 'bg-amber-50/80', text: 'text-amber-700', border: 'border-amber-150' },
+  PEMBETULAN: { bg: 'bg-purple-50/80', text: 'text-purple-700', border: 'border-purple-150' },
+  PENGAKTIFAN: { bg: 'bg-teal-50/80', text: 'text-teal-700', border: 'border-teal-150' },
+};
+
+const BUNDLE_STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string; shadow: string }> = {
+  DRAFT: {
+    bg: 'bg-indigo-50/70',
+    text: 'text-indigo-700',
+    border: 'border-indigo-100',
+    dot: 'bg-indigo-500',
+    shadow: 'hover:shadow-indigo-150/40'
+  },
+  LOCKED: {
+    bg: 'bg-slate-900',
+    text: 'text-slate-100',
+    border: 'border-slate-800',
+    dot: 'bg-amber-400',
+    shadow: 'hover:shadow-slate-300/20'
+  },
+  IN_MANIFEST: {
+    bg: 'bg-emerald-50/80',
+    text: 'text-emerald-800',
+    border: 'border-emerald-150',
+    dot: 'bg-emerald-500',
+    shadow: 'hover:shadow-emerald-150/40'
+  },
+};
+
+const isOverdue = (dateStr: string | null | undefined, status: string): boolean => {
+  if (!dateStr) return false;
+  if (status === 'COMPLETED' || status === 'REJECTED' || status === 'ARCHIVED') return false;
+  return new Date(dateStr) < new Date();
+};
+
+const toTitleCase = (str: string) =>
+  str
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'SUBMITTED':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200/50';
+    case 'REVISION':
+      return 'bg-amber-100 text-amber-800 border-amber-200/50 animate-pulse';
+    case 'BUNDLED':
+      return 'bg-blue-100 text-blue-800 border-blue-200/50';
+    case 'ARCHIVED':
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200/50';
+    case 'COMPLETED':
+      return 'bg-cyan-100 text-cyan-800 border-cyan-200/50';
+    case 'REJECTED':
+      return 'bg-rose-100 text-rose-800 border-rose-200/50';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200/50';
+  }
+};
+
 export default function PengarsipWorkspace() {
   const { showConfirm } = useDashboard();
-  
-  // Lists & Selected States
+
+  // ── View Mode
+  const [viewMode, setViewMode] = useState<ViewMode>("bundle");
+
+  // ── Data
   const [bundlesList, setBundlesList] = useState<any[]>([]);
   const [selectedBundle, setSelectedBundle] = useState<any | null>(null);
-  const [selectedPermohonan, setSelectedPermohonan] = useState<any | null>(null);
 
-  // States for search and UI loaders
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  // ── Loaders & Messages
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Version history dropdown state (tracked by permohonanId)
-  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
+  // ── Bundle tab: search + pagination
+  const [searchBundleQuery, setSearchBundleQuery] = useState("");
+  const [isBundleSearchFocused, setIsBundleSearchFocused] = useState(false);
+  const [currentBundlePage, setCurrentBundlePage] = useState(1);
+  const itemsPerBundlePage = 8;
 
-  // Modals for Major Correction (Kembalikan ke Peneliti)
+  // ── Arsip tab: pagination
+  const [currentArsipPage, setCurrentArsipPage] = useState(1);
+  const [itemsPerArsipPage, setItemsPerArsipPage] = useState(10);
+
+  // Copy to Clipboard
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const handleCopy = useCallback((e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1000);
+  }, []);
+
+  // ── Correction Modal
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [correctionTarget, setCorrectionTarget] = useState<any | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
 
-  // Refs for file input
+  // ── File inputs
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // Reset arsip pagination when selectedBundle changes
+  useEffect(() => {
+    setCurrentArsipPage(1);
+  }, [selectedBundle?.id]);
+
+  // Reset bundle pagination when search changes
+  useEffect(() => {
+    setCurrentBundlePage(1);
+  }, [searchBundleQuery]);
+
+  // ── Computed: filtered + paginated bundles
+  const filteredBundlesList = useMemo(() => {
+    return bundlesList.filter((b) =>
+      b.nomorBundle.toLowerCase().includes(searchBundleQuery.toLowerCase())
+    );
+  }, [bundlesList, searchBundleQuery]);
+
+  const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
+  const activeBundlePage = currentBundlePage > totalBundlePages ? 1 : currentBundlePage;
+  const paginatedBundlesList = useMemo(() => {
+    return filteredBundlesList.slice(
+      (activeBundlePage - 1) * itemsPerBundlePage,
+      activeBundlePage * itemsPerBundlePage
+    );
+  }, [filteredBundlesList, activeBundlePage, itemsPerBundlePage]);
+
+  // ── Computed: permohonan list for arsip tab
+  const permohonanList = selectedBundle?.permohonan || [];
+  const totalArsipPages = Math.ceil(permohonanList.length / itemsPerArsipPage);
+  const activeArsipPage = currentArsipPage > totalArsipPages ? 1 : currentArsipPage;
+  const paginatedArsipList = permohonanList.slice(
+    (activeArsipPage - 1) * itemsPerArsipPage,
+    activeArsipPage * itemsPerArsipPage
+  );
+
+  // ── Data fetch
   const fetchBundles = async () => {
     setListLoading(true);
     setError("");
@@ -153,15 +272,10 @@ export default function PengarsipWorkspace() {
       const res = await getDigitizationBundles();
       if (res.success) {
         setBundlesList(res.list || []);
-        
-        // Re-sync currently selected bundle details if any
+        // Re-sync selected bundle
         if (selectedBundle) {
-          const detailRes = await getBundleDetails(selectedBundle.id);
-          if (detailRes.success) {
-            setSelectedBundle(detailRes.bundle);
-          } else {
-            setSelectedBundle(null);
-          }
+          const updatedSelected = res.list?.find(b => b.id === selectedBundle.id);
+          setSelectedBundle(updatedSelected || null);
         }
       } else {
         setError(res.error || "Gagal mengambil daftar bundle.");
@@ -177,33 +291,13 @@ export default function PengarsipWorkspace() {
     fetchBundles();
   }, []);
 
-  const handleSelectBundle = async (bundle: any) => {
-    setLoading(true);
-    setError("");
-    setSuccess("");
-    try {
-      const res = await getBundleDetails(bundle.id);
-      if (res.success) {
-        setSelectedBundle(res.bundle);
-      } else {
-        setError(res.error || "Gagal memuat detail bundle.");
-      }
-    } catch (err) {
-      setError("Kesalahan memuat detail bundle.");
-    } finally {
-      setLoading(false);
-    }
+  // ── Select bundle → mark as active (instant, matching Peneliti behavior)
+  const handleSelectBundle = (bundle: any) => {
+    setSelectedBundle(bundle);
+    setCurrentArsipPage(1);
   };
 
-  // Toggle version history visibility
-  const toggleHistory = (permohonanId: string) => {
-    setExpandedHistory((prev) => ({
-      ...prev,
-      [permohonanId]: !prev[permohonanId]
-    }));
-  };
-
-  // Handle file upload
+  // ── File upload
   const handleUploadFile = async (permohonanId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -212,7 +306,6 @@ export default function PengarsipWorkspace() {
       setError("File harus berupa dokumen bertipe PDF.");
       return;
     }
-
     const MAX_SIZE = 20 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       setError("Ukuran file tidak boleh melebihi 20 MB.");
@@ -232,7 +325,6 @@ export default function PengarsipWorkspace() {
       if (res.success) {
         setSuccess("Arsip digital berhasil diunggah!");
         await fetchBundles();
-        // Clear input element
         if (fileInputRefs.current[permohonanId]) {
           fileInputRefs.current[permohonanId]!.value = "";
         }
@@ -247,14 +339,13 @@ export default function PengarsipWorkspace() {
     }
   };
 
-  // Trigger file input dialog
   const triggerFileInput = (permohonanId: string) => {
     if (fileInputRefs.current[permohonanId]) {
       fileInputRefs.current[permohonanId]!.click();
     }
   };
 
-  // Submit major correction: Kembalikan ke Peneliti
+  // ── Correction: Kembalikan ke Peneliti
   const handleRequestCorrection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!correctionTarget || !correctionReason.trim()) return;
@@ -282,473 +373,731 @@ export default function PengarsipWorkspace() {
     }
   };
 
-  // Open correction modal
   const openCorrectionModal = (permohonan: any) => {
     setCorrectionTarget(permohonan);
     setCorrectionReason("");
     setShowCorrectionModal(true);
   };
 
-  // Filter bundles list by search query
-  const filteredBundles = bundlesList.filter((b) =>
-    b.nomorBundle.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Early return: full skeleton while loading
-  if (listLoading) return <PengarsipSkeleton />;
-
   return (
-    <div className="w-full font-sans select-none flex flex-col gap-6 animate-fadeIn">
-      {/* Header card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f3f6f9] p-5 rounded-2xl shadow-sm select-none">
-        <div>
-          <span className="text-[9px] font-extrabold capitalize bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full">
-            Fase 4
-          </span>
-          <h2 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 tracking-tight mt-1.5">
-            Workspace Petugas Pengarsip (Digitalisasi)
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white border border-slate-100 px-3.5 py-2 rounded-xl shadow-3xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Arsip Digital Terintegrasi</span>
-        </div>
-      </div>
+    <div id="pengarsip-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-6">
 
-      <div className="flex flex-col lg:flex-row gap-6 w-full">
-      {/* ================= LEFT PANEL: BUNDLES LIST ================= */}
-      <div className="w-full lg:w-96 flex flex-col gap-4 bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-gray-250/50 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-md font-bold text-gray-800 flex items-center gap-2 select-none">
-            <FolderOpen className="w-5 h-5 text-indigo-500" /> Digitalisasi Antrean
-          </h2>
-          <button
-            onClick={fetchBundles}
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${listLoading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+      {/* Show full skeleton during initial load */}
+      {listLoading && <PengarsipSkeleton />}
 
-        {/* Search Input */}
-        <div className={`relative p-[1.5px] rounded-xl transition-all duration-300 ${
-          isSearchFocused 
-            ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' 
-            : 'bg-slate-200/85'
-        }`}>
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10" />
-          <input
-            type="text"
-            placeholder="Cari nomor bundle..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
-            className="w-full bg-white border-transparent focus:outline-none text-xs font-semibold rounded-[10px] pl-9.5 pr-4 py-2 transition-all text-gray-705"
-          />
-        </div>
+      {/* Hide real content while skeleton is visible */}
+      <div className={`flex flex-col gap-6 ${listLoading ? "hidden" : ""}`}>
 
-        {/* List of Bundles */}
-        <div className="flex-1 max-h-[60vh] lg:max-h-[65vh] overflow-y-auto pr-1 flex flex-col gap-3">
-          {listLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-              <span className="text-xs font-bold">Memuat antrean bundle...</span>
+        {/* ── Header card — gradient + tab switcher (identik dengan PenelitiWorkspace) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] p-5 rounded-2xl shadow-md transition-all duration-300">
+          <div className="flex items-center gap-2.5 text-xs font-bold tracking-wider font-display select-none">
+            <div className="flex items-center gap-1.5 text-[#2c333f]/80 hover:text-[#2c333f] transition-colors">
+              <span>Tugas Saya</span>
             </div>
-          ) : filteredBundles.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 font-semibold text-xs border border-dashed border-gray-200 rounded-xl">
-              Tidak ada bundle untuk digitalisasi.
+            <span className="text-[#2c333f]/50 font-medium select-none">&gt;</span>
+            <div className="flex items-center gap-1.5 bg-white/40 border border-white/50 px-2.5 py-1 rounded-lg shadow-3xs animate-fadeIn">
+              <span className="font-extrabold capitalize text-[#2c333f]">
+                {viewMode === "bundle" ? "daftar bundle" : "daftar arsip"}
+              </span>
             </div>
-          ) : (
-            filteredBundles.map((b) => {
-              const totalPermohonan = b.permohonan.length;
-              const archivedPermohonan = b.permohonan.filter((p: any) => p.status === "ARCHIVED").length;
-              const progressPercentage = totalPermohonan > 0 ? (archivedPermohonan / totalPermohonan) * 100 : 0;
-              const isSelected = selectedBundle?.id === b.id;
+          </div>
 
-              // Check if any application in the bundle needs re-upload (Fase 4 return flag)
-              const needsReUpload = b.status === "IN_MANIFEST" && b.permohonan.some(
-                (p: any) => p.status === "BUNDLED" && p.arsipDigital.some((ad: any) => ad.status === "SUPERSEDED")
-              );
-
-              return (
-                <button
-                  key={b.id}
-                  onClick={() => handleSelectBundle(b)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 flex flex-col gap-2.5 ${
-                    isSelected
-                      ? "bg-gradient-to-r from-indigo-500 to-indigo-650 text-white border-indigo-600 shadow-md transform scale-[1.01]"
-                      : "bg-white hover:bg-slate-50 border-gray-200 text-gray-800 shadow-sm"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-extrabold truncate max-w-[190px]">
-                      {b.nomorBundle}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {needsReUpload && (
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full select-none ${
-                          isSelected ? "bg-amber-400 text-slate-900" : "bg-amber-100 text-amber-800"
-                        } animate-pulse`}>
-                          Re-Upload
-                        </span>
-                      )}
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full select-none ${
-                        isSelected
-                          ? "bg-white/20 text-white"
-                          : b.status === "LOCKED"
-                          ? "bg-indigo-100 text-indigo-800"
-                          : "bg-slate-100 text-slate-800"
-                      }`}>
-                        {b.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress Indicator */}
-                  <div className="w-full flex flex-col gap-1">
-                    <div className="flex justify-between text-[10px] font-semibold">
-                      <span className={isSelected ? "text-indigo-200" : "text-gray-400"}>
-                        Digitalisasi: {archivedPermohonan}/{totalPermohonan}
-                      </span>
-                      <span className={isSelected ? "text-indigo-100" : "text-gray-600"}>
-                        {Math.round(progressPercentage)}%
-                      </span>
-                    </div>
-                    <div className={`w-full h-1.5 rounded-full overflow-hidden ${isSelected ? "bg-indigo-700/50" : "bg-gray-100"}`}>
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${isSelected ? "bg-white" : "bg-indigo-600"}`}
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`text-[9px] flex items-center justify-between font-medium ${isSelected ? "text-indigo-200" : "text-gray-400"}`}>
-                    <span>Peneliti: {b.peneliti?.name || "-"}</span>
-                    <span>{new Date(b.createdAt).toLocaleDateString("id-ID")}</span>
-                  </div>
-                </button>
-              );
-            })
-          )}
+          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+            <div className="bg-black/10 p-1 rounded-xl border border-black/5 flex items-center gap-1 shadow-3xs">
+              <button
+                onClick={() => setViewMode("bundle")}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                  viewMode === "bundle"
+                    ? "bg-white text-[#2c333f] shadow-xs"
+                    : "text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10"
+                }`}
+              >
+                <Boxes className="w-3.5 h-3.5" />
+                <span>Daftar Bundle</span>
+              </button>
+              <button
+                onClick={() => setViewMode("arsip")}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                  viewMode === "arsip"
+                    ? "bg-white text-[#2c333f] shadow-xs"
+                    : "text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10"
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Daftar Arsip</span>
+              </button>
+            </div>
+            {/* Refresh icon removed */}
+          </div>
         </div>
-      </div>
 
-      {/* ================= RIGHT PANEL: SELECTED BUNDLE DETAILS ================= */}
-      <div className="flex-1 flex flex-col gap-5 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-gray-250/50 shadow-sm min-w-0">
-        
-        {/* Banner Messages */}
+        {/* ── Error / Success banners ── */}
         {error && (
-          <div className="bg-red-55 border border-red-200/60 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2.5 text-xs font-semibold select-none animate-fadeIn">
-            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 animate-bounce" />
-            <p className="flex-1">{error}</p>
-            <button onClick={() => setError("")} className="text-red-500 hover:text-red-800 transition-colors">
+          <div className="bg-red-50/80 border border-red-200 text-red-700 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 shrink-0 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
-
         {success && (
-          <div className="bg-emerald-50 border border-emerald-250/60 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2.5 text-xs font-semibold select-none animate-fadeIn">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <p className="flex-1">{success}</p>
-            <button onClick={() => setSuccess("")} className="text-emerald-500 hover:text-emerald-800 transition-colors">
+          <div className="bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0">
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
+            <span className="flex-1">{success}</span>
+            <button onClick={() => setSuccess("")} className="text-emerald-500 hover:text-emerald-700 shrink-0 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {!selectedBundle ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-20 text-gray-400 select-none">
-            <FileText className="w-12 h-12 text-slate-300 mb-3 animate-pulse" />
-            <h3 className="text-sm font-bold text-slate-700 mb-1">Pilih Bundle</h3>
-            <p className="text-xs text-gray-400 font-semibold max-w-sm">
-              Silakan pilih salah satu bundle di antrean sebelah kiri untuk mengelola digitalisasi dan mengunggah dokumen arsip fisik.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-5 flex-1">
-            
-            {/* Header info */}
-            <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
+        {/* ==================== VIEW MODE: DAFTAR BUNDLE ==================== */}
+        {viewMode === "bundle" && (
+          <div className="bg-[#dde3ea] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[300px]">
+
+            {/* Header row */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4 select-none">
               <div>
-                <h3 className="text-sm font-extrabold text-gray-800 flex items-center gap-1.5">
-                  Detail Bundle: <span className="text-indigo-600 font-black">{selectedBundle.nomorBundle}</span>
-                </h3>
-                <p className="text-[11px] text-gray-400 font-semibold mt-0.5">
-                  Status: <span className="font-bold text-gray-700 capitalize">{selectedBundle.status}</span> • 
-                  Jenis: <span className="font-bold text-gray-700 capitalize">{selectedBundle.jenisPermohonan?.replace(/_/g, " ") || "Campuran"}</span>
-                </p>
+                <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display">
+                  Daftar Bundle Digitalisasi
+                </h2>
               </div>
-              <div className="text-[11px] font-semibold text-gray-400 text-left sm:text-right">
-                <p>Verifikasi oleh Peneliti: <span className="text-gray-700">{selectedBundle.peneliti?.name || "-"}</span></p>
-                <p>Dibuat: <span className="text-gray-700">{new Date(selectedBundle.createdAt).toLocaleString("id-ID")}</span></p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                {/* Search bundle */}
+                <div className={`relative w-full sm:w-56 p-[1.5px] rounded-lg transition-all duration-300 ${
+                  isBundleSearchFocused
+                    ? "bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs"
+                    : "bg-slate-200/90"
+                }`}>
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 z-10" />
+                  <input
+                    type="text"
+                    value={searchBundleQuery}
+                    onChange={(e) => setSearchBundleQuery(e.target.value)}
+                    onFocus={() => setIsBundleSearchFocused(true)}
+                    onBlur={() => setIsBundleSearchFocused(false)}
+                    className="w-full pl-7.5 pr-8 py-1 bg-white border-transparent rounded-[7px] text-[11px] font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
+                    placeholder="Cari nomor bundle..."
+                  />
+                  {searchBundleQuery && (
+                    <button
+                      onClick={() => setSearchBundleQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* List of applications */}
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
-              <h4 className="text-xs font-extrabold text-slate-500 capitalize tracking-widest">
-                Daftar Permohonan ({selectedBundle.permohonan.length})
-              </h4>
-
-              {selectedBundle.permohonan.length === 0 ? (
-                <p className="text-center py-6 text-gray-400 font-semibold text-xs border border-dashed border-gray-200 rounded-xl select-none">
-                  Bundle ini tidak memiliki permohonan.
-                </p>
+            {/* Bundle grid — identik dengan PenelitiWorkspace */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {loading ? (
+                <div className="col-span-full py-20 flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                  <span className="text-xs font-semibold text-gray-400">Memuat...</span>
+                </div>
+              ) : paginatedBundlesList.length === 0 ? (
+                <div className="col-span-full py-20 text-center text-xs text-gray-400 font-medium italic select-none">
+                  {searchBundleQuery
+                    ? "Tidak ada bundle yang sesuai dengan pencarian."
+                    : "Tidak ada bundle digitalisasi saat ini."}
+                </div>
               ) : (
-                selectedBundle.permohonan.map((p: any) => {
-                  const activeArchive = p.arsipDigital?.find((ad: any) => ad.status === "ACTIVE");
-                  
-                  // Check if this permohonan is frozen (pending correction approval)
-                  const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
-                  const pendingReq = isFrozen ? p.permintaanKoreksi[0] : null;
+                paginatedBundlesList.map((b) => {
+                  const isSelected = selectedBundle?.id === b.id;
+                  const isRevisi = b.status === "IN_MANIFEST";
 
-                  // Flag re-upload if status is BUNDLED and has superseded versions (returned from logistik)
-                  const needsReUpload = p.status === "BUNDLED" && p.arsipDigital?.some((ad: any) => ad.status === "SUPERSEDED");
+                  const reuploadNeeded = b.permohonan.filter(
+                    (p: any) => p.status === "BUNDLED" && p.arsipDigital.some((ad: any) => ad.status === "SUPERSEDED")
+                  ).length;
+                  const archivedCount = b.permohonan.filter((p: any) => p.status === "ARCHIVED").length;
+                  const totalCount = b.permohonan.length;
+
+                  // Get config styling based on status (fallback to LOCKED)
+                  const statusCfg = BUNDLE_STATUS_CONFIG[b.status] || BUNDLE_STATUS_CONFIG.LOCKED;
+
+                  // Get style config for jenisPermohonan
+                  const typeStyle = b.jenisPermohonan && BUNDLE_TYPE_STYLES[b.jenisPermohonan]
+                    ? BUNDLE_TYPE_STYLES[b.jenisPermohonan]
+                    : { bg: 'bg-slate-50', text: 'text-slate-400', border: 'border-slate-200/30' };
+
+                  const renderFolderIconOrCount = () => {
+                    const iconClass = `w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                      isSelected ? 'text-indigo-655 font-bold' : b.status === 'LOCKED' ? 'text-slate-400' : 'text-indigo-500'
+                    }`;
+                    if (totalCount > 0) {
+                      return (
+                        <span className={`w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-full leading-none transition-all duration-300 group-hover:scale-110 ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-sky-500 to-[#9cb4fe] text-white shadow-sm font-extrabold'
+                            : b.status === 'LOCKED'
+                              ? 'bg-slate-500 text-slate-50 font-bold'
+                              : 'bg-[#9cb4fe] text-white shadow-2xs font-extrabold'
+                        }`}>
+                          {totalCount}
+                        </span>
+                      );
+                    }
+
+                    if (b.status === 'LOCKED') return <FolderLock className={iconClass} />;
+                    return <Folder className={iconClass} />;
+                  };
+
+                  const renderStatusIcon = () => {
+                    const iconClass = "w-2.5 h-2.5 shrink-0";
+                    if (b.status === 'LOCKED') return <Lock className={iconClass} />;
+                    if (b.status === 'IN_MANIFEST') return <Send className={iconClass} />;
+                    return <Unlock className={iconClass} />;
+                  };
 
                   return (
                     <div
-                      key={p.id}
-                      className={`p-5 bg-white border rounded-2xl shadow-sm flex flex-col gap-4 transition-all hover:shadow-md ${
-                        isFrozen 
-                          ? "border-amber-200 bg-amber-50/20" 
-                          : needsReUpload
-                          ? "border-amber-300"
-                          : "border-gray-200"
+                      key={b.id}
+                      onClick={() => handleSelectBundle(b)}
+                      className={`p-4 rounded-2xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden group select-none min-h-[110px] ${
+                        isSelected
+                          ? 'bg-gradient-to-br from-sky-50/60 via-[#9cb4fe]/10 to-white/90 border-[#9cb4fe]/60 shadow-md ring-2 ring-[#7dd4fc]/25'
+                          : `bg-white/85 border-slate-200 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
                       }`}
                     >
-                      {/* Top Info Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-black text-gray-900 tracking-tight">
-                              NOP: {formatNop(p.nop)}
-                            </span>
-                            {p.isFavorite && (
-                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0 shadow-3xs" />
-                            )}
-                            <span className="text-[10px] font-bold text-gray-400 bg-slate-100 px-2 py-0.5 rounded-full select-none">
-                              {p.jenisPermohonan?.replace(/_/g, " ")}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-700 font-bold mt-1">
-                            Wajib Pajak: {p.namaWajibPajak}
-                          </span>
-                          <span className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                            Pelayanan: {p.nomorPelayanan || "-"} • WA WP: {p.noWhatsapp}
-                          </span>
+                      {/* Status Pill Badge (Top-Right) */}
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold border leading-none uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all ${
+                          b.status === 'LOCKED'
+                            ? 'bg-slate-900 text-slate-100 border-slate-800'
+                            : b.status === 'IN_MANIFEST'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}>
+                          {renderStatusIcon()}
+                          <span>{b.status.toLowerCase()}</span>
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2.5 items-start">
+                        {/* Left: Premium Folder Icon Wrapper */}
+                        <div className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-sky-50/80 border-sky-150'
+                            : b.status === 'LOCKED'
+                              ? 'bg-slate-100 border-slate-200'
+                              : 'bg-slate-50 border-slate-200/40'
+                        }`}>
+                          {renderFolderIconOrCount()}
                         </div>
 
-                        {/* Status Badges */}
-                        <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                          {isFrozen && (
-                            <span className="text-[9px] font-bold px-2.5 py-1 bg-amber-500 text-white rounded-full flex items-center gap-1 animate-pulse select-none">
-                              <ShieldAlert className="w-3 h-3" /> Menunggu Acc Supervisor
-                            </span>
-                          )}
-                          {needsReUpload && !isFrozen && (
-                            <span className="text-[9px] font-bold px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-250 rounded-full flex items-center gap-1 select-none animate-pulse">
-                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Perlu Re-Upload
-                            </span>
-                          )}
-                          <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full capitalize select-none ${
-                            p.status === "ARCHIVED"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : p.status === "BUNDLED"
-                              ? "bg-sky-100 text-sky-800"
-                              : "bg-slate-100 text-slate-800"
-                          }`}>
-                            {p.status === "ARCHIVED" ? "Terarsip" : p.status === "BUNDLED" ? "Terbundel" : p.status}
+                        {/* Right: Info */}
+                        <div className="flex flex-col min-w-0 flex-1 justify-center pr-12">
+                          <span className="text-xs font-black text-slate-850 font-mono tracking-tight truncate block" title={b.nomorBundle}>
+                            {b.nomorBundle}
                           </span>
+                          <div className="mt-1">
+                            {isRevisi ? (
+                              <span className="text-[10px] text-amber-700 font-bold select-none bg-amber-50 px-2 py-0.5 rounded-lg w-fit border border-amber-100/50">
+                                {reuploadNeeded} perlu re-upload
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-indigo-650 font-bold select-none bg-indigo-50 px-2 py-0.5 rounded-lg w-fit border border-indigo-100/50">
+                                {archivedCount}/{totalCount} terarsip
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Display Alert Banner if Frozen */}
-                      {isFrozen && (
-                        <div className="bg-amber-50/70 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-semibold select-none flex flex-col gap-1">
-                          <p className="flex items-center gap-1.5 font-bold">
-                            <Clock className="w-3.5 h-3.5 text-amber-500 animate-spin" /> 
-                            Permohonan ini dibekukan
-                          </p>
-                          <p className="text-[10px] text-amber-700 leading-relaxed pl-5 font-semibold">
-                            Pengajuan koreksi major ({pendingReq.jenisKoreksi.replace(/_/g, " ")}) diajukan oleh Anda. 
-                            Catatan: "{pendingReq.catatanPengaju}"
-                          </p>
-                        </div>
-                      )}
+                      {/* Bottom: Service Type Badge & Action */}
+                      <div className="flex flex-col gap-2 pt-2 border-t border-slate-100/80">
+                        <div className="flex items-center justify-between gap-2.5">
+                          {/* Service Type Tag */}
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
+                            {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : '—'}
+                          </span>
 
-                      {/* Actions & File Areas */}
-                      <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        {/* LEFT: File Upload controls */}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            ref={(el) => {
-                              fileInputRefs.current[p.id] = el;
-                            }}
-                            onChange={(e) => handleUploadFile(p.id, e)}
-                            className="hidden"
-                            disabled={isFrozen || loading}
-                          />
-
-                          {/* Not Uploaded view */}
-                          {p.status === "BUNDLED" && (
+                          {isSelected && (
                             <button
-                              onClick={() => triggerFileInput(p.id)}
-                              disabled={isFrozen || loading}
-                              className={`flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-extrabold rounded-xl border border-dashed text-indigo-600 border-indigo-300 hover:bg-indigo-50/50 hover:border-indigo-400 active:scale-98 transition-all cursor-pointer ${
-                                isFrozen ? "opacity-50 cursor-not-allowed" : ""
-                              }`}
+                              onClick={(e) => { e.stopPropagation(); setViewMode("arsip"); }}
+                              className="text-[9px] text-indigo-600 font-extrabold hover:underline flex items-center gap-0.5 cursor-pointer animate-fadeIn"
                             >
-                              <Upload className="w-4 h-4 shrink-0" />
-                              {needsReUpload ? "Re-upload file PDF baru" : "Unggah arsip PDF"}
+                              <span>Lihat Arsip</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
                             </button>
                           )}
-
-                          {/* Active archive file display */}
-                          {p.status === "ARCHIVED" && activeArchive && (
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
-                                <FileCheck className="w-5 h-5" />
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
-                                  Arsip aktif (v{activeArchive.versi})
-                                  <a
-                                    href={activeArchive.urlBlob}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-indigo-600 hover:text-indigo-800 transition-colors p-0.5 shrink-0 inline-flex items-center"
-                                    title="Buka file di tab baru"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                  </a>
-                                </span>
-                                <span className="text-[10px] text-gray-400 font-semibold truncate">
-                                  Diunggah: {new Date(activeArchive.createdAt).toLocaleString("id-ID")}
-                                </span>
-                              </div>
-                            </div>
-                          )}
                         </div>
-
-                        {/* RIGHT: Major / Minor Corrections */}
-                        {!isFrozen && (
-                          <div className="flex items-center gap-2 sm:justify-end shrink-0">
-                            {/* Upload Ulang (Minor Correction) */}
-                            {p.status === "ARCHIVED" && (
-                              <button
-                                onClick={() => triggerFileInput(p.id)}
-                                disabled={loading}
-                                className="flex items-center gap-1.5 py-2 px-3 text-xs font-bold text-gray-600 hover:text-indigo-700 bg-slate-50 hover:bg-indigo-55/15 rounded-xl transition-all cursor-pointer active:scale-95"
-                                title="Ganti berkas digital tanpa mengubah status"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                                Upload ulang
-                              </button>
-                            )}
-
-                            {/* Kembalikan ke Peneliti (Major Correction) */}
-                            <button
-                              onClick={() => openCorrectionModal(p)}
-                              disabled={loading}
-                              className="flex items-center gap-1.5 py-2 px-3 text-xs font-bold text-gray-500 hover:text-red-700 bg-slate-50 hover:bg-red-50 rounded-xl transition-all cursor-pointer active:scale-95"
-                              title="Kembalikan permohonan ke peneliti (cacat berkas / substansi data)"
-                            >
-                              <ArrowLeftRight className="w-3.5 h-3.5" />
-                              Kembalikan ke peneliti
-                            </button>
-                          </div>
-                        )}
                       </div>
-
-                      {/* Expandable Version History list */}
-                      {p.arsipDigital && p.arsipDigital.length > 0 && (
-                        <div className="border-t border-slate-50 pt-2 select-none">
-                          <button
-                            onClick={() => toggleHistory(p.id)}
-                            className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 font-bold transition-colors"
-                          >
-                            <History className="w-3 h-3" />
-                            {expandedHistory[p.id] ? "Sembunyikan riwayat" : `Tampilkan riwayat (${p.arsipDigital.length})`}
-                            {expandedHistory[p.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                          </button>
-
-                          {expandedHistory[p.id] && (
-                            <div className="mt-2.5 overflow-x-auto rounded-xl border border-slate-100 shadow-inner">
-                              <table className="w-full text-[10px] text-left text-gray-600 border-collapse">
-                                <thead>
-                                  <tr className="bg-[#f8fafc] text-gray-400 border-b border-gray-200/60 capitalize select-none font-bold">
-                                    <th className="px-3 py-1.5 font-bold">Versi</th>
-                                    <th className="px-3 py-1.5 font-bold">Status Versi</th>
-                                    <th className="px-3 py-1.5 font-bold">Tanggal Upload</th>
-                                    <th className="px-3 py-1.5 font-bold">Aksi</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {p.arsipDigital.map((ad: any) => (
-                                    <tr key={ad.id} className="border-b border-slate-200 last:border-0 hover:bg-slate-100/50">
-                                      <td className="px-3 py-1.5 font-bold">v{ad.versi}</td>
-                                      <td className="px-3 py-1.5">
-                                        <span className={`font-semibold px-1.5 py-0.5 rounded-md text-[9px] ${
-                                          ad.status === "ACTIVE"
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : ad.status === "SUPERSEDED"
-                                            ? "bg-amber-100 text-amber-800"
-                                            : "bg-red-100 text-red-800"
-                                        }`}>
-                                          {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SUPERSEDED" ? "Digantikan" : "Dibatalkan"}
-                                        </span>
-                                      </td>
-                                      <td className="px-3 py-1.5 font-medium">
-                                        {new Date(ad.createdAt).toLocaleString("id-ID")}
-                                      </td>
-                                      <td className="px-3 py-1.5">
-                                        <a
-                                          href={ad.urlBlob}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-indigo-600 hover:text-indigo-800 transition-colors font-bold inline-flex items-center gap-0.5"
-                                        >
-                                          Buka <ExternalLink className="w-2.5 h-2.5" />
-                                        </a>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   );
                 })
               )}
             </div>
+
+            {/* Pagination bundles */}
+            {totalBundlePages > 1 && (
+              <div className="px-5 py-3 border-t border-slate-200/55 flex items-center justify-between mt-auto">
+                <span className="text-[11px] font-semibold text-gray-400 select-none">
+                  Menampilkan {((activeBundlePage - 1) * itemsPerBundlePage) + 1}–{Math.min(activeBundlePage * itemsPerBundlePage, filteredBundlesList.length)} dari {filteredBundlesList.length} bundle
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentBundlePage((prev) => Math.max(prev - 1, 1))}
+                    disabled={activeBundlePage === 1}
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  {Array.from({ length: totalBundlePages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      type="button"
+                      key={page}
+                      onClick={() => setCurrentBundlePage(page)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        activeBundlePage === page
+                          ? "bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10"
+                          : "border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentBundlePage((prev) => Math.min(prev + 1, totalBundlePages))}
+                    disabled={activeBundlePage === totalBundlePages}
+                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* ==================== VIEW MODE: DAFTAR ARSIP ==================== */}
+        {viewMode === "arsip" && (
+          <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
+            {selectedBundle ? (
+              <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
+
+                {/* Bundle header banner — adaptasi dari print view Peneliti */}
+                <div className="px-5 py-4 border-b border-gray-200/60 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
+                  <div>
+                    <h3 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-black text-slate-900">{selectedBundle.nomorBundle}</span>
+                      <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full select-none">
+                        {(selectedBundle.permohonan || []).length} Berkas
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                      Peneliti:{" "}
+                      <span className="text-gray-600 font-semibold">{selectedBundle.peneliti?.name || "—"}</span>
+                      {" · "}
+                      {new Date(selectedBundle.createdAt).toLocaleDateString("id-ID", {
+                        day: "2-digit", month: "short", year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Permohonan table — identik kolom dengan PenelitiWorkspace, Aksi diganti */}
+                <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                  <div className="px-5 pt-5 pb-5 bg-[#dde3ea] flex-1 flex flex-col gap-4 overflow-hidden">
+                    <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-3xs flex flex-col flex-1">
+                    <div className="flex-1 overflow-x-auto scrollbar-thin">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200">
+                            <th className="py-3 px-5 text-center">No</th>
+                            <th className="py-3 px-2 text-center select-none w-10">⭐</th>
+                            <th className="py-3 px-5">Tgl. Nopel</th>
+                            <th className="py-3 px-5">Tgl. Selesai</th>
+                            <th className="py-3 px-5">No. Pelayanan</th>
+                            <th className="py-3 px-5">Nomor Objek Pajak</th>
+                            <th className="py-3 px-5">Nama Pemohon</th>
+                            <th className="py-3 px-5">Jenis Layanan</th>
+                            <th className="py-3 px-5 text-center">Status</th>
+                            <th className="py-3 px-5 text-right pr-6 w-32">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-xs font-semibold text-gray-700 bg-white">
+                          {paginatedArsipList.length === 0 ? (
+                            <tr>
+                              <td colSpan={10} className="py-14 text-center text-slate-400 italic">
+                                Bundle tidak memiliki permohonan.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedArsipList.map((p: any, index: number) => {
+                              const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
+                              const needsReUpload = p.status === "BUNDLED" && p.arsipDigital?.some((ad: any) => ad.status === "SUPERSEDED");
+                              const isArchived = p.status === "ARCHIVED";
+                              const activeArchive = p.arsipDigital?.find((ad: any) => ad.status === "ACTIVE");
+                              const itemNumber = (activeArsipPage - 1) * itemsPerArsipPage + index + 1;
+
+                              const nopolDate = p.tanggalNoPelayanan
+                                ? new Date(p.tanggalNoPelayanan).toLocaleDateString("id-ID", {
+                                    day: "numeric", month: "short", year: "numeric",
+                                  })
+                                : "—";
+                              const penyelesaianDate = p.tanggalPenyelesaian
+                                ? new Date(p.tanggalPenyelesaian).toLocaleDateString("id-ID", {
+                                    day: "numeric", month: "short", year: "numeric",
+                                  })
+                                : "—";
+
+                              return (
+                                <tr
+                                  key={p.id}
+                                  className={`hover:bg-slate-50 transition-colors duration-150 group relative text-xs font-semibold text-gray-700 ${
+                                    isFrozen ? "bg-amber-50/20" : ""
+                                  }`}
+                                >
+                                  {/* No */}
+                                  <td className="py-4 px-5 text-center text-xs font-bold text-slate-500 font-mono">
+                                    {itemNumber}
+                                  </td>
+
+                                  {/* ⭐ */}
+                                  <td className="py-4 px-2 text-center">
+                                    <Star className={`w-4 h-4 transition-all duration-200 inline ${
+                                      p.isFavorite
+                                        ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
+                                        : 'text-slate-300'
+                                    }`} />
+                                  </td>
+
+                                  {/* Tgl Nopel */}
+                                  <td className="py-4 px-5 text-xs font-semibold text-slate-500 whitespace-nowrap">{nopolDate}</td>
+
+                                  {/* Tgl Penyelesaian */}
+                                  <td className="py-4 px-5 whitespace-nowrap">
+                                    {p.tanggalPenyelesaian ? (
+                                      <div className="flex items-center gap-1">
+                                        {isOverdue(p.tanggalPenyelesaian, p.status) && (
+                                          <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                        )}
+                                        <span className={`text-xs font-semibold ${
+                                          isOverdue(p.tanggalPenyelesaian, p.status)
+                                            ? 'text-red-600 font-bold'
+                                            : 'text-slate-500'
+                                        }`}>
+                                          {penyelesaianDate}
+                                        </span>
+                                      </div>
+                                    ) : "—"}
+                                  </td>
+
+                                  {/* No. Pelayanan */}
+                                  <td className="py-4 px-5 min-w-[140px] group/cell relative">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-bold text-slate-700 font-mono tracking-tight">
+                                        {p.nomorPelayanan || p.nomorPermohonan}
+                                      </span>
+                                      {isFrozen && (
+                                        <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
+                                          <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
+                                          Frozen
+                                        </span>
+                                      )}
+                                      {needsReUpload && !isFrozen && (
+                                        <span className="text-[8px] font-extrabold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md select-none">
+                                          Re-upload
+                                        </span>
+                                      )}
+                                      <button
+                                        onClick={(e) => handleCopy(e, p.nomorPelayanan || p.nomorPermohonan)}
+                                        className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                        title="Salin Nomor"
+                                      >
+                                        {copiedText === (p.nomorPelayanan || p.nomorPermohonan) ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  {/* NOP */}
+                                  <td className="py-4 px-5 min-w-[140px] group/cell relative">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-slate-500 font-mono">
+                                        {formatNop(p.nop)}
+                                      </span>
+                                      <button
+                                        onClick={(e) => handleCopy(e, p.nop)}
+                                        className="p-1.5 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                        title="Salin NOP"
+                                      >
+                                        {copiedText === p.nop ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  {/* Nama WP */}
+                                  <td className="py-4 px-5 group/cell relative">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-bold text-slate-700 whitespace-nowrap capitalize">
+                                        {p.namaWajibPajak.toLowerCase()}
+                                      </span>
+                                      <button
+                                        onClick={(e) => handleCopy(e, p.namaWajibPajak)}
+                                        className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                        title="Salin Nama Pemohon"
+                                      >
+                                        {copiedText === p.namaWajibPajak ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  {/* Jenis */}
+                                  <td className="py-4 px-5">
+                                    <span
+                                      className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-205 px-2.5 py-0.5 rounded capitalize font-sans tracking-wide select-none"
+                                      title={p.jenisPermohonan?.replace(/_/g, " ")}
+                                    >
+                                      {getAbbreviatedJenis(p.jenisPermohonan)}
+                                    </span>
+                                  </td>
+
+                                  {/* Status */}
+                                  <td className="py-4 px-5 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <span className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(p.status)}`}>
+                                        {toTitleCase(p.status).toUpperCase()}
+                                      </span>
+                                    </div>
+                                  </td>
+
+                                  {/* Aksi */}
+                                  <td className="py-4 px-5 text-right pr-6">
+                                    {/* Hidden file input per permohonan */}
+                                    <input
+                                      type="file"
+                                      accept=".pdf"
+                                      ref={(el) => { fileInputRefs.current[p.id] = el; }}
+                                      onChange={(e) => handleUploadFile(p.id, e)}
+                                      className="hidden"
+                                      disabled={isFrozen || loading}
+                                    />
+
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {isFrozen ? (
+                                        <span className="text-[9px] font-extrabold px-2 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 whitespace-nowrap">
+                                          Menunggu Supervisor
+                                        </span>
+                                      ) : (
+                                        <>
+                                          {/* Re-upload (BUNDLED + SUPERSEDED) */}
+                                          {p.status === "BUNDLED" && needsReUpload && (
+                                            <button
+                                              onClick={() => triggerFileInput(p.id)}
+                                              disabled={loading}
+                                              className="p-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition-all cursor-pointer flex items-center justify-center shrink-0"
+                                              title="Re-upload arsip PDF baru"
+                                            >
+                                              <RotateCcw className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+
+                                          {/* Upload pertama kali (BUNDLED, tanpa SUPERSEDED) */}
+                                          {p.status === "BUNDLED" && !needsReUpload && (
+                                            <button
+                                              onClick={() => triggerFileInput(p.id)}
+                                              disabled={loading}
+                                              className="p-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition-all cursor-pointer flex items-center justify-center shrink-0"
+                                              title="Unggah arsip PDF"
+                                            >
+                                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+
+                                          {/* Buka arsip (ARCHIVED) */}
+                                          {isArchived && activeArchive && (
+                                            <a
+                                              href={activeArchive.urlBlob}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="p-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-all flex items-center justify-center shrink-0"
+                                              title={`v${activeArchive.versi} — Buka arsip PDF`}
+                                            >
+                                              <FileCheck className="w-3.5 h-3.5" />
+                                            </a>
+                                          )}
+
+                                          {/* Ganti file (ARCHIVED) */}
+                                          {isArchived && (
+                                            <button
+                                              onClick={() => triggerFileInput(p.id)}
+                                              disabled={loading}
+                                              className="p-1.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-lg text-slate-500 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                              title="Ganti file arsip"
+                                            >
+                                              <FolderOpen className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+
+                                          {/* Kembalikan ke Peneliti */}
+                                          <button
+                                            onClick={() => openCorrectionModal(p)}
+                                            disabled={loading}
+                                            className="p-1.5 bg-slate-50 border border-slate-200/60 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                            title="Kembalikan ke Peneliti"
+                                          >
+                                            <ArrowLeftRight className="w-3.5 h-3.5" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Table Footer / Pagination — identical to Penginput & Peneliti */}
+                    <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-semibold text-gray-500 font-sans">
+                          {permohonanList.length > 0
+                            ? `Menampilkan ${((activeArsipPage - 1) * itemsPerArsipPage) + 1}–${Math.min(activeArsipPage * itemsPerArsipPage, permohonanList.length)} dari ${permohonanList.length} berkas`
+                            : 'Tidak ada data'}
+                        </span>
+                        {/* Items per page */}
+                        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5">
+                          {[10, 20, 50].map(n => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => {
+                                setItemsPerArsipPage(n);
+                                setCurrentArsipPage(1);
+                              }}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerArsipPage === n
+                                ? 'bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] text-[#1e2022] shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                          <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
+                        </div>
+                      </div>
+
+                      {totalArsipPages > 1 && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentArsipPage(prev => Math.max(prev - 1, 1))}
+                            disabled={activeArsipPage === 1}
+                            className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          {Array.from({ length: totalArsipPages }, (_, i) => i + 1).map(page => (
+                            <button
+                              type="button"
+                              key={page}
+                              onClick={() => setCurrentArsipPage(page)}
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activeArsipPage === page
+                                ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
+                                : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentArsipPage(prev => Math.min(prev + 1, totalArsipPages))}
+                            disabled={activeArsipPage === totalArsipPages}
+                            className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status watermark strip — identik dengan PenelitiWorkspace */}
+                  {(() => {
+                    const status = selectedBundle.status;
+                    const isRevisi = status === "IN_MANIFEST";
+                    const repeatedTexts = Array(45).fill(isRevisi ? "REVISI" : status);
+                    return (
+                      <div className={`w-full py-2 text-center text-[9px] font-bold tracking-widest uppercase select-none flex items-center justify-center gap-6 border-t overflow-hidden shrink-0 ${
+                        isRevisi
+                          ? "bg-amber-50/60 text-amber-700/75 border-amber-100/50"
+                          : "bg-slate-100/60 text-slate-500/70 border-slate-200/50"
+                      }`}>
+                        <div className="flex items-center gap-6 whitespace-nowrap">
+                          {repeatedTexts.map((text, i) => (
+                            <React.Fragment key={i}>
+                              <span>{text}</span>
+                              {i < repeatedTexts.length - 1 && (
+                                <span className="opacity-40 select-none">•</span>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            ) : (
+              /* Empty state — belum ada bundle dipilih */
+              <div className="flex-1 flex flex-col items-center justify-center py-28 px-8 text-center select-none">
+                <div className="w-14 h-14 bg-gradient-to-br from-indigo-50 to-blue-100 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                  <Boxes className="w-7 h-7 text-indigo-400" />
+                </div>
+                <p className="text-sm font-bold text-gray-600 mb-1.5">Pilih bundle terlebih dahulu</p>
+                <p className="text-xs text-gray-400 font-medium max-w-xs leading-relaxed mb-4">
+                  Buka tab "Daftar Bundle", pilih bundle yang ingin diproses, dan daftar arsipnya akan tampil di sini.
+                </p>
+                <button
+                  onClick={() => setViewMode("bundle")}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Boxes className="w-3.5 h-3.5" />
+                  <span>Ke Daftar Bundle</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
-      {/* ================= MODAL: AJUKAN KEMBALIKAN KE PENELITI ================= */}
+      {/* ==================== MODAL: Kembalikan ke Peneliti ==================== */}
       {showCorrectionModal && correctionTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 select-none">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full border border-slate-150 overflow-hidden animate-scaleUp">
-            
+
             {/* Modal Header */}
             <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <ArrowLeftRight className="w-4 h-4 text-red-500 animate-pulse" />
+                <ArrowLeftRight className="w-4 h-4 text-red-400" />
                 Kembalikan ke Peneliti
               </h3>
               <button
-                onClick={() => {
-                  setShowCorrectionModal(false);
-                  setCorrectionTarget(null);
-                }}
+                onClick={() => { setShowCorrectionModal(false); setCorrectionTarget(null); }}
                 className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -758,9 +1107,10 @@ export default function PengarsipWorkspace() {
             {/* Modal Form */}
             <form onSubmit={handleRequestCorrection}>
               <div className="p-5 flex flex-col gap-4 text-xs">
-                <div className="p-3.5 bg-red-50/50 border border-red-100 rounded-xl leading-relaxed text-red-800 font-medium">
+                <div className="p-3.5 bg-red-50/60 border border-red-100 rounded-xl leading-relaxed text-red-800 font-medium">
                   <p>
-                    Anda mengajukan pengembalian <strong>koreksi major</strong> untuk berkas NOP: <strong>{formatNop(correctionTarget.nop)}</strong>.
+                    Anda mengajukan pengembalian <strong>koreksi major</strong> untuk berkas NOP:{" "}
+                    <strong>{formatNop(correctionTarget.nop)}</strong>.
                   </p>
                   <p className="text-[10px] text-red-600 mt-1.5 font-bold">
                     * Tindakan ini memerlukan persetujuan Supervisor dan akan mem-freeze permohonan hingga diputuskan.
@@ -769,15 +1119,15 @@ export default function PengarsipWorkspace() {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="catatan-koreksi" className="font-extrabold text-gray-755">
-                    Alasan pengembalian berkas <span className="text-red-500">*</span>
+                    Alasan pengembalian <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     id="catatan-koreksi"
                     rows={4}
                     value={correctionReason}
                     onChange={(e) => setCorrectionReason(e.target.value)}
-                    placeholder="Masukkan alasan detail kesalahan berkas fisik (misalnya: dokumen sobek, berkas tertukar, NOP berbeda dengan fisik, dll.)"
-                    className="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 focus:outline-none focus:border-indigo-500 focus:bg-white text-xs font-semibold rounded-xl px-3 py-2.5 transition-all text-gray-800 shadow-inner"
+                    placeholder="Masukkan alasan detail (contoh: dokumen sobek, berkas tertukar, NOP tidak sesuai fisik...)"
+                    className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:outline-none focus:border-indigo-400 focus:bg-white text-xs font-semibold rounded-xl px-3 py-2.5 transition-all text-gray-800 resize-none"
                     required
                   />
                 </div>
@@ -787,10 +1137,7 @@ export default function PengarsipWorkspace() {
               <div className="bg-slate-50 border-t border-slate-100 px-5 py-3.5 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCorrectionModal(false);
-                    setCorrectionTarget(null);
-                  }}
+                  onClick={() => { setShowCorrectionModal(false); setCorrectionTarget(null); }}
                   className="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all cursor-pointer"
                 >
                   Batal
@@ -798,18 +1145,18 @@ export default function PengarsipWorkspace() {
                 <button
                   type="submit"
                   disabled={loading || !correctionReason.trim()}
-                  className="px-4 py-2 text-xs font-bold text-white bg-red-650 hover:bg-red-700 active:scale-95 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:scale-95 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Ajukan pengembalian
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
+
+

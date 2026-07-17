@@ -27,7 +27,7 @@ export async function getSubmittedPermohonan() {
 
     // Filter di JS: hanya yang belum memiliki bundleId
     const list = all.filter(p => !p.bundleId);
-    
+
     return { success: true, list };
   } catch (error: any) {
     console.error('[ACTION-GET-SUBMITTED-ERR]', error);
@@ -106,10 +106,6 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
         }
       }
 
-      // Send In-App Notification to the responsible Penginput
-      const notifPesan = `Permohonan Anda (${permohonan.nomorPermohonan}) dikembalikan untuk revisi. Catatan Peneliti: "${catatan}"`;
-      await createInAppNotification(permohonan.penginputId, 'Permohonan Perlu Revisi', notifPesan, { permohonanId });
-
       // Create Audit Log
       await tx.auditLog.create({
         data: {
@@ -127,9 +123,15 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
         updatedPermohonan,
         noWhatsapp: permohonan.noWhatsapp,
         nomorPermohonan: permohonan.nomorPermohonan,
-        jenisPermohonan: permohonan.jenisPermohonan
+        nomorPelayanan: permohonan.nomorPelayanan,
+        jenisPermohonan: permohonan.jenisPermohonan,
+        penginputId: permohonan.penginputId
       };
     });
+
+    // Send In-App Notification to the responsible Penginput (outside transaction)
+    const notifPesan = `Permohonan Anda (${result.nomorPelayanan || result.nomorPermohonan}) dikembalikan untuk revisi. Catatan Peneliti: "${catatan}"`;
+    await createInAppNotification(result.penginputId, 'Permohonan Perlu Revisi', notifPesan, { permohonanId });
 
     // Kirim notifikasi WhatsApp ke Wajib Pajak di luar transaction scope
     const readableJenis = result.jenisPermohonan.replace(/_/g, ' ');
@@ -233,7 +235,7 @@ export async function getBundles() {
   try {
     const list = await prisma.bundle.findMany({
       where: {
-        status: { in: ['DRAFT', 'LOCKED'] }
+        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST'] }
       },
       include: {
         permohonan: true,
@@ -296,7 +298,7 @@ export async function addPermohonanToBundle(bundleId: string, permohonanId: stri
       // 4. Perform update: associate permohonan with bundle, change status to BUNDLED
       // If it's the first permohonan in the bundle, set the locked jenisPermohonan on the bundle
       const updatedBundleJenis = bundle.jenisPermohonan || permohonan.jenisPermohonan;
-      
+
       await tx.bundle.update({
         where: { id: bundleId },
         data: { jenisPermohonan: updatedBundleJenis }
@@ -343,7 +345,7 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const bundle = await tx.bundle.findUnique({
         where: { id: bundleId }
       });
@@ -379,7 +381,7 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
           // Reset locked type, but keep status as DRAFT
           await tx.bundle.update({
             where: { id: bundleId },
-            data: { 
+            data: {
               jenisPermohonan: null
             }
           });
@@ -440,20 +442,30 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
           }
         });
 
-        // Notify Supervisor
-        const notifTitle = 'Persetujuan Koreksi';
-        const notifPesan = `Peneliti mengajukan koreksi untuk mengeluarkan Permohonan ${permohonan.nomorPermohonan} dari Bundle ${bundle.nomorBundle}. Alasan: "${alasan}"`;
-        await notifyAllUsersOfRole('SUPERVISOR', notifTitle, notifPesan, { 
-          koreksiId: request.id, 
-          permohonanId, 
-          bundleId 
-        });
-
-        return { success: true, status: 'PENDING_APPROVAL', request };
+        return {
+          success: true,
+          status: 'PENDING_APPROVAL',
+          request,
+          nomorPelayanan: permohonan.nomorPelayanan || permohonan.nomorPermohonan,
+          nomorBundle: bundle.nomorBundle
+        };
       }
 
       throw new Error('Bundle dalam manifest atau status lain tidak dapat dikoreksi oleh Peneliti.');
     });
+
+    // Notify Supervisor (outside transaction)
+    if (result.success && result.status === 'PENDING_APPROVAL' && result.request) {
+      const notifTitle = 'Persetujuan Koreksi';
+      const notifPesan = `Peneliti mengajukan koreksi untuk mengeluarkan Permohonan ${result.nomorPelayanan} dari Bundle ${result.nomorBundle}. Alasan: "${alasan}"`;
+      await notifyAllUsersOfRole('SUPERVISOR', notifTitle, notifPesan, {
+        koreksiId: result.request.id,
+        permohonanId,
+        bundleId
+      });
+    }
+
+    return result;
   } catch (error: any) {
     console.error('[ACTION-REMOVE-FROM-BUNDLE-ERR]', error);
     return { success: false, error: error.message || 'Gagal mengeluarkan permohonan.' };
@@ -470,7 +482,7 @@ export async function lockBundle(bundleId: string) {
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const bundle = await tx.bundle.findUnique({
         where: { id: bundleId },
         include: { permohonan: true }
@@ -494,10 +506,6 @@ export async function lockBundle(bundleId: string) {
         data: { status: 'LOCKED' }
       });
 
-      // Send In-App Notification to all active PENGARSIP users
-      const notifPesan = `Bundle Baru ${bundle.nomorBundle} telah dikunci oleh Peneliti dan siap untuk didigitalisasi.`;
-      await notifyAllUsersOfRole('PENGARSIP', 'Bundle Siap Didigitalisasi', notifPesan, { bundleId });
-
       // Audit Log
       await tx.auditLog.create({
         data: {
@@ -510,8 +518,16 @@ export async function lockBundle(bundleId: string) {
         }
       });
 
-      return { success: true, bundle: updatedBundle };
+      return { success: true, bundle: updatedBundle, nomorBundle: bundle.nomorBundle };
     });
+
+    // Send In-App Notification to all active PENGARSIP users (outside transaction)
+    if (result.success && result.bundle) {
+      const notifPesan = `Bundle Baru ${result.nomorBundle} telah dikunci oleh Peneliti dan siap untuk didigitalisasi.`;
+      await notifyAllUsersOfRole('PENGARSIP', 'Bundle Siap Didigitalisasi', notifPesan, { bundleId });
+    }
+
+    return { success: true, bundle: result.bundle };
   } catch (error: any) {
     console.error('[ACTION-LOCK-BUNDLE-ERR]', error);
     return { success: false, error: error.message || 'Gagal mengunci bundle.' };
@@ -532,5 +548,131 @@ export async function getPendingKoreksiForPermohonan(permohonanId: string) {
     return { success: true, request };
   } catch (e) {
     return { success: false, request: null };
+  }
+}
+
+/**
+ * Retrieve summary stats of bundles and queue for Peneliti dashboard
+ */
+export async function getPenelitiStats() {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const draftCount = await prisma.bundle.count({ where: { status: 'DRAFT' } });
+    const lockedCount = await prisma.bundle.count({ where: { status: 'LOCKED' } });
+    const inManifestCount = await prisma.bundle.count({ where: { status: 'IN_MANIFEST' } });
+
+    // For submitted but unbundled permohonan
+    const allSubmitted = await prisma.permohonan.findMany({
+      where: { status: 'SUBMITTED' },
+      select: { bundleId: true }
+    });
+    const unbundledCount = allSubmitted.filter(p => !p.bundleId).length;
+
+    // Total bundles (excluding VOID)
+    const totalCount = await prisma.bundle.count({ where: { status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST'] } } });
+
+    // Pending correction requests count
+    const pendingCorrectionCount = await prisma.permintaanKoreksi.count({
+      where: { status: 'PENDING_APPROVAL' }
+    });
+
+    return {
+      success: true,
+      stats: {
+        unbundled: unbundledCount,
+        draft: draftCount,
+        locked: lockedCount,
+        inManifest: inManifestCount,
+        total: totalCount,
+        pendingKoreksi: pendingCorrectionCount
+      }
+    };
+  } catch (error: any) {
+    console.error('[ACTION-GET-PENELITI-STATS-ERR]', error);
+    return {
+      success: false,
+      stats: { unbundled: 0, draft: 0, locked: 0, inManifest: 0, total: 0, pendingKoreksi: 0 },
+      error: 'Gagal mengambil statistik peneliti.'
+    };
+  }
+}
+
+/**
+ * Retrieve recent bundles for Peneliti dashboard
+ */
+export async function getRecentBundles(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const list = await prisma.bundle.findMany({
+      where: {
+        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST'] }
+      },
+      include: {
+        permohonan: { select: { id: true } },
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-RECENT-BUNDLES-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil daftar bundle terbaru.' };
+  }
+}
+
+/**
+ * Action: Reset jenisPermohonan on an empty DRAFT bundle.
+ * 
+ * Handles the legacy case where a DRAFT bundle has no permohonan inside it
+ * but still carries a non-null jenisPermohonan from a previous state.
+ * Only allowed if the bundle is truly empty (0 permohonan) and in DRAFT status.
+ */
+export async function resetEmptyBundleType(bundleId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const bundle = await tx.bundle.findUnique({
+        where: { id: bundleId },
+        include: { _count: { select: { permohonan: true } } }
+      });
+
+      if (!bundle) throw new Error('Bundle tidak ditemukan.');
+      if (bundle.status !== 'DRAFT') throw new Error('Hanya bundle DRAFT yang dapat direset jenis permohonannya.');
+      if (bundle._count.permohonan > 0) throw new Error('Bundle masih berisi permohonan — tidak dapat direset.');
+      if (!bundle.jenisPermohonan) return { success: true, message: 'Bundle sudah bersih (jenisPermohonan sudah null).' };
+
+      await tx.bundle.update({
+        where: { id: bundleId },
+        data: { jenisPermohonan: null }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entityType: 'BUNDLE',
+          entityId: bundleId,
+          aksi: `Jenis permohonan bundle "${bundle.nomorBundle}" direset secara manual karena bundle kosong`,
+          pelakuId: session.user.id,
+        }
+      });
+
+      revalidatePath('/');
+      return { success: true, message: `Jenis layanan bundle ${bundle.nomorBundle} berhasil direset.` };
+    });
+  } catch (error: any) {
+    console.error('[ACTION-RESET-EMPTY-BUNDLE-TYPE-ERR]', error);
+    return { success: false, error: error.message || 'Gagal mereset jenis bundle.' };
   }
 }

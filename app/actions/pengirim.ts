@@ -718,7 +718,7 @@ export async function ajukanKembalikanKePengarsip(permohonanId: string, alasan: 
 
       // Notify Supervisor
       const notifTitle = "Persetujuan Koreksi Logistik";
-      const notifPesan = `Pengirim mengajukan pengembalian Permohonan ${permohonan.nomorPermohonan} ke Pengarsip. Alasan: "${alasan}"`;
+      const notifPesan = `Pengirim mengajukan pengembalian Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} ke Pengarsip. Alasan: "${alasan}"`;
       
       const activeSupervisors = await tx.user.findMany({
         where: { role: "SUPERVISOR", isActive: true },
@@ -762,5 +762,53 @@ export async function getPendingKoreksiForPermohonan(permohonanId: string) {
     return { success: true, request };
   } catch (e) {
     return { success: false, request: null };
+  }
+}
+
+/**
+ * Action: Retrieve statistics for the Pengirim dashboard.
+ */
+export async function getPengirimStats() {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGIRIM", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const totalManifest = await prisma.manifest.count();
+    const draftManifest = await prisma.manifest.count({ where: { status: "DRAFT" } });
+    const lockedManifest = await prisma.manifest.count({ where: { status: "LOCKED" } });
+    const sentManifest = await prisma.manifest.count({ where: { status: "SENT" } });
+
+    const list = await prisma.bundle.findMany({
+      where: {
+        status: "LOCKED",
+        manifestId: null
+      },
+      include: {
+        permohonan: true
+      }
+    });
+
+    const eligibleBundles = list.filter((b) => {
+      return (
+        b.permohonan.length > 0 &&
+        b.permohonan.every((p) => p.status === "ARCHIVED")
+      );
+    }).length;
+
+    return {
+      success: true,
+      stats: {
+        totalManifest,
+        draftManifest,
+        lockedManifest,
+        sentManifest,
+        eligibleBundles
+      }
+    };
+  } catch (error: any) {
+    console.error("[ACTION-GET-PENGIRIM-STATS-ERR]", error);
+    return { success: false, stats: null, error: "Gagal mengambil statistik pengirim." };
   }
 }

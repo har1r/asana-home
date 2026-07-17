@@ -31,6 +31,9 @@ export async function getDigitizationBundles() {
           include: {
             arsipDigital: {
               orderBy: { versi: "desc" }
+            },
+            permintaanKoreksi: {
+              where: { status: "PENDING_APPROVAL" }
             }
           }
         },
@@ -245,7 +248,7 @@ export async function uploadArsipDigital(formData: FormData) {
 
       if (lastKoreksi && lastKoreksi.pengajuId) {
         // Send In-App Notification to the Pengirim
-        const notifPesan = `Permohonan ${permohonan.nomorPermohonan} telah selesai didigitalisasi ulang oleh Pengarsip dan kembali ke status Terarsip (ARCHIVED).`;
+        const notifPesan = `Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} telah selesai didigitalisasi ulang oleh Pengarsip dan kembali ke status Terarsip (ARCHIVED).`;
         await tx.inAppNotification.create({
           data: {
             userId: lastKoreksi.pengajuId,
@@ -340,7 +343,7 @@ export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: s
 
       // Notify Supervisor
       const notifTitle = "Persetujuan Koreksi";
-      const notifPesan = `Pengarsip mengajukan koreksi untuk mengembalikan Permohonan ${permohonan.nomorPermohonan} ke Peneliti. Alasan: "${alasan}"`;
+      const notifPesan = `Pengarsip mengajukan koreksi untuk mengembalikan Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} ke Peneliti. Alasan: "${alasan}"`;
       
       const activeSupervisors = await tx.user.findMany({
         where: { role: "SUPERVISOR", isActive: true },
@@ -386,3 +389,104 @@ export async function getPendingKoreksiForPermohonan(permohonanId: string) {
     return { success: false, request: null };
   }
 }
+
+/**
+ * Retrieve summary stats of digitization for Pengarsip dashboard
+ */
+export async function getPengarsipStats() {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // 1. Digitization Queue Count (LOCKED + returned IN_MANIFEST bundles)
+    const bundles = await prisma.bundle.findMany({
+      where: { status: { in: ["LOCKED", "IN_MANIFEST"] } },
+      include: {
+        permohonan: {
+          include: {
+            arsipDigital: { orderBy: { versi: "desc" } }
+          }
+        }
+      }
+    });
+    const queueCount = bundles.filter((bundle) => {
+      if (bundle.status === "LOCKED") return true;
+      if (bundle.status === "IN_MANIFEST") {
+        return bundle.permohonan.some(
+          (p) => p.status === "BUNDLED" && p.arsipDigital.some((ad) => ad.status === "SUPERSEDED")
+        );
+      }
+      return false;
+    }).length;
+
+    // 2. Total Permohonan currently in ARCHIVED status (Awaiting manifest phase)
+    const archivedCount = await prisma.permohonan.count({
+      where: { status: "ARCHIVED" }
+    });
+
+    // 3. Total uploaded archives by this user
+    const totalUploadedCount = await prisma.arsipDigital.count({
+      where: { pengarsipId: session.user.id }
+    });
+
+    // 4. Pending koreksi requests (KEMBALIKAN_KE_PENELITI) submitted by this user
+    const pendingKoreksiCount = await prisma.permintaanKoreksi.count({
+      where: {
+        pengajuId: session.user.id,
+        status: "PENDING_APPROVAL",
+        jenisKoreksi: "KEMBALIKAN_KE_PENELITI"
+      }
+    });
+
+    return {
+      success: true,
+      stats: {
+        digitizationQueue: queueCount,
+        archivedPending: archivedCount,
+        totalUploaded: totalUploadedCount,
+        pendingKoreksi: pendingKoreksiCount
+      }
+    };
+  } catch (error: any) {
+    console.error("[ACTION-GET-PENGARSIP-STATS-ERR]", error);
+    return {
+      success: false,
+      stats: { digitizationQueue: 0, archivedPending: 0, totalUploaded: 0, pendingKoreksi: 0 },
+      error: "Gagal mengambil statistik pengarsip."
+    };
+  }
+}
+
+/**
+ * Retrieve recent uploads for Pengarsip dashboard
+ */
+export async function getRecentUploads(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "PENGARSIP") {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const list = await prisma.arsipDigital.findMany({
+      where: { pengarsipId: session.user.id },
+      include: {
+        permohonan: {
+          select: {
+            nomorPermohonan: true,
+            namaWajibPajak: true,
+            jenisPermohonan: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit
+    });
+    return { success: true, list };
+  } catch (error: any) {
+    console.error("[ACTION-GET-RECENT-UPLOADS-ERR]", error);
+    return { success: false, list: [], error: "Gagal mengambil riwayat unggah terbaru." };
+  }
+}
+

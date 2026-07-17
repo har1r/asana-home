@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getRevisionPermohonans } from '@/app/actions/penginput';
@@ -8,12 +9,12 @@ import { TasksRevisionCardSkeleton } from '@/components/skeletons/SkeletonBase';
 import { toTitleCase, getInitials, getAvatarBg, formatDate } from '@/lib/displayHelpers';
 
 const CATEGORY_STYLES: Record<string, string> = {
-  'MUTASI_SEBAGIAN': 'bg-indigo-100 text-indigo-950 border-indigo-200/50',
-  'MUTASI_HABIS_UPDATE': 'bg-emerald-100 text-emerald-900 border-emerald-200/50',
-  'MUTASI_HABIS_REGULER': 'bg-pink-100 text-pink-900 border-pink-200/50',
-  'OBJEK_PAJAK_BARU': 'bg-amber-100 text-amber-900 border-amber-200/50',
-  'PEMBETULAN': 'bg-purple-100 text-purple-900 border-purple-200/50',
-  'PENGAKTIFAN': 'bg-rose-100 text-rose-900 border-rose-200/50',
+  'MUTASI_SEBAGIAN':     'bg-indigo-100 text-indigo-700',
+  'MUTASI_HABIS_UPDATE': 'bg-emerald-100 text-emerald-700',
+  'MUTASI_HABIS_REGULER':'bg-pink-100 text-pink-700',
+  'OBJEK_PAJAK_BARU':    'bg-amber-100 text-amber-700',
+  'PEMBETULAN':          'bg-purple-100 text-purple-700',
+  'PENGAKTIFAN':         'bg-rose-100 text-rose-700',
 };
 
 export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => void }) {
@@ -98,14 +99,24 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
       </div>
 
       {/* Task List table */}
-      <div className="flex flex-col flex-1 gap-1 min-h-[160px]">
+      <div className={`flex flex-col flex-1 gap-1 ${filteredRevisions.length === 0 ? 'min-h-[160px] justify-center' : 'justify-start mt-1'}`}>
         {filteredRevisions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-            <p className="text-xs">Tidak ada permohonan revisi</p>
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center select-none animate-fadeIn gap-2.5">
+            <div className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-500 border border-emerald-100/60 flex items-center justify-center shadow-3xs animate-pulse">
+              <CheckCircle2 className="w-5.5 h-5.5 stroke-[1.85]" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-700">Semua Permohonan Aman!</p>
+              <p className="text-[10px] text-slate-400 font-semibold max-w-[240px] leading-relaxed mx-auto">
+                {searchQuery 
+                  ? "Tidak ada permohonan revisi yang cocok dengan kata kunci pencarian Anda." 
+                  : "Semua berkas bersih dan tidak memerlukan perbaikan atau revisi saat ini."}
+              </p>
+            </div>
           </div>
         ) : (
           filteredRevisions.slice(0, 5).map((item) => {
-            const tagClass = CATEGORY_STYLES[item.jenisPermohonan] || 'bg-slate-100 text-slate-900 border-slate-200/50';
+            const tagClass = CATEGORY_STYLES[item.jenisPermohonan] || 'bg-slate-100 text-slate-600';
             const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
               ? (item.namaPemilikLama || '')
               : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
@@ -113,32 +124,41 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
             return (
               <div
                 key={item.id}
-                className="task-row grid grid-cols-12 gap-2 items-center pb-2 pt-2 border-b border-[#eceff1] group transition-all relative"
+                className="task-row grid grid-cols-12 gap-2 items-center pb-2 pt-2 border-b border-[#eceff1] group transition-all relative select-none"
               >
-                {/* Left Column: Title / Nama Pemilik */}
-                <div className="col-span-6 sm:col-span-5 min-w-0 pr-2">
+                {/* Column 1: Nomor Pelayanan (Left Aligned) */}
+                <div className="col-span-3 min-w-0 pr-2">
+                  <span className="text-[11px] font-semibold text-[#1e2022] select-none truncate block">
+                    {item.nomorPelayanan || item.nomorPermohonan}
+                  </span>
+                </div>
+
+                {/* Column 2: Nama Pemilik (Left Aligned) */}
+                <div className="col-span-3 min-w-0 pr-2">
                   <span
-                    className="text-[13px] font-semibold text-[#1e2022] truncate cursor-pointer block capitalize"
+                    className="text-[13px] font-bold text-[#1e2022] truncate cursor-pointer block capitalize"
                     title={namaPemilik.toLowerCase()}
                   >
                     {namaPemilik.toLowerCase()}
                   </span>
                 </div>
 
-                {/* Middle Column 1: Date Inputted */}
-                <span className="col-span-3 sm:col-span-2 text-[11px] font-semibold text-gray-400 text-left">
-                  {formatDate(item.createdAt)}
-                </span>
+                {/* Column 3: Date Inputted (Centered) */}
+                <div className="col-span-2 flex justify-center">
+                  <span className="text-[11px] font-semibold text-gray-400 text-center select-none">
+                    {new Date(item.updatedAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                  </span>
+                </div>
 
-                {/* Middle Column 2: Service Type Badge */}
-                <div className="col-span-3 sm:col-span-3 flex justify-start">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold border leading-none ${tagClass} text-center select-none`} title={toTitleCase(item.jenisPermohonan)}>
+                {/* Column 4: Service Type Badge (Centered) */}
+                <div className="col-span-3 flex justify-center overflow-hidden">
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${tagClass} text-center select-none truncate max-w-full`} title={toTitleCase(item.jenisPermohonan)}>
                     {toTitleCase(item.jenisPermohonan)}
                   </span>
                 </div>
 
-                {/* Middle Column 3: Inputter Initial Avatar */}
-                <div className="hidden sm:flex sm:col-span-2 items-center justify-end select-none">
+                {/* Column 5: Inputter Initial Avatar (Right Aligned) */}
+                <div className="col-span-1 flex items-center justify-end select-none">
                   <div
                     className={`flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-bold text-white ring-2 ring-white cursor-pointer ${getAvatarBg(item.penginput?.name || '')}`}
                     title={item.penginput?.name || 'Unknown'}

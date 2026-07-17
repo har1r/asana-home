@@ -114,7 +114,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex bg-gradient-to-tr from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] min-h-screen text-gray-800 font-sans items-center justify-center p-4 relative overflow-hidden select-none antialiased">
+    <div className="flex bg-gradient-to-br from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] min-h-screen text-gray-800 font-sans items-center justify-center p-4 relative overflow-hidden select-none antialiased">
       {/* Dynamic Background Blurs */}
       <div className="absolute w-[40rem] h-[40rem] rounded-full bg-white/20 blur-3xl -top-40 -left-40 animate-pulse duration-10000 pointer-events-none" />
       <div className="absolute w-[35rem] h-[35rem] rounded-full bg-[#f06e5b]/10 blur-3xl -bottom-40 -right-40 animate-pulse duration-[12000ms] pointer-events-none" />
@@ -127,12 +127,21 @@ export default function LoginPage() {
           <div>
             {/* Logo Section */}
             <div className="flex items-center gap-2.5 mb-8">
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#f06e5b] inline-block shadow-sm animate-ping" />
-                <div className="flex flex-col gap-0.5 justify-center">
-                  <span className="w-2 h-2 rounded-full bg-[#f06e5b] inline-block shadow-sm" />
-                  <span className="w-2 h-2 rounded-full bg-[#f06e5b] inline-block shadow-sm" />
-                </div>
+              <div className="w-9 h-9 shrink-0 transition-all duration-300 hover:scale-105">
+                <svg viewBox="34 34 132 132" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                  <g transform="translate(100,100) rotate(-8)">
+                    {/* Top-left */}
+                    <rect x="-56" y="-56" width="50" height="50" rx="12" fill="#3F72E6"/>
+                    {/* Top-right */}
+                    <rect x="6" y="-56" width="50" height="50" rx="12" fill="#0DC5B4"/>
+                    {/* Bottom-left */}
+                    <rect x="-56" y="6" width="50" height="50" rx="12" fill="#FF6355"/>
+                    {/* Bottom-right */}
+                    <rect x="6" y="6" width="50" height="50" rx="12" fill="#7C5CFC"/>
+                  </g>
+                  {/* Center connector dot */}
+                  <circle cx="100" cy="100" r="6" fill="white"/>
+                </svg>
               </div>
               <span className="font-bold text-2xl tracking-tight text-[#1e2022] font-display">Architax</span>
             </div>

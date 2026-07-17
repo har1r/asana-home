@@ -1,12 +1,18 @@
 import { renderToStream } from '@react-pdf/renderer';
 import { NextRequest, NextResponse } from 'next/server';
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import path from 'path';
 import fs from 'fs';
+
+// Disable hyphenation globally to prevent weird word wrapping (e.g. MAN-HAT-TAN)
+Font.registerHyphenationCallback((word) => [word]);
+
+export const dynamic = 'force-dynamic';
+
 
 const logoPath = path.join(process.cwd(), 'assets', 'logo_kabupatentangerang.png');
 const logoBuffer = fs.readFileSync(logoPath);
@@ -100,15 +106,15 @@ const styles = StyleSheet.create({
   },
   // Recipient block
   recipientBlock: {
-    marginBottom: 15,
-    lineHeight: 1.3,
+    marginBottom: 12,
+    lineHeight: 1.15,
   },
   recipientText: {
     marginBottom: 2,
   },
   bodyText: {
-    lineHeight: 1.4,
-    marginBottom: 12,
+    lineHeight: 1.2,
+    marginBottom: 10,
     textAlign: 'justify',
   },
   // Table Page 1
@@ -126,14 +132,14 @@ const styles = StyleSheet.create({
     borderRightColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
+    padding: 4,
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
   },
   tableHeaderColLastPage1: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
+    padding: 4,
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
   },
@@ -142,13 +148,13 @@ const styles = StyleSheet.create({
     borderRightColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
+    padding: 4,
     textAlign: 'center',
   },
   tableCellColLastPage1: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
+    padding: 4,
     textAlign: 'center',
   },
   // Table Page 2 (Landscape layout matching the second page)
@@ -169,73 +175,101 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#000000',
     backgroundColor: '#ffffff',
+    height: 25,
   },
   tableHeaderColPage2: {
     borderRightWidth: 1,
     borderRightColor: '#000000',
-    padding: 4,
+    padding: 2.5,
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: 7,
+    fontSize: 6.5,
+    height: '100%',
   },
   tableHeaderColLastPage2: {
-    padding: 4,
+    padding: 2.5,
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: 7,
+    fontSize: 6.5,
+    height: '100%',
   },
   tableCellColPage2: {
     borderRightWidth: 1,
     borderRightColor: '#000000',
-    padding: 4,
-    fontSize: 6.5,
+    padding: 2.5,
+    fontSize: 5.5,
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   tableCellColLastPage2: {
-    padding: 4,
-    fontSize: 6.5,
+    padding: 2.5,
+    fontSize: 5.5,
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   // Double-header and sub-column table styles (Mutasi Habis)
   headerColDouble: {
     borderRightWidth: 1,
     borderRightColor: '#000000',
     flexDirection: 'column',
+    height: '100%',
   },
   headerDoubleMainLabel: {
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: '#000000',
-    fontSize: 6.5,
+    fontSize: 6,
+    height: 11,
   },
   headerDoubleSubRow: {
     flexDirection: 'row',
-    flex: 1,
+    height: 14,
   },
   headerDoubleSubCol: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 3,
+    height: 14,
   },
   headerDoubleSubLabel: {
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
-    fontSize: 5.5,
+    fontSize: 5,
   },
   cellDouble: {
     borderRightWidth: 1,
     borderRightColor: '#000000',
     flexDirection: 'row',
+    alignSelf: 'stretch',
   },
   cellDoubleSubView: {
     justifyContent: 'center',
-    padding: 4,
+    padding: 2.5,
+    height: '100%',
+    alignSelf: 'stretch',
+  },
+  cellDoubleSubLabel: {
+    fontFamily: 'Helvetica',
+    fontSize: 5,
+    textAlign: 'center',
+  },
+  tableCellTextPage2: {
+    fontFamily: 'Helvetica',
+    fontSize: 5.5,
+  },
+  tableCellTextPage2Small: {
+    fontFamily: 'Helvetica',
+    fontSize: 4.8,
+  },
+  tableCellTextPage2Center: {
+    fontFamily: 'Helvetica',
+    fontSize: 5.5,
+    textAlign: 'center',
   },
   // Signature block
   signatureSection: {
@@ -274,7 +308,7 @@ const styles = StyleSheet.create({
   metaLandscape: {
     fontSize: 8.5,
     marginBottom: 10,
-    lineHeight: 1.3,
+    lineHeight: 1.15,
   },
   metaLandscapeRow: {
     flexDirection: 'row',
@@ -361,6 +395,52 @@ const getTableRows = (permohonanList: any[]) => {
   return rows;
 };
 
+// Helper to insert spaces after slashes and hyphens to allow React-PDF to wrap them
+const insertZeroWidthSpaces = (str: string | null | undefined) => {
+  if (!str) return '-';
+  return str.replace(/\//g, '/ ').replace(/-/g, '- ');
+};
+
+// Helper to parse address into Jalan, Blok, RT, RW
+const parseAddress = (addressStr: string | null | undefined) => {
+  const result = {
+    jalan: '',
+    blok: '',
+    rt: '',
+    rw: ''
+  };
+
+  if (!addressStr) return result;
+
+  const upperStr = addressStr.trim().toUpperCase();
+
+  // RT/RW matching (e.g. RT 005/06 or RT 005 RW 06)
+  const rtRwRegex = /RT\.?\s*(\d+)(?:\s*[\/\-]\s*(?:RW\.?\s*)?(\d+)|(?:\s+RW\.?\s*(\d+)))?/i;
+  const match = upperStr.match(rtRwRegex);
+
+  let cleanAddress = upperStr;
+  if (match) {
+    result.rt = match[1] || '';
+    result.rw = match[2] || match[3] || '';
+    cleanAddress = upperStr.replace(match[0], '').trim();
+  }
+
+  // Block/No matching (e.g. BLOK A, NO 45B)
+  const blockRegex = /\b(BLOK|KAV|NO|GG|GANG)\.?\s*([A-Z0-9\/\-\.\s]+)$/i;
+  const blockMatch = cleanAddress.match(blockRegex);
+
+  if (blockMatch) {
+    result.blok = blockMatch[0].trim().replace(/[\s,\-\/]+$/, '');
+    result.jalan = cleanAddress.substring(0, blockMatch.index).trim();
+  } else {
+    result.jalan = cleanAddress;
+  }
+
+  result.jalan = result.jalan.replace(/[\s,\-\/]+$/, '').trim();
+
+  return result;
+};
+
 // Map database permohonan to rows for Mutasi Habis Page 2
 const getTableRowsMH = (
   permohonanList: any[], 
@@ -370,31 +450,34 @@ const getTableRowsMH = (
     const num = numbersMap[p.id] || { noBumi: 0, noBangunan: null };
     const db = p.dataBaru?.[0];
     
-    // Check if LT & LB has differences for Keterangan
-    const isLtDiff = p.luasTanahLama !== (db?.luasTanahBaru ?? 0);
-    const isLbDiff = p.luasBangunanLama !== (db?.luasBangunanBaru ?? 0);
-    let keterangan = '-';
-    if (isLtDiff && isLbDiff) {
-      keterangan = 'UPD LT & LB';
-    } else if (isLtDiff) {
-      keterangan = 'UPD LT';
-    } else if (isLbDiff) {
-      keterangan = 'UPD LB';
-    }
+    const oldAddrParsed = parseAddress(p.alamatObjekLama);
+    const newAddrParsed = parseAddress(db?.alamatObjekBaru);
 
     return {
-      nomorPelayanan: p.nomorPelayanan || '-',
+      nomorPelayanan: insertZeroWidthSpaces(p.nomorPelayanan),
       noBumi: num.noBumi,
       noBangunan: num.noBangunan,
-      nop: p.nop,
-      wpLama: p.namaPemilikLama || p.namaWajibPajak || '-',
-      wpBaru: db?.namaPemilikBaru || '-',
+      nop: insertZeroWidthSpaces(p.nop),
+      wpLama: insertZeroWidthSpaces(p.namaPemilikLama || p.namaWajibPajak),
+      wpBaru: insertZeroWidthSpaces(db?.namaPemilikBaru),
+      
+      // Letak Objek Saat Ini (Lama)
+      jalanLama: insertZeroWidthSpaces(oldAddrParsed.jalan),
+      blokLama: insertZeroWidthSpaces(oldAddrParsed.blok),
+      rtLama: insertZeroWidthSpaces(oldAddrParsed.rt),
+      rwLama: insertZeroWidthSpaces(oldAddrParsed.rw),
+
+      // Letak Objek Seharusnya (Baru)
+      jalanBaru: insertZeroWidthSpaces(newAddrParsed.jalan),
+      blokBaru: insertZeroWidthSpaces(newAddrParsed.blok),
+      rtBaru: insertZeroWidthSpaces(newAddrParsed.rt),
+      rwBaru: insertZeroWidthSpaces(newAddrParsed.rw),
+
       luasTanahLama: p.luasTanahLama || 0,
       luasTanahBaru: db?.luasTanahBaru || 0,
       luasBangunanLama: p.luasBangunanLama || 0,
       luasBangunanBaru: db?.luasBangunanBaru || 0,
-      kepemilikan: db?.sertifikatBaru || '-',
-      keterangan
+      kepemilikan: insertZeroWidthSpaces(db?.sertifikatBaru),
     };
   });
 };
@@ -559,13 +642,13 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
         {/* Conditionally Render Table matching SP_Hal_2_MH (Mutasi Habis) or SP_Hal_2 (Standard) */}
         {isMutasiHabis ? (
           <View style={styles.tablePage2}>
-            {/* Header Row MH */}
+             {/* Header Row MH */}
             <View style={styles.tableRowPage2Header}>
-              <View style={[styles.tableHeaderColPage2, { width: '3%' }]}><Text>NO</Text></View>
-              <View style={[styles.tableHeaderColPage2, { width: '7%' }]}><Text>NOPEL</Text></View>
+              <View style={[styles.tableHeaderColPage2, { width: '2%' }]}><Text>NO</Text></View>
+              <View style={[styles.tableHeaderColPage2, { width: '6%' }]}><Text>NOPEL</Text></View>
               
               {/* NO BUNDEL FORMULIR */}
-              <View style={[styles.headerColDouble, { width: '8%' }]}>
+              <View style={[styles.headerColDouble, { width: '6%' }]}>
                 <Text style={styles.headerDoubleMainLabel}>NO BUNDEL FORMULIR</Text>
                 <View style={styles.headerDoubleSubRow}>
                   <View style={[styles.headerDoubleSubCol, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000' }]}>
@@ -577,120 +660,118 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
                 </View>
               </View>
               
-              <View style={[styles.tableHeaderColPage2, { width: '12%' }]}><Text>NOP</Text></View>
+              <View style={[styles.tableHeaderColPage2, { width: '11%' }]}><Text>NOP</Text></View>
               <View style={[styles.tableHeaderColPage2, { width: '8%' }]}><Text>WP LAMA</Text></View>
               <View style={[styles.tableHeaderColPage2, { width: '8%' }]}><Text>WP BARU</Text></View>
               
               {/* Letak Objek Saat Ini */}
-              <View style={[styles.headerColDouble, { width: '12%' }]}>
+              <View style={[styles.headerColDouble, { width: '21%' }]}>
                 <Text style={styles.headerDoubleMainLabel}>Letak Objek Saat Ini</Text>
                 <View style={styles.headerDoubleSubRow}>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Nama Jalan</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Blok/Kav/No</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>RT</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%' }]}><Text style={styles.headerDoubleSubLabel}>RW</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Jalan</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '24%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Blok/No</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '13%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>RT</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '13%' }]}><Text style={styles.headerDoubleSubLabel}>RW</Text></View>
                 </View>
               </View>
               
               {/* Letak Objek Seharusnya */}
-              <View style={[styles.headerColDouble, { width: '12%' }]}>
+              <View style={[styles.headerColDouble, { width: '21%' }]}>
                 <Text style={styles.headerDoubleMainLabel}>Letak Objek Seharusnya</Text>
                 <View style={styles.headerDoubleSubRow}>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Nama Jalan</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Blok/Kav/No</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>RT</Text></View>
-                  <View style={[styles.headerDoubleSubCol, { width: '25%' }]}><Text style={styles.headerDoubleSubLabel}>RW</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Jalan</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '24%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>Blok/No</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '13%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text style={styles.headerDoubleSubLabel}>RT</Text></View>
+                  <View style={[styles.headerDoubleSubCol, { width: '13%' }]}><Text style={styles.headerDoubleSubLabel}>RW</Text></View>
                 </View>
               </View>
               
               {/* Luas Tanah */}
-              <View style={[styles.headerColDouble, { width: '8%' }]}>
+              <View style={[styles.headerColDouble, { width: '5%' }]}>
                 <Text style={styles.headerDoubleMainLabel}>Luas Tanah</Text>
                 <View style={styles.headerDoubleSubRow}>
                   <View style={[styles.headerDoubleSubCol, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000' }]}>
-                    <Text style={styles.headerDoubleSubLabel}>Saat Ini</Text>
+                    <Text style={styles.headerDoubleSubLabel}>Lama</Text>
                   </View>
                   <View style={[styles.headerDoubleSubCol, { width: '50%' }]}>
-                    <Text style={styles.headerDoubleSubLabel}>Seharusnya</Text>
+                    <Text style={styles.headerDoubleSubLabel}>Baru</Text>
                   </View>
                 </View>
               </View>
               
               {/* Luas Bangunan */}
-              <View style={[styles.headerColDouble, { width: '8%' }]}>
+              <View style={[styles.headerColDouble, { width: '5%' }]}>
                 <Text style={styles.headerDoubleMainLabel}>Luas Bangunan</Text>
                 <View style={styles.headerDoubleSubRow}>
                   <View style={[styles.headerDoubleSubCol, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000' }]}>
-                    <Text style={styles.headerDoubleSubLabel}>Saat Ini</Text>
+                    <Text style={styles.headerDoubleSubLabel}>Lama</Text>
                   </View>
                   <View style={[styles.headerDoubleSubCol, { width: '50%' }]}>
-                    <Text style={styles.headerDoubleSubLabel}>Seharusnya</Text>
+                    <Text style={styles.headerDoubleSubLabel}>Baru</Text>
                   </View>
                 </View>
               </View>
               
-              <View style={[styles.tableHeaderColPage2, { width: '8%' }]}><Text>Kepemilikan</Text></View>
-              <View style={[styles.tableHeaderColLastPage2, { width: '6%' }]}><Text>Keterangan</Text></View>
+              <View style={[styles.tableHeaderColLastPage2, { width: '7%' }]}><Text>Kepemilikan</Text></View>
             </View>
 
             {/* Data Rows MH */}
             {tableRowsPage2MH.map((row, index) => (
               <View style={styles.tableRowPage2} key={index}>
-                <View style={[styles.tableCellColPage2, { width: '3%', textAlign: 'center' }]}><Text>{String(index + 1)}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '7%', textAlign: 'center' }]}><Text>{row.nomorPelayanan}</Text></View>
+                <View style={[styles.tableCellColPage2, { width: '2%', textAlign: 'center' }]}><Text style={styles.tableCellTextPage2Center}>{String(index + 1)}</Text></View>
+                <View style={[styles.tableCellColPage2, { width: '6%', textAlign: 'center' }]}><Text style={styles.tableCellTextPage2Center}>{row.nomorPelayanan}</Text></View>
                 
                 {/* BUNDEL FORMULIR values */}
-                <View style={[styles.cellDouble, { width: '8%' }]}>
+                <View style={[styles.cellDouble, { width: '6%' }]}>
                   <View style={[styles.cellDoubleSubView, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}>
-                    <Text>{String(row.noBumi)}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{String(row.noBumi)}</Text>
                   </View>
                   <View style={[styles.cellDoubleSubView, { width: '50%', alignItems: 'center' }]}>
-                    <Text>{row.noBangunan ? String(row.noBangunan) : ''}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{row.noBangunan ? String(row.noBangunan) : '-'}</Text>
                   </View>
                 </View>
                 
-                <View style={[styles.tableCellColPage2, { width: '12%', textAlign: 'center' }]}><Text>{row.nop}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text>{row.wpLama}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text>{row.wpBaru}</Text></View>
+                <View style={[styles.tableCellColPage2, { width: '11%', textAlign: 'center' }]}><Text style={styles.tableCellTextPage2Center}>{row.nop}</Text></View>
+                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text style={styles.tableCellTextPage2}>{row.wpLama}</Text></View>
+                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text style={styles.tableCellTextPage2}>{row.wpBaru}</Text></View>
                 
-                {/* Letak Objek Saat Ini values (Empty in image) */}
-                <View style={[styles.cellDouble, { width: '12%' }]}>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%' }]}><Text></Text></View>
+                {/* Letak Objek Saat Ini values */}
+                <View style={[styles.cellDouble, { width: '21%' }]}>
+                  <View style={[styles.cellDoubleSubView, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.jalanLama}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '24%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.blokLama}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '13%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.rtLama}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '13%', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.rwLama}</Text></View>
                 </View>
                 
-                {/* Letak Objek Seharusnya values (Empty in image) */}
-                <View style={[styles.cellDouble, { width: '12%' }]}>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%', borderRightWidth: 1, borderRightColor: '#000000' }]}><Text></Text></View>
-                  <View style={[styles.cellDoubleSubView, { width: '25%' }]}><Text></Text></View>
+                {/* Letak Objek Seharusnya values */}
+                <View style={[styles.cellDouble, { width: '21%' }]}>
+                  <View style={[styles.cellDoubleSubView, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.jalanBaru}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '24%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.blokBaru}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '13%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.rtBaru}</Text></View>
+                  <View style={[styles.cellDoubleSubView, { width: '13%', alignItems: 'center' }]}><Text style={styles.cellDoubleSubLabel}>{row.rwBaru}</Text></View>
                 </View>
                 
                 {/* Luas Tanah values */}
-                <View style={[styles.cellDouble, { width: '8%' }]}>
+                <View style={[styles.cellDouble, { width: '5%' }]}>
                   <View style={[styles.cellDoubleSubView, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}>
-                    <Text>{String(row.luasTanahLama)}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{String(row.luasTanahLama)}</Text>
                   </View>
                   <View style={[styles.cellDoubleSubView, { width: '50%', alignItems: 'center' }]}>
-                    <Text>{String(row.luasTanahBaru)}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{String(row.luasTanahBaru)}</Text>
                   </View>
                 </View>
                 
                 {/* Luas Bangunan values */}
-                <View style={[styles.cellDouble, { width: '8%' }]}>
+                <View style={[styles.cellDouble, { width: '5%' }]}>
                   <View style={[styles.cellDoubleSubView, { width: '50%', borderRightWidth: 1, borderRightColor: '#000000', alignItems: 'center' }]}>
-                    <Text>{String(row.luasBangunanLama)}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{String(row.luasBangunanLama)}</Text>
                   </View>
                   <View style={[styles.cellDoubleSubView, { width: '50%', alignItems: 'center' }]}>
-                    <Text>{String(row.luasBangunanBaru)}</Text>
+                    <Text style={styles.cellDoubleSubLabel}>{String(row.luasBangunanBaru)}</Text>
                   </View>
                 </View>
                 
-                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text>{row.kepemilikan}</Text></View>
-                <View style={[styles.tableCellColLastPage2, { width: '6%', textAlign: 'center' }]}><Text>{row.keterangan}</Text></View>
+                <View style={[styles.tableCellColLastPage2, { width: '7%' }]}><Text style={styles.tableCellTextPage2Small}>{row.kepemilikan}</Text></View>
               </View>
             ))}
           </View>

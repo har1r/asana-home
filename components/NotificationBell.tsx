@@ -21,17 +21,88 @@ export const notifBus = {
   emit() { this.listeners.forEach(fn => fn()); }
 };
 
+const playNotifSound = () => {
+  try {
+    const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+    if (!AudioContextClass) return;
+    const audioContext = new AudioContextClass();
+    
+    const playTone = (freq: number, start: number, duration: number) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.08, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+    
+    const now = audioContext.currentTime;
+    playTone(659.25, now, 0.12);
+    playTone(830.61, now + 0.1, 0.22);
+  } catch (err) {
+    console.warn("Failed to play notification audio:", err);
+  }
+};
+
 export default function NotificationBell() {
   const { status } = useSession();
   const [panelOpen, setPanelOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [cachedUnreadCount, setCachedUnreadCount] = useState(0);
   const [markingAll, setMarkingAll] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const isFirstLoad = useRef(true);
+
+  // Load from cache on client mount (safe from SSR hydration mismatch)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('architax_recent_notifications');
+      if (cached) {
+        try {
+          setNotifications(JSON.parse(cached));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      const cachedCountStr = localStorage.getItem('architax_unread_notif_count');
+      if (cachedCountStr) {
+        setCachedUnreadCount(parseInt(cachedCountStr, 10));
+      }
+    }
+  }, []);
 
   const fetchNotifs = useCallback(async () => {
     if (status !== 'authenticated') return;
     const res = await getUnreadNotifications();
-    if (res.success) setNotifications(res.notifications as Notification[]);
+    if (res.success) {
+      const newNotifs = res.notifications as Notification[];
+      
+      // Update cache
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('architax_recent_notifications', JSON.stringify(newNotifs));
+        localStorage.setItem('architax_unread_notif_count', String(newNotifs.length));
+      }
+      setCachedUnreadCount(newNotifs.length);
+
+      setNotifications(prev => {
+        if (!isFirstLoad.current && newNotifs.length > prev.length) {
+          setIsShaking(true);
+          playNotifSound();
+          setTimeout(() => setIsShaking(false), 600);
+        }
+        isFirstLoad.current = false;
+        return newNotifs;
+      });
+    }
   }, [status]);
 
   // Subscribe ke event bus agar NotificationSystem bisa trigger re-fetch
@@ -50,13 +121,24 @@ export default function NotificationBell() {
 
   const handleMarkRead = async (id: string) => {
     await markNotificationAsRead(id);
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    const updated = notifications.filter(n => n.id !== id);
+    setNotifications(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('architax_recent_notifications', JSON.stringify(updated));
+      localStorage.setItem('architax_unread_notif_count', String(updated.length));
+    }
+    setCachedUnreadCount(updated.length);
   };
 
   const handleMarkAll = async () => {
     setMarkingAll(true);
     await markAllNotificationsAsRead();
     setNotifications([]);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('architax_recent_notifications', JSON.stringify([]));
+      localStorage.setItem('architax_unread_notif_count', '0');
+    }
+    setCachedUnreadCount(0);
     setMarkingAll(false);
     setPanelOpen(false);
   };
@@ -70,9 +152,14 @@ export default function NotificationBell() {
       <div className="relative shrink-0">
         <button
           disabled
-          className="relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/30 border border-amber-200/40 opacity-60 cursor-not-allowed"
+          className="relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/50 border border-amber-200/60 opacity-80 cursor-not-allowed animate-pulse"
         >
-          <Bell className="w-4 h-4 text-amber-500/50 animate-pulse" />
+          <Bell className="w-4 h-4 text-amber-600/60 fill-amber-550/10" />
+          {cachedUnreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500/70 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {cachedUnreadCount > 9 ? '9+' : cachedUnreadCount}
+            </span>
+          )}
         </button>
       </div>
     );
@@ -87,7 +174,7 @@ export default function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={() => setPanelOpen(v => !v)}
-        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/50 border border-amber-200/60 hover:bg-amber-100/70 hover:border-amber-300/60 hover:shadow-xs hover:shadow-amber-200/30 transition-all duration-300"
+        className={`relative w-9 h-9 flex items-center justify-center rounded-full bg-amber-50/50 border border-amber-200/60 hover:bg-amber-100/70 hover:border-amber-300/60 hover:shadow-xs hover:shadow-amber-200/30 transition-all duration-300 ${isShaking ? 'animate-bellShake' : ''}`}
         aria-label={`Notifikasi${unreadCount > 0 ? `, ${unreadCount} belum dibaca` : ''}`}
       >
         <Bell className="w-4 h-4 text-amber-600 fill-amber-550/20" />
@@ -109,7 +196,6 @@ export default function NotificationBell() {
             {/* Header Panel */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-indigo-500" />
                 <span className="text-sm font-semibold text-gray-800">Notifikasi</span>
                 {unreadCount > 0 && (
                   <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
@@ -167,6 +253,17 @@ export default function NotificationBell() {
           </div>
         </>
       )}
+
+      <style jsx global>{`
+        @keyframes notifBellShake {
+          0%, 100% { transform: rotate(0deg); }
+          15%, 45%, 75% { transform: rotate(-12deg); }
+          30%, 60%, 90% { transform: rotate(12deg); }
+        }
+        .animate-bellShake {
+          animation: notifBellShake 0.6s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }

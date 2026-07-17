@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText,
-  RefreshCw,
-  FolderEdit,
-  Zap,
-  FilePlus,
-  Pencil
+  ArrowLeftRight,
+  RefreshCcw,
+  Repeat2,
+  MapPin,
+  PenLine,
+  Power
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getLatestPermohonans } from '@/app/actions/penginput';
@@ -18,26 +19,28 @@ import { toTitleCase, getInitials, getAvatarBg, formatDate } from '@/lib/display
 // Warna & ikon untuk setiap jenis permohonan
 // Module-level constant: tidak bergantung pada state, tidak perlu di dalam komponen
 const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
-  'MUTASI_SEBAGIAN':    { icon: FolderEdit, bg: 'bg-indigo-500' },
-  'MUTASI_HABIS_UPDATE': { icon: RefreshCw,  bg: 'bg-emerald-500' },
-  'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
-  'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
-  'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
-  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
+  'MUTASI_SEBAGIAN':     { icon: ArrowLeftRight, bg: 'bg-indigo-500' },
+  'MUTASI_HABIS_UPDATE': { icon: RefreshCcw,     bg: 'bg-emerald-500' },
+  'MUTASI_HABIS_REGULER':{ icon: Repeat2,        bg: 'bg-pink-500' },
+  'OBJEK_PAJAK_BARU':    { icon: MapPin,         bg: 'bg-amber-500' },
+  'PEMBETULAN':          { icon: PenLine,        bg: 'bg-purple-500' },
+  'PENGAKTIFAN':         { icon: Power,          bg: 'bg-rose-500' },
 };
 
 export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void }) {
   const { searchQuery } = useDashboard();
   const [tasks, setTasks] = useState<any[]>([]);
+  const [submittedCount, setSubmittedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLatest() {
       try {
         setIsLoading(true);
-        const res = await getLatestPermohonans(10);
+        const res = await getLatestPermohonans(5);
         if (res.success && res.list) {
           setTasks(res.list);
+          setSubmittedCount(res.submittedCount ?? 0);
         }
       } catch (error) {
         console.error('Failed to load latest permohonans:', error);
@@ -73,6 +76,11 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
       <div className="flex items-center justify-between pb-[10px] border-b-2 border-gray-200/90 mb-3">
         <div className="flex items-center gap-1.5">
           <h2 className="text-[15px] font-bold text-[#1e2022] font-display">Permohonan Terbaru</h2>
+          {submittedCount > 0 && (
+            <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+              {submittedCount}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3.5">
@@ -104,7 +112,7 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
             <p className="text-xs">Tidak ada permohonan</p>
           </div>
         ) : (
-          filteredTasks.slice(0, 10).map((item) => {
+          filteredTasks.slice(0, 5).map((item) => {
             const config = JENIS_CONFIG[item.jenisPermohonan] || { icon: FileText, bg: 'bg-slate-400' };
             const Icon = config.icon;
 

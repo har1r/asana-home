@@ -190,7 +190,7 @@ export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
 
       // Notify Supervisor
       const notifTitle = "Persetujuan Batal Selesai";
-      const notifPesan = `Pemantau mengajukan pembatalan status selesai (Rollback) untuk Permohonan ${permohonan.nomorPermohonan}. Alasan: "${alasan}"`;
+      const notifPesan = `Pemantau mengajukan pembatalan status selesai (Rollback) untuk Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan}. Alasan: "${alasan}"`;
       
       const activeSupervisors = await tx.user.findMany({
         where: { role: "SUPERVISOR", isActive: true },
@@ -217,5 +217,67 @@ export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
   } catch (error: any) {
     console.error("[ACTION-AJUKAN-BATAL-SELESAI-ERR]", error);
     return { success: false, error: error.message || "Gagal mengajukan pembatalan selesai." };
+  }
+}
+
+/**
+ * Action: Retrieve statistics for the Pemantau dashboard.
+ */
+export async function getPemantauStats() {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PEMANTAU", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const antreanPemantauan = await prisma.permohonan.count({
+      where: {
+        status: "ARCHIVED",
+        bundle: {
+          manifest: {
+            status: "SENT"
+          }
+        }
+      }
+    });
+
+    const berkasSelesai = await prisma.permohonan.count({
+      where: {
+        status: "COMPLETED",
+        bundle: {
+          manifest: {
+            status: "SENT"
+          }
+        }
+      }
+    });
+
+    const berkasFrozen = await prisma.permohonan.count({
+      where: {
+        status: { in: ["ARCHIVED", "COMPLETED"] },
+        bundle: {
+          manifest: {
+            status: "SENT"
+          }
+        },
+        permintaanKoreksi: {
+          some: {
+            status: "PENDING_APPROVAL"
+          }
+        }
+      }
+    });
+
+    return {
+      success: true,
+      stats: {
+        antreanPemantauan,
+        berkasSelesai,
+        berkasFrozen
+      }
+    };
+  } catch (error: any) {
+    console.error("[ACTION-GET-PEMANTAU-STATS-ERR]", error);
+    return { success: false, stats: null, error: "Gagal mengambil statistik pemantau." };
   }
 }

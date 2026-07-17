@@ -382,7 +382,7 @@ export async function resubmitPermohonan(id: string) {
   try {
     const existing = await prisma.permohonan.findUnique({
       where: { id },
-      select: { status: true, nomorPermohonan: true, noWhatsapp: true, jenisPermohonan: true }
+      select: { status: true, nomorPermohonan: true, nomorPelayanan: true, noWhatsapp: true, jenisPermohonan: true }
     });
 
     if (!existing) {
@@ -401,12 +401,12 @@ export async function resubmitPermohonan(id: string) {
 
     // 1. Send WhatsApp notification to the taxpayer
     const readableJenis = existing.jenisPermohonan.replace(/_/g, ' ');
-    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${existing.nomorPermohonan} telah berhasil diterima dan sedang dalam proses verifikasi.`;
+    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${existing.nomorPermohonan} telah berhasil diterima and sedang dalam proses verifikasi.`;
     await sendWhatsApp(existing.noWhatsapp, whatsappMessage);
 
     // 2. Send In-App Notification to all active PENELITI users
     const notifTitle = 'Resubmit Permohonan';
-    const notifPesan = `Permohonan ${readableJenis} nomor ${existing.nomorPermohonan} telah diperbaiki oleh Penginput dan siap diverifikasi kembali.`;
+    const notifPesan = `Permohonan ${readableJenis} nomor ${existing.nomorPelayanan || existing.nomorPermohonan} telah diperbaiki oleh Penginput dan siap diverifikasi kembali.`;
     await notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: id });
 
     // 3. Create Audit Log record
@@ -443,7 +443,13 @@ export async function getPenginputPermohonan() {
   try {
     const list = await prisma.permohonan.findMany({
       where: { penginputId: session.user.id },
-      include: { dataBaru: true },
+      include: {
+        dataBaru: true,
+        permintaanKoreksi: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -460,8 +466,8 @@ export async function getPenginputPermohonan() {
 export async function togglePermohonanFavorite(id: string) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'PENGINPUT') {
-    throw new Error('Unauthorized: Hanya Penginput yang dapat menandai favorit.');
+  if (!session || (session.user.role !== 'PENGINPUT' && session.user.role !== 'PENELITI')) {
+    throw new Error('Unauthorized: Hanya Penginput atau Peneliti yang dapat menandai favorit.');
   }
 
   try {
@@ -531,25 +537,28 @@ export async function getLatestPermohonans(limit = 10) {
   }
 
   try {
-    const list = await prisma.permohonan.findMany({
-      include: {
-        dataBaru: true,
-        penginput: {
-          select: {
-            id: true,
-            name: true,
-            email: true
+    const [list, submittedCount] = await Promise.all([
+      prisma.permohonan.findMany({
+        include: {
+          dataBaru: true,
+          penginput: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
           }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit
-    });
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }),
+      prisma.permohonan.count({ where: { status: 'SUBMITTED' } })
+    ]);
 
-    return { success: true, list };
+    return { success: true, list, submittedCount };
   } catch (error: any) {
     console.error('[ACTION-GET-LATEST-ERR]', error);
-    return { success: false, list: [], error: 'Gagal mengambil data permohonan terbaru.' };
+    return { success: false, list: [], submittedCount: 0, error: 'Gagal mengambil data permohonan terbaru.' };
   }
 }
 
@@ -600,4 +609,34 @@ export async function getPermohonanStats() {
     return { success: false, error: 'Gagal mengambil statistik permohonan.' };
   }
 }
+
+/**
+ * Server Action: Get all favorite permohonans
+ */
+export async function getFavoritePermohonans() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return { success: false, error: 'Unauthorized', list: [] };
+  }
+
+  try {
+    const list = await prisma.permohonan.findMany({
+      where: { isFavorite: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        nomorPelayanan: true,
+        nomorPermohonan: true,
+        isFavorite: true,
+      }
+    });
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-FAVORITES-ERR]', error);
+    return { success: false, error: 'Gagal mengambil data favorit.', list: [] };
+  }
+}
+
 

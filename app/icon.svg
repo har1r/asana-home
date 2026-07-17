@@ -1,0 +1,14 @@
+<svg viewBox="34 34 132 132" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(100,100) rotate(-8)">
+    <!-- Top-left -->
+    <rect x="-56" y="-56" width="50" height="50" rx="12" fill="#3F72E6"/>
+    <!-- Top-right -->
+    <rect x="6" y="-56" width="50" height="50" rx="12" fill="#0DC5B4"/>
+    <!-- Bottom-left -->
+    <rect x="-56" y="6" width="50" height="50" rx="12" fill="#FF6355"/>
+    <!-- Bottom-right -->
+    <rect x="6" y="6" width="50" height="50" rx="12" fill="#7C5CFC"/>
+  </g>
+  <!-- Center connector dot -->
+  <circle cx="100" cy="100" r="6" fill="white"/>
+</svg>

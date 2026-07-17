@@ -44,13 +44,13 @@ export const getAvatarBg = (name: string): string => {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 };
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const;
 const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
 ] as const;
 
-/** Format a date as "Mon 6 Jul" style short-date string. */
+/** Format a date as "Sen, 17 Jul" style short-date string (Indonesian). */
 export const formatDate = (dateString: string | Date): string => {
   const date = new Date(dateString);
   return `${DAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;

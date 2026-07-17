@@ -8,6 +8,9 @@ import { authOptions } from "@/lib/auth";
 import path from "path";
 import fs from "fs";
 
+export const dynamic = 'force-dynamic';
+
+
 const logoPath = path.join(process.cwd(), "assets", "logo_kabupatentangerang.png");
 const logoBuffer = fs.readFileSync(logoPath);
 

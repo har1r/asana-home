@@ -21,6 +21,7 @@ import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import dynamic from 'next/dynamic';
+import { DetailsModal } from '@/components/workspaces/DetailsModal';
 import ProjectDetailsDrawer from '@/components/ProjectDetailsDrawer';
 import { useSession, signOut } from 'next-auth/react';
 import { ROLE_COOKIE_NAME } from '@/lib/constants';
@@ -52,25 +53,91 @@ const CalendarCard = dynamic(() => import('@/components/CalendarCard'), {
   loading: () => <CalendarCardSkeleton />
 });
 
+const PenelitiBundleStatsCard = dynamic(() => import('@/components/PenelitiBundleStatsCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+
+const PenelitiBundleListCard = dynamic(() => import('@/components/PenelitiBundleListCard'), {
+  ssr: false,
+  loading: () => <TasksRevisionCardSkeleton />
+});
+
+const PenelitiSubmittedQueueCard = dynamic(() => import('@/components/PenelitiSubmittedQueueCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
+const PengarsipStatsCard = dynamic(() => import('@/components/PengarsipStatsCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+
+const PengarsipDigitizationQueueCard = dynamic(() => import('@/components/PengarsipDigitizationQueueCard'), {
+  ssr: false,
+  loading: () => <TasksRevisionCardSkeleton />
+});
+
+const PengarsipRecentUploadsCard = dynamic(() => import('@/components/PengarsipRecentUploadsCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
+const PengirimStatsCard = dynamic(() => import('@/components/PengirimStatsCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+
+const PengirimManifestListCard = dynamic(() => import('@/components/PengirimManifestListCard'), {
+  ssr: false,
+  loading: () => <TasksRevisionCardSkeleton />
+});
+
+const PengirimEligibleBundlesCard = dynamic(() => import('@/components/PengirimEligibleBundlesCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
+const PemantauStatsCard = dynamic(() => import('@/components/PemantauStatsCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+
+const PemantauActiveQueueCard = dynamic(() => import('@/components/PemantauActiveQueueCard'), {
+  ssr: false,
+  loading: () => <TasksRevisionCardSkeleton />
+});
+
+const PemantauRecentCompletedCard = dynamic(() => import('@/components/PemantauRecentCompletedCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
+
+
 const PenginputWorkspace = dynamic(() => import('@/components/workspaces/PenginputWorkspace'), {
   ssr: false,
-  loading: () => <PenginputSkeleton />
+  loading: () => <MascotLoadingSpinner />
 });
 const PenelitiWorkspace = dynamic(() => import('@/components/workspaces/PenelitiWorkspace'), {
   ssr: false,
-  loading: () => <PenelitiSkeleton />
+  loading: () => <MascotLoadingSpinner />
 });
 const PengarsipWorkspace = dynamic(() => import('@/components/workspaces/PengarsipWorkspace'), {
   ssr: false,
-  loading: () => <PengarsipSkeleton />
+  loading: () => <MascotLoadingSpinner />
 });
 const PengirimWorkspace = dynamic(() => import('@/components/workspaces/PengirimWorkspace'), {
   ssr: false,
-  loading: () => <PengirimSkeleton />
+  loading: () => <MascotLoadingSpinner />
 });
 const PemantauWorkspace = dynamic(() => import('@/components/workspaces/PemantauWorkspace'), {
   ssr: false,
-  loading: () => <PemantauSkeleton />
+  loading: () => <MascotLoadingSpinner />
+});
+const SupervisorWorkspace = dynamic(() => import('@/components/workspaces/SupervisorWorkspace'), {
+  ssr: false,
+  loading: () => <MascotLoadingSpinner />
 });
 import NotificationSystem from '@/components/NotificationSystem';
 
@@ -165,7 +232,84 @@ function WorkspaceLoadingSkeleton() {
         <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
       </div>
       <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">
-        Memuat Halaman Kerja...
+        Memuat Halaman...
+      </span>
+    </div>
+  );
+}
+
+/** Mascot spinner loading kucing berputar/memantul untuk workspaces dynamic import */
+function MascotLoadingSpinner() {
+  return (
+    <div className="w-full min-h-[520px] flex flex-col items-center justify-center gap-4 select-none animate-fadeIn pt-16">
+      <div className="relative w-20 h-20">
+        {/* Outer spinning ring with gradient */}
+        <div className="absolute inset-0 w-full h-full rounded-full border-[4px] border-slate-100/60" />
+        <div className="absolute inset-0 w-full h-full rounded-full border-[4px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
+        
+        {/* Animated Architax Logo inside the spinning ring */}
+        <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+          <svg viewBox="34 34 132 132" className="w-12 h-12">
+            <style>{`
+              @keyframes logoOrbit {
+                0% {
+                  transform: rotate(-8deg);
+                }
+                100% {
+                  transform: rotate(352deg);
+                }
+              }
+              @keyframes tilePulse {
+                0%, 100% {
+                  transform: scale(1);
+                  opacity: 1;
+                }
+                50% {
+                  transform: scale(0.76);
+                  opacity: 0.45;
+                }
+              }
+              .orbit-logo-group {
+                animation: logoOrbit 10s linear infinite;
+                transform-origin: 0 0;
+              }
+              .tile-pulse {
+                transform-box: fill-box;
+                transform-origin: center;
+                animation: tilePulse 2s ease-in-out infinite;
+              }
+              .tile-tl {
+                animation-delay: 0s;
+              }
+              .tile-tr {
+                animation-delay: 0.35s;
+              }
+              .tile-br {
+                animation-delay: 0.7s;
+              }
+              .tile-bl {
+                animation-delay: 1.05s;
+              }
+            `}</style>
+            <g transform="translate(100,100)">
+              <g className="orbit-logo-group">
+                {/* Top-left */}
+                <rect x="-56" y="-56" width="50" height="50" rx="12" fill="#3F72E6" className="tile-pulse tile-tl" />
+                {/* Top-right */}
+                <rect x="6" y="-56" width="50" height="50" rx="12" fill="#0DC5B4" className="tile-pulse tile-tr" />
+                {/* Bottom-left */}
+                <rect x="-56" y="6" width="50" height="50" rx="12" fill="#FF6355" className="tile-pulse tile-bl" />
+                {/* Bottom-right */}
+                <rect x="6" y="6" width="50" height="50" rx="12" fill="#7C5CFC" className="tile-pulse tile-br" />
+              </g>
+            </g>
+            {/* Center connector dot */}
+            <circle cx="100" cy="100" r="6" fill="white" />
+          </svg>
+        </div>
+      </div>
+      <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">
+        Menyiapkan Halaman...
       </span>
     </div>
   );
@@ -176,13 +320,79 @@ function WorkspaceLoadingSkeleton() {
 // --- 1. BerandaTab ---
 interface BerandaTabProps {
   onViewAllTasks: () => void;
+  initialRole: string | null;
 }
 
-const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks }: BerandaTabProps) {
+const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole }: BerandaTabProps) {
   const { isInitialized } = useDashboard();
+  const { data: session } = useSession();
+  const resolvedRole = (session?.user as any)?.role || initialRole;
+
   if (!isInitialized) {
-    return <WorkspaceLoadingSkeleton />;
+    return <MascotLoadingSpinner />;
   }
+
+  // Render Peneliti-specific home dashboard if role is PENELITI
+  if (resolvedRole === 'PENELITI') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
+        <PenelitiBundleListCard onViewAll={onViewAllTasks} />
+        <PenelitiBundleStatsCard />
+        <PenelitiSubmittedQueueCard onViewAll={onViewAllTasks} />
+        <MessageTeamCard />
+        <div className="col-span-1 lg:col-span-2">
+          <CalendarCard />
+        </div>
+      </div>
+    );
+  }
+
+  // Render Pengarsip-specific home dashboard if role is PENGARSIP
+  if (resolvedRole === 'PENGARSIP') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
+        <PengarsipDigitizationQueueCard onViewAll={onViewAllTasks} />
+        <PengarsipStatsCard />
+        <PengarsipRecentUploadsCard onViewAll={onViewAllTasks} />
+        <MessageTeamCard />
+        <div className="col-span-1 lg:col-span-2">
+          <CalendarCard />
+        </div>
+      </div>
+    );
+  }
+
+  // Render Pengirim-specific home dashboard if role is PENGIRIM
+  if (resolvedRole === 'PENGIRIM') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
+        <PengirimManifestListCard onViewAll={onViewAllTasks} />
+        <PengirimStatsCard />
+        <PengirimEligibleBundlesCard onViewAll={onViewAllTasks} />
+        <MessageTeamCard />
+        <div className="col-span-1 lg:col-span-2">
+          <CalendarCard />
+        </div>
+      </div>
+    );
+  }
+
+  // Render Pemantau-specific home dashboard if role is PEMANTAU
+  if (resolvedRole === 'PEMANTAU') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
+        <PemantauActiveQueueCard onViewAll={onViewAllTasks} />
+        <PemantauStatsCard />
+        <PemantauRecentCompletedCard onViewAll={onViewAllTasks} />
+        <MessageTeamCard />
+        <div className="col-span-1 lg:col-span-2">
+          <CalendarCard />
+        </div>
+      </div>
+    );
+  }
+
+  // Default Penginput-specific home dashboard
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
       <TasksRevisionCard onViewAll={onViewAllTasks} />
@@ -196,6 +406,7 @@ const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks }: BerandaTab
   );
 });
 
+
 // --- 2. MyTasksTab ---
 const WORKSPACE_COMPONENTS: Record<string, React.ComponentType<any>> = {
   PENGINPUT: PenginputWorkspace,
@@ -203,6 +414,7 @@ const WORKSPACE_COMPONENTS: Record<string, React.ComponentType<any>> = {
   PENGARSIP: PengarsipWorkspace,
   PENGIRIM: PengirimWorkspace,
   PEMANTAU: PemantauWorkspace,
+  SUPERVISOR: SupervisorWorkspace,
 };
 
 interface MyTasksTabProps {
@@ -229,7 +441,7 @@ const MyTasksTab = React.memo(function MyTasksTab({ initialRole }: MyTasksTabPro
     );
   }
 
-  return <WorkspaceLoadingSkeleton />;
+  return <MascotLoadingSpinner />;
 });
 
 // --- 3. InboxTab ---
@@ -702,7 +914,9 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
 
     handleCreateTeam,
     getTasksForProject,
-    resetDatabase
+    resetDatabase,
+    globalSelectedRequest,
+    setGlobalSelectedRequest
   } = useDashboard();
 
   const handleViewAllTasks = useCallback(() => {
@@ -722,7 +936,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
   }, [setShowAddProjectModal]);
 
   return (
-    <div id="app-root" className="flex bg-[#f3f6f9] min-h-screen text-gray-800 font-sans relative overflow-x-hidden antialiased">
+    <div id="app-root" className="flex bg-[#dde3ea] min-h-screen text-gray-800 font-sans relative overflow-x-hidden antialiased">
 
       {/* ====== GLOBAL NOTIFICATION SYSTEM — polls for new in-app notifications ====== */}
       <NotificationSystem />
@@ -750,25 +964,11 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
         {/* --- MAIN TAB INTERFACE CONTROLLER --- */}
         <div id="tab-content-container" className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1680px] w-full mx-auto pb-16 transition-all duration-300 animate-fadeIn">
 
-          {/* Active view query filters indicator */}
-          {searchQuery && (
-            <div className="bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl px-4 py-2 mb-4 flex items-center justify-between select-none animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
-                <span>Filtering dashboard elements matching <strong>"{searchQuery}"</strong></span>
-              </div>
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-indigo-500 hover:text-indigo-800 transition-colors font-bold text-xs"
-              >
-                Clear Filters
-              </button>
-            </div>
-          )}
+
 
           {/* ==================== TAB VIEWS ==================== */}
           {activeTab === 'beranda' && (
-            <BerandaTab onViewAllTasks={handleViewAllTasks} />
+            <BerandaTab onViewAllTasks={handleViewAllTasks} initialRole={initialRole} />
           )}
 
           {activeTab === 'my-tasks' && (
@@ -821,6 +1021,15 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
         isOpen={showAddProjectModal}
         onClose={handleCloseAddProject}
       />
+
+      {/* ==================== 5. GLOBAL REQUEST DETAILS MODAL ==================== */}
+      {globalSelectedRequest && (
+        <DetailsModal
+          isOpen={!!globalSelectedRequest}
+          onClose={() => setGlobalSelectedRequest(null)}
+          selectedRequest={globalSelectedRequest}
+        />
+      )}
 
     </div>
   );
