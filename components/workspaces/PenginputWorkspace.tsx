@@ -239,9 +239,16 @@ const JENIS_OPTIONS = [
 ] as const;
 
 const formatNop = (nop: string) => {
-  // Format: 36.19.150.002.003-0123.0 (2+2+3+3+3+4+1 = 18 digits)
-  if (!nop || nop.length !== 18) return nop;
-  return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
+  if (!nop) return '';
+  const cleanNop = nop.replace(/[^0-9]/g, '');
+  if (cleanNop.length === 17) {
+    const padded = cleanNop + '0';
+    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
+  }
+  if (cleanNop.length === 18) {
+    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
+  }
+  return nop;
 };
 
 const getAbbreviatedJenis = (jenis: string) => {
@@ -549,7 +556,6 @@ export default function PenginputWorkspace() {
       const matchesSearch =
         item.namaWajibPajak.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.nop.includes(searchQuery) ||
-        item.nomorPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.nomorPelayanan && item.nomorPelayanan.includes(searchQuery));
 
       const matchesStatus =
@@ -661,7 +667,7 @@ export default function PenginputWorkspace() {
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
                     className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                    placeholder="Cari No. Pelayanan, NOP, Nama..."
+                    placeholder="Cari No. Pelayanan, NOP, Nama."
                   />
                   {/* Keyboard hint badge */}
                   {!isSearchFocused && !searchQuery && (

@@ -37,7 +37,7 @@ const playNotifSound = () => {
       osc.frequency.setValueAtTime(freq, start);
       
       gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.08, start + 0.02);
+      gain.gain.linearRampToValueAtTime(0.75, start + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
       
       osc.start(start);

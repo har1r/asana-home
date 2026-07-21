@@ -21,7 +21,7 @@ const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
   'MUTASI_HABIS_REGULER':{ icon: RefreshCw,  bg: 'bg-pink-500' },
   'OBJEK_PAJAK_BARU':   { icon: FilePlus,   bg: 'bg-amber-500' },
   'PEMBETULAN':          { icon: Pencil,     bg: 'bg-purple-500' },
-  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-rose-500' },
+  'PENGAKTIFAN':         { icon: Zap,        bg: 'bg-sky-500' },
 };
 
 export default function PengarsipRecentUploadsCard({ onViewAll }: { onViewAll?: () => void }) {
@@ -46,19 +46,8 @@ export default function PengarsipRecentUploadsCard({ onViewAll }: { onViewAll?: 
     fetchUploads();
   }, []);
 
-  const filteredUploads = useMemo(() =>
-    uploads.filter(item => {
-      const permohonan = item.permohonan;
-      if (!permohonan) return false;
-      const wp = permohonan.namaWajibPajak || '';
-      return (
-        wp.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        permohonan.nomorPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        permohonan.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }),
-    [uploads, searchQuery]
-  );
+  // Memoized filter – always show all uploads (no global search filtering on homepage cards)
+  const filteredUploads = useMemo(() => uploads, [uploads]);
 
   if (isLoading) return <RecentTasksCardSkeleton />;
 
@@ -109,7 +98,7 @@ export default function PengarsipRecentUploadsCard({ onViewAll }: { onViewAll?: 
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between pb-1.5 pt-1.5 border-b border-[#eceff1] group transition-all cursor-default"
+                className="flex items-center justify-between pb-1.5 pt-1.5 border-b border-[#eceff1] group transition-all cursor-default hover:bg-slate-50/50 rounded-sm"
               >
                 {/* Left: Icon, WP Name, Subtitle */}
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -130,12 +119,12 @@ export default function PengarsipRecentUploadsCard({ onViewAll }: { onViewAll?: 
                   </div>
                 </div>
 
-                {/* Right: Version and Quick PDF Link */}
-                <div className="flex items-center gap-3 shrink-0 pl-2">
+                {/* Right: Version badge and Quick PDF Link */}
+                <div className="flex items-center gap-2 shrink-0 pl-2">
                   <span className="bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded">
                     V{item.versi}
                   </span>
-                  
+
                   <a
                     href={item.urlBlob}
                     target="_blank"

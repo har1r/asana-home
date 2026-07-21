@@ -106,8 +106,16 @@ export function PengarsipSkeleton() {
 }
 
 const formatNop = (nop: string) => {
-  if (!nop || nop.length !== 18) return nop;
-  return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
+  if (!nop) return '';
+  const cleanNop = nop.replace(/[^0-9]/g, '');
+  if (cleanNop.length === 17) {
+    const padded = cleanNop + '0';
+    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
+  }
+  if (cleanNop.length === 18) {
+    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
+  }
+  return nop;
 };
 
 const getAbbreviatedJenis = (jenis: string) => {
@@ -123,12 +131,12 @@ const getAbbreviatedJenis = (jenis: string) => {
 };
 
 const BUNDLE_TYPE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  MUTASI_SEBAGIAN: { bg: 'bg-indigo-50/80', text: 'text-indigo-700', border: 'border-indigo-150' },
-  MUTASI_HABIS_UPDATE: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-150' },
-  MUTASI_HABIS_REGULER: { bg: 'bg-sky-50/80', text: 'text-sky-750', border: 'border-sky-150' },
-  OBJEK_PAJAK_BARU: { bg: 'bg-amber-50/80', text: 'text-amber-700', border: 'border-amber-150' },
-  PEMBETULAN: { bg: 'bg-purple-50/80', text: 'text-purple-700', border: 'border-purple-150' },
-  PENGAKTIFAN: { bg: 'bg-teal-50/80', text: 'text-teal-700', border: 'border-teal-150' },
+  MUTASI_SEBAGIAN: { bg: 'bg-indigo-50/80', text: 'text-indigo-700', border: 'border-indigo-150/80' },
+  MUTASI_HABIS_UPDATE: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-150/80' },
+  MUTASI_HABIS_REGULER: { bg: 'bg-pink-50/80', text: 'text-pink-750', border: 'border-pink-150/80' },
+  OBJEK_PAJAK_BARU: { bg: 'bg-amber-50/80', text: 'text-amber-700', border: 'border-amber-150/80' },
+  PEMBETULAN: { bg: 'bg-purple-50/80', text: 'text-purple-700', border: 'border-purple-150/80' },
+  PENGAKTIFAN: { bg: 'bg-sky-50/80', text: 'text-sky-700', border: 'border-sky-150/80' },
 };
 
 const BUNDLE_STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string; shadow: string }> = {

@@ -490,3 +490,72 @@ export async function getRecentUploads(limit = 5) {
   }
 }
 
+/**
+ * Retrieve bundles that need re-upload (IN_MANIFEST with SUPERSEDED archives)
+ * for the Pengarsip "Arsip Perlu Direvisi" dashboard card.
+ */
+export async function getReuploadBundles(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const inManifestBundles = await prisma.bundle.findMany({
+      where: { status: "IN_MANIFEST" },
+      include: {
+        permohonan: {
+          include: {
+            arsipDigital: { orderBy: { versi: "desc" } }
+          }
+        },
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { updatedAt: "desc" }
+    });
+
+    // Only keep bundles that have at least one BUNDLED permohonan with a SUPERSEDED archive
+    const reuploadList = inManifestBundles.filter((bundle) =>
+      bundle.permohonan.some(
+        (p) => p.status === "BUNDLED" && p.arsipDigital.some((ad) => ad.status === "SUPERSEDED")
+      )
+    );
+
+    const total = reuploadList.length;
+    const list = reuploadList.slice(0, limit);
+
+    return { success: true, list, total };
+  } catch (error: any) {
+    console.error("[ACTION-GET-REUPLOAD-BUNDLES-ERR]", error);
+    return { success: false, list: [], total: 0, error: "Gagal mengambil daftar arsip yang perlu direvisi." };
+  }
+}
+
+/**
+ * Retrieve LOCKED bundles only (normal digitalization queue)
+ * for the Pengarsip "Antrean Digitalisasi" dashboard card.
+ */
+export async function getLockedBundles(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PENGARSIP", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const list = await prisma.bundle.findMany({
+      where: { status: "LOCKED" },
+      include: {
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit
+    });
+
+    const total = await prisma.bundle.count({ where: { status: "LOCKED" } });
+
+    return { success: true, list, total };
+  } catch (error: any) {
+    console.error("[ACTION-GET-LOCKED-BUNDLES-ERR]", error);
+    return { success: false, list: [], total: 0, error: "Gagal mengambil daftar antrean digitalisasi." };
+  }
+}

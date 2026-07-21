@@ -69,8 +69,16 @@ export function PemantauSkeleton() {
 }
 
 const formatNop = (nop: string) => {
-  if (!nop || nop.length !== 18) return nop;
-  return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
+  if (!nop) return '';
+  const cleanNop = nop.replace(/[^0-9]/g, '');
+  if (cleanNop.length === 17) {
+    const padded = cleanNop + '0';
+    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
+  }
+  if (cleanNop.length === 18) {
+    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
+  }
+  return nop;
 };
 
 export default function PemantauWorkspace() {
@@ -310,7 +318,7 @@ export default function PemantauWorkspace() {
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                   className="w-full pl-7.5 pr-8 py-1 bg-white border-transparent rounded-[7px] text-[11px] font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                  placeholder="Cari NOP, pelayanan, WP..."
+                  placeholder="Cari No. Pelayanan, NOP, Nama."
                 />
                 {searchQuery && (
                   <button
@@ -477,7 +485,7 @@ export default function PemantauWorkspace() {
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                   className="w-full pl-7.5 pr-8 py-1 bg-white border-transparent rounded-[7px] text-[11px] font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                  placeholder="Cari NOP, pelayanan, WP..."
+                  placeholder="Cari No. Pelayanan, NOP, Nama."
                 />
                 {searchQuery && (
                   <button

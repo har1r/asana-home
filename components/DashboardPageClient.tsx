@@ -58,12 +58,12 @@ const PenelitiBundleStatsCard = dynamic(() => import('@/components/PenelitiBundl
   loading: () => <FavoritesCardSkeleton />
 });
 
-const PenelitiBundleListCard = dynamic(() => import('@/components/PenelitiBundleListCard'), {
+const PenelitiBundleVoidCard = dynamic(() => import('@/components/PenelitiBundleVoidCard'), {
   ssr: false,
   loading: () => <TasksRevisionCardSkeleton />
 });
 
-const PenelitiSubmittedQueueCard = dynamic(() => import('@/components/PenelitiSubmittedQueueCard'), {
+const PenelitiBundleDraftCard = dynamic(() => import('@/components/PenelitiBundleDraftCard'), {
   ssr: false,
   loading: () => <RecentTasksCardSkeleton />
 });
@@ -73,9 +73,14 @@ const PengarsipStatsCard = dynamic(() => import('@/components/PengarsipStatsCard
   loading: () => <FavoritesCardSkeleton />
 });
 
+const PengarsipReuploadCard = dynamic(() => import('@/components/PengarsipReuploadCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
 const PengarsipDigitizationQueueCard = dynamic(() => import('@/components/PengarsipDigitizationQueueCard'), {
   ssr: false,
-  loading: () => <TasksRevisionCardSkeleton />
+  loading: () => <RecentTasksCardSkeleton />
 });
 
 const PengarsipRecentUploadsCard = dynamic(() => import('@/components/PengarsipRecentUploadsCard'), {
@@ -113,6 +118,16 @@ const PemantauRecentCompletedCard = dynamic(() => import('@/components/PemantauR
   loading: () => <RecentTasksCardSkeleton />
 });
 
+const SupervisorStatsCard = dynamic(() => import('@/components/SupervisorStatsCard'), {
+  ssr: false,
+  loading: () => <FavoritesCardSkeleton />
+});
+
+const SupervisorPendingCard = dynamic(() => import('@/components/SupervisorPendingCard'), {
+  ssr: false,
+  loading: () => <RecentTasksCardSkeleton />
+});
+
 
 
 const PenginputWorkspace = dynamic(() => import('@/components/workspaces/PenginputWorkspace'), {
@@ -136,6 +151,10 @@ const PemantauWorkspace = dynamic(() => import('@/components/workspaces/Pemantau
   loading: () => <MascotLoadingSpinner />
 });
 const SupervisorWorkspace = dynamic(() => import('@/components/workspaces/SupervisorWorkspace'), {
+  ssr: false,
+  loading: () => <MascotLoadingSpinner />
+});
+const TrackingTab = dynamic(() => import('@/components/workspaces/TrackingTab'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
@@ -178,49 +197,7 @@ function InboxSkeleton() {
   );
 }
 
-/** Skeleton untuk tab Portfolios — 4 project card shimmer */
-function PortfoliosSkeleton() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200/80 p-6 flex flex-col gap-6 w-full shadow-sm">
-      {/* Header */}
-      <div className="flex flex-col gap-1 border-b border-gray-100 pb-4">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-gray-200 animate-pulse rounded" />
-          <SkeletonBox width="w-48" height="h-5" rounded="rounded-full" />
-        </div>
-        <SkeletonText width="w-72" height="h-3" className="mt-1" />
-      </div>
 
-      {/* 4-col grid of project cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-5 bg-slate-50 rounded-2xl border border-slate-200/40">
-            {/* Icon + title */}
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gray-200 animate-pulse" />
-              <div className="flex flex-col gap-1.5">
-                <SkeletonText width="w-24" height="h-3" />
-                <SkeletonText width="w-16" height="h-2" />
-              </div>
-            </div>
-            {/* Progress section */}
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <SkeletonText width="w-16" height="h-2.5" />
-                <SkeletonText width="w-8" height="h-2.5" />
-              </div>
-              <SkeletonProgressBar />
-              <div className="flex justify-between pt-1">
-                <SkeletonText width="w-16" height="h-2" />
-                <SkeletonText width="w-16" height="h-2" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 
 /** Spinner loading melingkar untuk My Tasks & pre-initialization */
@@ -336,9 +313,9 @@ const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole 
   if (resolvedRole === 'PENELITI') {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PenelitiBundleListCard onViewAll={onViewAllTasks} />
+        <PenelitiBundleVoidCard onViewAll={onViewAllTasks} />
         <PenelitiBundleStatsCard />
-        <PenelitiSubmittedQueueCard onViewAll={onViewAllTasks} />
+        <PenelitiBundleDraftCard onViewAll={onViewAllTasks} />
         <MessageTeamCard />
         <div className="col-span-1 lg:col-span-2">
           <CalendarCard />
@@ -351,9 +328,9 @@ const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole 
   if (resolvedRole === 'PENGARSIP') {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PengarsipDigitizationQueueCard onViewAll={onViewAllTasks} />
+        <PengarsipReuploadCard onViewAll={onViewAllTasks} />
         <PengarsipStatsCard />
-        <PengarsipRecentUploadsCard onViewAll={onViewAllTasks} />
+        <PengarsipDigitizationQueueCard onViewAll={onViewAllTasks} />
         <MessageTeamCard />
         <div className="col-span-1 lg:col-span-2">
           <CalendarCard />
@@ -384,6 +361,20 @@ const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole 
         <PemantauActiveQueueCard onViewAll={onViewAllTasks} />
         <PemantauStatsCard />
         <PemantauRecentCompletedCard onViewAll={onViewAllTasks} />
+        <MessageTeamCard />
+        <div className="col-span-1 lg:col-span-2">
+          <CalendarCard />
+        </div>
+      </div>
+    );
+  }
+
+  // Render Supervisor-specific home dashboard if role is SUPERVISOR
+  if (resolvedRole === 'SUPERVISOR') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
+        <SupervisorPendingCard onViewAll={onViewAllTasks} />
+        <SupervisorStatsCard />
         <MessageTeamCard />
         <div className="col-span-1 lg:col-span-2">
           <CalendarCard />
@@ -507,91 +498,7 @@ const InboxTab = React.memo(function InboxTab({ messages }: InboxTabProps) {
   );
 });
 
-// --- 4. ProjectCard & PortfoliosTab ---
-interface ProjectCardProps {
-  proj: any;
-  correlatedTasks: any[];
-  onClick: () => void;
-}
 
-const ProjectCard = React.memo(function ProjectCard({ proj, correlatedTasks, onClick }: ProjectCardProps) {
-  const total = correlatedTasks.length;
-  const done = correlatedTasks.filter(t => t.completed).length;
-  const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
-
-  return (
-    <div
-      onClick={onClick}
-      className="p-5 bg-slate-50 hover:bg-slate-100/40 rounded-2xl border border-slate-200/40 hover:shadow-md transition-all cursor-pointer pointer-events-auto"
-    >
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs ${proj.iconBg}`}>
-          ⚡
-        </div>
-        <div>
-          <h3 className="text-xs font-bold text-gray-800 truncate w-36">{proj.title}</h3>
-          <span className="text-[10px] text-gray-400 font-bold capitalize tracking-wider">{proj.category}</span>
-        </div>
-      </div>
-
-      <div className="space-y-2 select-none">
-        <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
-          <span>Progress score</span>
-          <span>{percentage}%</span>
-        </div>
-        <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-          <div
-            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] text-gray-400 font-semibold pt-1">
-          <span>{done} complete</span>
-          <span>{total - done} in queue</span>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-interface PortfoliosTabProps {
-  projects: any[];
-  getTasksForProject: (proj: any) => any[];
-  setSelectedProject: (proj: any) => void;
-}
-
-const PortfoliosTab = React.memo(function PortfoliosTab({
-  projects,
-  getTasksForProject,
-  setSelectedProject,
-}: PortfoliosTabProps) {
-  if (projects.length === 0) {
-    return <PortfoliosSkeleton />;
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200/80 p-6 flex flex-col gap-6 w-full shadow-sm">
-      <div className="flex flex-col gap-1 border-b border-gray-100 pb-4 select-none">
-        <h2 className="text-lg font-bold text-[#1e2022] flex items-center gap-1.5">
-          <Briefcase className="w-5 h-5 text-indigo-500 shrink-0" />
-          Portfolios & Project Roadmaps
-        </h2>
-        <p className="text-xs text-gray-400 font-medium">Live progress calculations calculated cleanly based on real-time task checkoffs.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {projects.map((proj) => (
-          <ProjectCard
-            key={proj.id}
-            proj={proj}
-            correlatedTasks={getTasksForProject(proj)}
-            onClick={() => setSelectedProject(proj)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-});
 
 // --- 5. HelpTab ---
 const HelpTab = React.memo(function HelpTab() {
@@ -979,12 +886,8 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
             <InboxTab messages={messages} />
           )}
 
-          {activeTab === 'portfolios' && (
-            <PortfoliosTab
-              projects={projects}
-              getTasksForProject={getTasksForProject}
-              setSelectedProject={setSelectedProject}
-            />
+          {activeTab === 'tracking' && (
+            <TrackingTab />
           )}
 
           {activeTab === 'help' && (

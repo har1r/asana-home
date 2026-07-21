@@ -172,8 +172,7 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
             await tx.bundle.update({
               where: { id: bundle.id },
               data: {
-                // If bundle was LOCKED and now empty → revert to DRAFT so it can be reused
-                status: bundle.status === 'LOCKED' ? 'DRAFT' : bundle.status,
+                status: 'VOID',
                 jenisPermohonan: null
               }
             });
@@ -195,7 +194,7 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
             await tx.bundle.update({
               where: { id: bundle.id },
               data: {
-                status: bundle.status === 'LOCKED' ? 'DRAFT' : bundle.status,
+                status: 'VOID',
                 jenisPermohonan: null
               }
             });

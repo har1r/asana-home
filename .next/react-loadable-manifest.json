@@ -35,10 +35,10 @@
       "static/chunks/_app-pages-browser_components_PemantauStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleListCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleListCard",
+  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleDraftCard": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleDraftCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PenelitiBundleListCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_PenelitiBundleDraftCard_tsx.js"
     ]
   },
   "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleStatsCard": {
@@ -47,10 +47,10 @@
       "static/chunks/_app-pages-browser_components_PenelitiBundleStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PenelitiSubmittedQueueCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiSubmittedQueueCard",
+  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleVoidCard": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleVoidCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PenelitiSubmittedQueueCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_PenelitiBundleVoidCard_tsx.js"
     ]
   },
   "components\\DashboardPageClient.tsx -> @/components/PengarsipDigitizationQueueCard": {
@@ -63,6 +63,12 @@
     "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipRecentUploadsCard",
     "files": [
       "static/chunks/_app-pages-browser_components_PengarsipRecentUploadsCard_tsx.js"
+    ]
+  },
+  "components\\DashboardPageClient.tsx -> @/components/PengarsipReuploadCard": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipReuploadCard",
+    "files": [
+      "static/chunks/_app-pages-browser_components_PengarsipReuploadCard_tsx.js"
     ]
   },
   "components\\DashboardPageClient.tsx -> @/components/PengarsipStatsCard": {
@@ -93,6 +99,18 @@
     "id": "components\\DashboardPageClient.tsx -> @/components/RecentTasksCard",
     "files": [
       "static/chunks/_app-pages-browser_components_RecentTasksCard_tsx.js"
+    ]
+  },
+  "components\\DashboardPageClient.tsx -> @/components/SupervisorPendingCard": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/SupervisorPendingCard",
+    "files": [
+      "static/chunks/_app-pages-browser_components_SupervisorPendingCard_tsx.js"
+    ]
+  },
+  "components\\DashboardPageClient.tsx -> @/components/SupervisorStatsCard": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/SupervisorStatsCard",
+    "files": [
+      "static/chunks/_app-pages-browser_components_SupervisorStatsCard_tsx.js"
     ]
   },
   "components\\DashboardPageClient.tsx -> @/components/TasksRevisionCard": {
@@ -135,6 +153,12 @@
     "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/SupervisorWorkspace",
     "files": [
       "static/chunks/_app-pages-browser_components_workspaces_SupervisorWorkspace_tsx.js"
+    ]
+  },
+  "components\\DashboardPageClient.tsx -> @/components/workspaces/TrackingTab": {
+    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/TrackingTab",
+    "files": [
+      "static/chunks/_app-pages-browser_components_workspaces_TrackingTab_tsx.js"
     ]
   },
   "node_modules\\next\\dist\\client\\dev\\hot-reloader\\app\\use-websocket.js -> @vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts": {

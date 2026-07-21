@@ -24,7 +24,16 @@ const JENIS_CONFIG: Record<string, { icon: any; bg: string }> = {
   'MUTASI_HABIS_REGULER':{ icon: Repeat2,        bg: 'bg-pink-500' },
   'OBJEK_PAJAK_BARU':    { icon: MapPin,         bg: 'bg-amber-500' },
   'PEMBETULAN':          { icon: PenLine,        bg: 'bg-purple-500' },
-  'PENGAKTIFAN':         { icon: Power,          bg: 'bg-rose-500' },
+  'PENGAKTIFAN':         { icon: Power,          bg: 'bg-sky-500' },
+};
+
+const CATEGORY_STYLES: Record<string, string> = {
+  'MUTASI_SEBAGIAN': 'bg-indigo-50 text-indigo-700 border-indigo-100/80',
+  'MUTASI_HABIS_UPDATE': 'bg-emerald-50 text-emerald-700 border-emerald-100/80',
+  'MUTASI_HABIS_REGULER': 'bg-pink-50 text-pink-700 border-pink-100/80',
+  'OBJEK_PAJAK_BARU': 'bg-amber-50 text-amber-700 border-amber-100/80',
+  'PEMBETULAN': 'bg-purple-50 text-purple-700 border-purple-100/80',
+  'PENGAKTIFAN': 'bg-sky-50 text-sky-700 border-sky-100/80',
 };
 
 export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void }) {
@@ -51,22 +60,8 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
     fetchLatest();
   }, []);
 
-  // Memoized filter – only recomputes when tasks list or searchQuery change
-  const filteredTasks = useMemo(() =>
-    tasks.filter(item => {
-      const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
-        ? (item.namaPemilikLama || '')
-        : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
-
-      return (
-        namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }),
-    [tasks, searchQuery]
-  );
+  // Memoized filter – always show all tasks (no global search filtering on homepage cards)
+  const filteredTasks = useMemo(() => tasks, [tasks]);
 
   if (isLoading) return <RecentTasksCardSkeleton />;
 
@@ -140,8 +135,17 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
                     {/* Subtitle: tanggal diinput • jenis layanan — sama posisi & style dengan RecentProjectsCard */}
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-semibold mt-0.5">
                       <span className="shrink-0">{formatDate(item.createdAt)}</span>
-                      <span className="text-gray-300">•</span>
-                      <span className="truncate">{toTitleCase(item.jenisPermohonan)}</span>
+                      <span className="text-gray-355 select-none">•</span>
+                      {(() => {
+                        const tagClass = item.jenisPermohonan
+                          ? (CATEGORY_STYLES[item.jenisPermohonan] || 'bg-slate-50 text-slate-700 border-slate-200/50')
+                          : 'bg-slate-50 text-slate-400 border-slate-200/30';
+                        return (
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-extrabold border leading-none capitalize truncate max-w-[120px] ${tagClass}`}>
+                            {toTitleCase(item.jenisPermohonan)}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -150,7 +154,7 @@ export default function RecentTasksCard({ onViewAll }: { onViewAll?: () => void 
                 <div className="flex items-center gap-3 shrink-0 pl-2">
                   <div className="flex -space-x-1 items-center select-none">
                     <div
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-bold text-white ring-2 ring-white ${getAvatarBg(item.penginput?.name || '')}`}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white ${getAvatarBg(item.penginput?.name || '')}`}
                       title={item.penginput?.name || 'Unknown'}
                     >
                       {getInitials(item.penginput?.name || 'Unknown')}

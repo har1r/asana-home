@@ -35,16 +35,8 @@ export default function PengirimManifestListCard({ onViewAll }: { onViewAll?: ()
     fetchManifests();
   }, []);
 
-  const filteredManifests = useMemo(() =>
-    manifests.filter(item => {
-      const creatorName = item.pengirim?.name || '';
-      return (
-        item.nomorManifest.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        creatorName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }),
-    [manifests, searchQuery]
-  );
+  // Memoized filter – always show all manifests (no global search filtering on homepage cards)
+  const filteredManifests = useMemo(() => manifests, [manifests]);
 
   if (isLoading) return <TasksRevisionCardSkeleton />;
 

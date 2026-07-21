@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Menu, Search, X } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import NotificationBell from '@/components/NotificationBell';
@@ -10,8 +10,16 @@ import { searchPermohonans } from '@/app/actions/search';
 
 // Helper format NOP
 const formatNop = (nop: string) => {
-  if (!nop || nop.length !== 18) return nop;
-  return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
+  if (!nop) return '';
+  const cleanNop = nop.replace(/[^0-9]/g, '');
+  if (cleanNop.length === 17) {
+    const padded = cleanNop + '0';
+    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
+  }
+  if (cleanNop.length === 18) {
+    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
+  }
+  return nop;
 };
 
 const getStatusBadgeClass = (status: string) => {
@@ -38,9 +46,134 @@ const TAB_TITLES: Record<string, string> = {
   beranda: 'Beranda',
   'my-tasks': 'Papan Tugas Saya',
   inbox: 'Workspace Notification Feed',
-  portfolios: 'Team Portfolios Grid',
+  tracking: 'Pelacakan Berkas & Manifest',
   help: 'Help & Tutorial Guide',
 };
+
+interface FishingAnimationProps {
+  isSearch?: boolean;
+}
+
+const FishingAnimation: React.FC<FishingAnimationProps> = React.memo(({ isSearch }) => {
+  return (
+    <div className="relative w-44 h-28 flex items-center justify-center overflow-hidden select-none mb-1">
+      <svg viewBox="0 0 200 120" className="w-full h-full">
+        <defs>
+          <style>{`
+            @keyframes rodBob {
+              0%, 100% { transform: rotate(0deg); }
+              50% { transform: rotate(-2.5deg); }
+            }
+            @keyframes lineDangle {
+              0%, 100% { transform: skewX(0deg); }
+              50% { transform: skewX(-2deg); }
+            }
+            @keyframes rippleEffect {
+              0% { r: 1px; opacity: 0.8; stroke-width: 0.75px; }
+              100% { r: 18px; opacity: 0; stroke-width: 0.25px; }
+            }
+            @keyframes fishJump {
+              0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+              5% { opacity: 1; }
+              25% { transform: translate(15px, -20px) rotate(30deg); }
+              35% { transform: translate(22px, -20px) rotate(70deg); }
+              55% { transform: translate(40px, 0px) rotate(130deg); opacity: 1; }
+              65%, 100% { transform: translate(40px, 8px) rotate(160deg); opacity: 0; }
+            }
+            @keyframes cloudMove {
+              0% { transform: translateX(-8px); }
+              100% { transform: translateX(8px); }
+            }
+            .rod-rod {
+              transform-origin: 45px 75px;
+              animation: rodBob 4.5s ease-in-out infinite;
+            }
+            .line-string {
+              transform-origin: 125px 35px;
+              animation: lineDangle 4.5s ease-in-out infinite;
+            }
+            .ripple-circle-1 {
+              animation: rippleEffect 3.2s linear infinite;
+            }
+            .ripple-circle-2 {
+              animation: rippleEffect 3.2s linear infinite;
+              animation-delay: 1.6s;
+            }
+            .fish-jumping {
+              transform-origin: 125px 95px;
+              animation: fishJump 6.5s ease-in-out infinite;
+            }
+            .cloud-bg-1 {
+              animation: cloudMove 15s ease-in-out infinite alternate;
+            }
+            .cloud-bg-2 {
+              animation: cloudMove 20s ease-in-out infinite alternate;
+            }
+          `}</style>
+        </defs>
+
+        {/* Sky Background & Clouds */}
+        <g className="cloud-bg-1" opacity="0.3">
+          <path d="M25 20c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5c.8-.2 1.6.3 1.8 1.1.2.8-.3 1.6-1.1 1.8H20c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5" fill="#94a3b8" />
+        </g>
+        <g className="cloud-bg-2" opacity="0.25">
+          <path d="M145 15c0-1.8 1.5-3.3 3.3-3.3s3.3 1.5 3.3 3.3c.6-.2 1.2.2 1.4.8.2.6-.2 1.2-.8 1.4H140c-.6 0-1.1-.5-1.1-1.1s.5-1.1 1.1-1.1" fill="#94a3b8" />
+        </g>
+
+        {/* Water */}
+        <path d="M0 95h200v25H0z" fill="#f1f5f9" />
+        <path d="M0 95c30-1.5 60 1.5 90 0s60-1.5 90 0 20 1.5 20 1.5v4H0z" fill="#cbd5e1" opacity="0.4" />
+
+        {/* Wooden Pier */}
+        <rect x="0" y="80" width="55" height="5" rx="1" fill="#854d0e" />
+        <rect x="8" y="85" width="7" height="35" fill="#713f12" />
+        <rect x="40" y="85" width="7" height="35" fill="#713f12" />
+
+        {/* Sitting Fisherman */}
+        <circle cx="35" cy="55" r="4.5" fill="#475569" />
+        {/* Hat */}
+        <path d="M26 53c3-3 15-3 18 0z" fill="#7c2d12" />
+        <path d="M21 53h28v1.5H21z" fill="#a16207" />
+        {/* Torso & Arms */}
+        <path d="M30 59.5h10l2 18.5H28z" fill="#64748b" />
+        {/* Pants */}
+        <path d="M28 78h12l-1 7H29z" fill="#334155" />
+        {/* Legs dangling over pier */}
+        <rect x="31" y="85" width="2.5" height="11" rx="0.5" fill="#475569" />
+        <rect x="36" y="85" width="2.5" height="9" rx="0.5" fill="#475569" />
+
+        {/* Fishing Rod and Line Group */}
+        <g className="rod-rod">
+          {/* Wooden rod stick */}
+          <line x1="38" y1="64" x2="125" y2="35" stroke="#a16207" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Thread line */}
+          <line className="line-string" x1="125" y1="35" x2="125" y2="95" stroke="#cbd5e1" strokeWidth="0.75" />
+        </g>
+
+        {/* Water Ripple Circles */}
+        <ellipse className="ripple-circle-1" cx="125" cy="95" rx="12" ry="2.5" fill="none" stroke="#6366f1" />
+        <ellipse className="ripple-circle-2" cx="125" cy="95" rx="12" ry="2.5" fill="none" stroke="#6366f1" />
+
+        {/* Jumping Fish */}
+        {!isSearch && (
+          <g className="fish-jumping">
+            <path d="M125 95c2.5-0.8 5-2.5 5-4.2s-2.5-3.3-5-4.2c-1.7 0.8-2.5 2.5-2.5 4.2s0.8 3.3 2.5 4.2z" fill="#f59e0b" />
+            <path d="M122.5 90.8l-2.5-1.7v3.3z" fill="#f59e0b" />
+            <circle cx="128.5" cy="92" r="0.4" fill="#fff" />
+          </g>
+        )}
+      </svg>
+      {/* Search overlay indicator */}
+      {isSearch && (
+        <div className="absolute right-5 bottom-8 bg-white border border-slate-200 p-1.5 rounded-xl shadow-md animate-bounce flex items-center justify-center">
+          <Search className="w-3.5 h-3.5 text-indigo-650" />
+        </div>
+      )}
+    </div>
+  );
+});
+
+FishingAnimation.displayName = 'FishingAnimation';
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -54,6 +187,8 @@ export default function Header() {
     setGlobalSelectedRequest
   } = useDashboard();
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
@@ -127,6 +262,21 @@ export default function Header() {
     }
   }, [searchQuery]);
 
+  // Keyboard shortcut: Ctrl+K or '/' to focus header search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target as HTMLElement).isContentEditable;
+      if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && !isTyping)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Only recomputes when activeTab actually changes
   const headerTitle = useMemo(() => TAB_TITLES[activeTab] ?? '', [activeTab]);
 
@@ -150,7 +300,7 @@ export default function Header() {
         <div className={`relative transition-all duration-350 ${
           isMobileSearchExpanded 
             ? 'w-full flex items-center gap-2 z-40 bg-[#dde3ea]' 
-            : 'hidden sm:block w-44 sm:w-64'
+            : 'hidden sm:block w-52 sm:w-72'
         }`}>
           {isMobileSearchExpanded && (
             <button
@@ -165,19 +315,31 @@ export default function Header() {
           )}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 stroke-[2.25] z-10" />
-            <div className="p-[1px] bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] rounded-full overflow-hidden">
+            <div className={`p-[1.5px] rounded-full transition-all duration-300 ${
+              isSearchFocused
+                ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs'
+                : 'bg-slate-200/90'
+            }`}>
               <input
+                ref={searchInputRef}
                 id="search-input"
                 type="text"
-                placeholder="Cari permohonan, NOP, atau nama..."
+                placeholder="Cari No. Pelayanan, NOP, Nama."
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 onFocus={() => {
+                  setIsSearchFocused(true);
                   if (localSearch.trim()) setPanelOpen(true);
                 }}
-                className="w-full bg-slate-50 focus:outline-none focus:bg-white text-xs font-medium rounded-full pl-9 pr-8 py-1.5 transition-all text-gray-700 border-0"
+                onBlur={() => setIsSearchFocused(false)}
+                className="w-full bg-slate-50 focus:outline-none focus:bg-white text-xs font-semibold placeholder-gray-400 rounded-full pl-9 pr-12 py-1.5 transition-all text-gray-700 border-0"
               />
             </div>
+            {!isSearchFocused && !localSearch && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
+                Ctrl+K
+              </span>
+            )}
             {localSearch && (
               <button
                 onClick={() => {
@@ -228,10 +390,10 @@ export default function Header() {
                     ) : searchError ? (
                       <div className="py-8 text-center text-xs font-semibold text-rose-500">{searchError}</div>
                     ) : searchResults.length === 0 ? (
-                      <div className="py-12 text-center select-none flex flex-col items-center justify-center gap-2">
-                        <Search className="w-7 h-7 text-slate-350 stroke-[1.5]" />
-                        <p className="text-xs text-slate-400 font-semibold">Tidak ada hasil ditemukan</p>
-                        <p className="text-[10px] text-slate-350 font-medium px-6 leading-relaxed">Coba cari dengan nomor pelayanan, nomor permohonan, NOP, atau nama pemohon.</p>
+                      <div className="py-8 text-center select-none flex flex-col items-center justify-center gap-2 px-4">
+                        <FishingAnimation isSearch={true} />
+                        <p className="text-xs font-bold text-slate-700">Tidak ada hasil ditemukan</p>
+                        <p className="text-[10px] text-slate-400 font-semibold leading-relaxed max-w-xs">Coba cari dengan nomor pelayanan, nomor permohonan, NOP, atau nama pemohon.</p>
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-50">

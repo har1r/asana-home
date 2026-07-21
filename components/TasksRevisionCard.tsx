@@ -9,12 +9,12 @@ import { TasksRevisionCardSkeleton } from '@/components/skeletons/SkeletonBase';
 import { toTitleCase, getInitials, getAvatarBg, formatDate } from '@/lib/displayHelpers';
 
 const CATEGORY_STYLES: Record<string, string> = {
-  'MUTASI_SEBAGIAN':     'bg-indigo-100 text-indigo-700',
-  'MUTASI_HABIS_UPDATE': 'bg-emerald-100 text-emerald-700',
-  'MUTASI_HABIS_REGULER':'bg-pink-100 text-pink-700',
-  'OBJEK_PAJAK_BARU':    'bg-amber-100 text-amber-700',
-  'PEMBETULAN':          'bg-purple-100 text-purple-700',
-  'PENGAKTIFAN':         'bg-rose-100 text-rose-700',
+  'MUTASI_SEBAGIAN':     'bg-indigo-50 text-indigo-700 border border-indigo-100/80',
+  'MUTASI_HABIS_UPDATE': 'bg-emerald-50 text-emerald-700 border border-emerald-100/80',
+  'MUTASI_HABIS_REGULER':'bg-pink-50 text-pink-700 border border-pink-100/80',
+  'OBJEK_PAJAK_BARU':    'bg-amber-50 text-amber-700 border border-amber-100/80',
+  'PEMBETULAN':          'bg-purple-50 text-purple-700 border border-purple-100/80',
+  'PENGAKTIFAN':         'bg-sky-50 text-sky-700 border border-sky-100/80',
 };
 
 export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => void }) {
@@ -40,22 +40,8 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
     fetchRevisions();
   }, []);
 
-  // Memoized filter – only recomputes when revisions list or searchQuery change
-  const filteredRevisions = useMemo(() =>
-    revisions.filter(item => {
-      const namaPemilik = item.jenisPermohonan === 'PENGAKTIFAN'
-        ? (item.namaPemilikLama || '')
-        : (item.dataBaru?.[0]?.namaPemilikBaru || item.namaWajibPajak || '');
-
-      return (
-        namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nop.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.jenisPermohonan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.penginput?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }),
-    [revisions, searchQuery]
-  );
+  // Memoized filter – always show all revisions (no global search filtering on homepage cards)
+  const filteredRevisions = useMemo(() => revisions, [revisions]);
 
   const activeCount = revisions.length;
 
@@ -146,7 +132,7 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
                 {/* Column 3: Date Inputted (Centered) */}
                 <div className="col-span-2 flex justify-center">
                   <span className="text-[11px] font-semibold text-gray-400 text-center select-none">
-                    {new Date(item.updatedAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                    {formatDate(item.updatedAt)}
                   </span>
                 </div>
 
@@ -160,7 +146,7 @@ export default function TasksRevisionCard({ onViewAll }: { onViewAll?: () => voi
                 {/* Column 5: Inputter Initial Avatar (Right Aligned) */}
                 <div className="col-span-1 flex items-center justify-end select-none">
                   <div
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-bold text-white ring-2 ring-white cursor-pointer ${getAvatarBg(item.penginput?.name || '')}`}
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white cursor-pointer ${getAvatarBg(item.penginput?.name || '')}`}
                     title={item.penginput?.name || 'Unknown'}
                   >
                     {getInitials(item.penginput?.name || 'Unknown')}

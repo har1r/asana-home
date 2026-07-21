@@ -16,20 +16,12 @@ export async function searchPermohonans(query: string) {
       where: {
         OR: [
           { nomorPelayanan: { contains: trimmedQuery, mode: "insensitive" } },
-          { nomorPermohonan: { contains: trimmedQuery, mode: "insensitive" } },
           { nop: { contains: trimmedQuery, mode: "insensitive" } },
           { namaWajibPajak: { contains: trimmedQuery, mode: "insensitive" } },
         ],
       },
-      select: {
-        id: true,
-        nomorPermohonan: true,
-        nomorPelayanan: true,
-        nop: true,
-        namaWajibPajak: true,
-        status: true,
-        jenisPermohonan: true,
-        createdAt: true,
+      include: {
+        dataBaru: true,
       },
       orderBy: { createdAt: "desc" },
       take: 15,

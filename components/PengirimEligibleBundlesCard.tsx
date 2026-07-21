@@ -8,12 +8,12 @@ import { formatDate, toTitleCase } from '@/lib/displayHelpers';
 import { Folder, CheckCircle, Clock } from 'lucide-react';
 
 const CATEGORY_STYLES: Record<string, string> = {
-  'MUTASI_SEBAGIAN': 'bg-indigo-50 text-indigo-700 border-indigo-100',
-  'MUTASI_HABIS_UPDATE': 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  'MUTASI_HABIS_REGULER': 'bg-pink-50 text-pink-700 border-pink-100',
-  'OBJEK_PAJAK_BARU': 'bg-amber-50 text-amber-700 border-amber-100',
-  'PEMBETULAN': 'bg-purple-50 text-purple-700 border-purple-100',
-  'PENGAKTIFAN': 'bg-rose-50 text-rose-700 border-rose-100',
+  'MUTASI_SEBAGIAN': 'bg-indigo-50 text-indigo-700 border-indigo-100/80',
+  'MUTASI_HABIS_UPDATE': 'bg-emerald-50 text-emerald-700 border-emerald-100/80',
+  'MUTASI_HABIS_REGULER': 'bg-pink-50 text-pink-700 border-pink-100/80',
+  'OBJEK_PAJAK_BARU': 'bg-amber-50 text-amber-700 border-amber-100/80',
+  'PEMBETULAN': 'bg-purple-50 text-purple-700 border-purple-100/80',
+  'PENGAKTIFAN': 'bg-sky-50 text-sky-700 border-sky-100/80',
 };
 
 export default function PengirimEligibleBundlesCard({ onViewAll }: { onViewAll?: () => void }) {
@@ -38,16 +38,8 @@ export default function PengirimEligibleBundlesCard({ onViewAll }: { onViewAll?:
     fetchBundles();
   }, []);
 
-  const filteredBundles = useMemo(() =>
-    bundles.filter(item => {
-      const creatorName = item.peneliti?.name || '';
-      return (
-        item.nomorBundle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        creatorName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }),
-    [bundles, searchQuery]
-  );
+  // Memoized filter – always show all bundles (no global search filtering on homepage cards)
+  const filteredBundles = useMemo(() => bundles, [bundles]);
 
   if (isLoading) return <RecentTasksCardSkeleton />;
 

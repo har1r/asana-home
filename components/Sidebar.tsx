@@ -5,7 +5,7 @@ import {
   Home,
   CheckSquare,
   Inbox,
-  Briefcase,
+  Search,
   HelpCircle,
   Star,
   ChevronDown,
@@ -36,7 +36,7 @@ export default function Sidebar() {
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     { id: 'inbox', label: 'Inbox', icon: Inbox },
-    { id: 'portfolios', label: 'Portfolios', icon: Briefcase },
+    { id: 'tracking', label: 'Pelacakan', icon: Search },
     { id: 'help', label: 'Help', icon: HelpCircle },
   ];
 

@@ -7,7 +7,7 @@ import {
   CheckCircle, Clock, X, AlertTriangle, Star,
   FileSpreadsheet, Filter, Check, ChevronLeft, ChevronRight,
   User, Hash, ListFilter, RefreshCw, Copy,
-  Folder, FolderLock, Unlock, Send
+  Folder, FolderLock, Unlock, Send, Slash
 } from 'lucide-react';
 import {
   getSubmittedPermohonan,
@@ -26,7 +26,7 @@ import { DetailsModal } from './DetailsModal';
 import { ActionStatusModal } from './ActionStatusModal';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from '@/components/skeletons/SkeletonBase';
 
-/** Skeleton untuk PenelitiWorkspace — premium tabbed layout */
+/** Skeleton untuk PenelitiWorkspace — premium card grid layout */
 export function PenelitiSkeleton() {
   return (
     <div className="w-full font-sans select-none flex flex-col gap-6 animate-fadeIn">
@@ -42,50 +42,52 @@ export function PenelitiSkeleton() {
         </div>
       </div>
 
-      {/* Content card skeleton (default: table) */}
-      <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
-        {/* Action row: search */}
-        <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <SkeletonBox width="w-36" height="h-4" rounded="rounded-full" />
-          <div className="w-72 h-8 bg-gray-200 animate-pulse rounded-lg" />
+      {/* Content card skeleton (grid of cards) */}
+      <div className="bg-[#dde3ea] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[300px]">
+        {/* Action row skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <SkeletonBox width="w-40" height="h-4.5" rounded="rounded-full" />
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <SkeletonBox width="w-full sm:w-72" height="h-8" rounded="rounded-lg" />
+            <SkeletonBox width="w-16" height="h-8" rounded="rounded-lg" />
+          </div>
         </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#f8fafc] border-b border-gray-200/60">
-                {['No', '⭐', 'Tanggal', 'No. Pelayanan', 'NOP', 'Wajib Pajak', 'Layanan', 'Aksi'].map((h) => (
-                  <th key={h} className="py-3 px-5">
-                    <SkeletonText width="w-16" height="h-2.5" />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  <td className="py-4 px-5 w-12"><SkeletonText width="w-4" height="h-3" /></td>
-                  <td className="py-4 px-5 w-10 text-center"><SkeletonText width="w-4" height="h-3" /></td>
-                  <td className="py-4 px-5"><SkeletonText width="w-20" height="h-3" /></td>
-                  <td className="py-4 px-5 min-w-[140px]">
-                    <SkeletonText width="w-36" height="h-3" />
-                  </td>
-                  <td className="py-4 px-5 min-w-[140px]">
-                    <SkeletonText width="w-28" height="h-2.5" />
-                  </td>
-                  <td className="py-4 px-5"><SkeletonText width={i % 2 === 0 ? 'w-28' : 'w-24'} height="h-3" /></td>
-                  <td className="py-4 px-5"><SkeletonBadge width="w-10" /></td>
-                  <td className="py-4 px-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 h-6 rounded-lg bg-gray-200 animate-pulse" />
-                      <div className="w-12 h-6 rounded-lg bg-gray-200 animate-pulse" />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Status Pills skeleton */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonBox key={i} width="w-20" height="h-6" rounded="rounded-full" />
+          ))}
+        </div>
+
+        {/* Grid of bundle cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between gap-3.5 min-h-[110px]"
+            >
+              {/* Top Row: Title & Count Badge */}
+              <div className="flex items-center justify-between gap-3 w-full">
+                <SkeletonBox width="w-32" height="h-3" rounded="rounded-sm" />
+                <SkeletonBox width="w-6" height="h-4.5" rounded="rounded-md" />
+              </div>
+
+              {/* Bottom Row */}
+              <div className="flex flex-col gap-2 pt-2.5 border-t border-slate-100/80">
+                <div className="flex items-center justify-between gap-2.5">
+                  <SkeletonBox width="w-12" height="h-4" rounded="rounded-full" />
+                  <SkeletonBox width="w-16" height="h-4" rounded="rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination Footer skeleton */}
+        <div className="px-5 py-3.5 border border-slate-200 bg-slate-50 flex items-center justify-between mt-auto rounded-xl shadow-3xs">
+          <SkeletonBox width="w-48" height="h-3" rounded="rounded-full" />
+          <SkeletonBox width="w-32" height="h-7" rounded="rounded-lg" />
         </div>
       </div>
     </div>
@@ -93,8 +95,16 @@ export function PenelitiSkeleton() {
 }
 
 const formatNop = (nop: string) => {
-  if (!nop || nop.length !== 18) return nop;
-  return `${nop.slice(0, 2)}.${nop.slice(2, 4)}.${nop.slice(4, 7)}.${nop.slice(7, 10)}.${nop.slice(10, 13)}-${nop.slice(13, 17)}.${nop.slice(17)}`;
+  if (!nop) return '';
+  const cleanNop = nop.replace(/[^0-9]/g, '');
+  if (cleanNop.length === 17) {
+    const padded = cleanNop + '0';
+    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
+  }
+  if (cleanNop.length === 18) {
+    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
+  }
+  return nop;
 };
 
 const getAbbreviatedJenis = (jenis: string) => {
@@ -117,12 +127,12 @@ const getAbbreviatedJenis = (jenis: string) => {
 };
 
 const BUNDLE_TYPE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  MUTASI_SEBAGIAN: { bg: 'bg-indigo-50/80', text: 'text-indigo-700', border: 'border-indigo-150' },
-  MUTASI_HABIS_UPDATE: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-150' },
-  MUTASI_HABIS_REGULER: { bg: 'bg-sky-50/80', text: 'text-sky-750', border: 'border-sky-150' },
-  OBJEK_PAJAK_BARU: { bg: 'bg-amber-50/80', text: 'text-amber-700', border: 'border-amber-150' },
-  PEMBETULAN: { bg: 'bg-purple-50/80', text: 'text-purple-700', border: 'border-purple-150' },
-  PENGAKTIFAN: { bg: 'bg-teal-50/80', text: 'text-teal-700', border: 'border-teal-150' },
+  MUTASI_SEBAGIAN: { bg: 'bg-indigo-50/80', text: 'text-indigo-700', border: 'border-indigo-150/80' },
+  MUTASI_HABIS_UPDATE: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', border: 'border-emerald-150/80' },
+  MUTASI_HABIS_REGULER: { bg: 'bg-pink-50/80', text: 'text-pink-750', border: 'border-pink-150/80' },
+  OBJEK_PAJAK_BARU: { bg: 'bg-amber-50/80', text: 'text-amber-700', border: 'border-amber-150/80' },
+  PEMBETULAN: { bg: 'bg-purple-50/80', text: 'text-purple-700', border: 'border-purple-150/80' },
+  PENGAKTIFAN: { bg: 'bg-sky-50/80', text: 'text-sky-700', border: 'border-sky-150/80' },
 };
 
 const BUNDLE_STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string; shadow: string }> = {
@@ -344,6 +354,7 @@ export default function PenelitiWorkspace() {
   // Loaders & Message States
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -358,7 +369,7 @@ export default function PenelitiWorkspace() {
 
   // Pagination States for Print Bundle Details Table
   const [currentPrintPage, setCurrentPrintPage] = useState(1);
-  const itemsPerPrintPage = 10;
+  const [itemsPerPrintPage, setItemsPerPrintPage] = useState(10);
 
   // Copy to Clipboard
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -430,6 +441,8 @@ export default function PenelitiWorkspace() {
   const [currentBundlePage, setCurrentBundlePage] = useState(1);
   const [itemsPerBundlePage, setItemsPerBundlePage] = useState(8);
   const [filterBundleStatus, setFilterBundleStatus] = useState<string>('ALL');
+  const [filterBundleJenisLayanan, setFilterBundleJenisLayanan] = useState<string>('ALL');
+  const [isBundleFilterDropdownOpen, setIsBundleFilterDropdownOpen] = useState(false);
 
   // Status Modal State
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -437,15 +450,15 @@ export default function PenelitiWorkspace() {
   const [statusModalTitle, setStatusModalTitle] = useState('');
   const [statusModalMessage, setStatusModalMessage] = useState('');
 
-  // Reset pagination when search bundle, status filter, or items per page changes
+  // Reset pagination when search bundle, status filter, jenis filter, or items per page changes
   useEffect(() => {
     setCurrentBundlePage(1);
-  }, [searchBundleQuery, filterBundleStatus, itemsPerBundlePage]);
+  }, [searchBundleQuery, filterBundleStatus, filterBundleJenisLayanan, itemsPerBundlePage]);
 
-  // Reset pagination when selected bundle changes
+  // Reset pagination when selected bundle or items per page for print changes
   useEffect(() => {
     setCurrentPrintPage(1);
-  }, [selectedBundle?.id]);
+  }, [selectedBundle?.id, itemsPerPrintPage]);
 
   // Bundle status counts memoization
   const bundleStatusCounts = useMemo(() => {
@@ -469,9 +482,10 @@ export default function PenelitiWorkspace() {
       const matchesSearch = b.nomorBundle.toLowerCase().includes(searchBundleQuery.toLowerCase()) ||
         (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(searchBundleQuery.toLowerCase()));
       const matchesStatus = filterBundleStatus === 'ALL' || b.status === filterBundleStatus;
-      return matchesSearch && matchesStatus;
+      const matchesJenis = filterBundleJenisLayanan === 'ALL' || b.jenisPermohonan === filterBundleJenisLayanan;
+      return matchesSearch && matchesStatus && matchesJenis;
     });
-  }, [bundlesList, searchBundleQuery, filterBundleStatus]);
+  }, [bundlesList, searchBundleQuery, filterBundleStatus, filterBundleJenisLayanan]);
 
   // Pagination computed variables for Bundles
   const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
@@ -484,8 +498,12 @@ export default function PenelitiWorkspace() {
   }, [filteredBundlesList, activeBundlePage, itemsPerBundlePage]);
 
   // Fetch initial data
-  const fetchData = async () => {
-    setListLoading(true);
+  const fetchData = async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setListLoading(true);
+    }
     setError('');
     try {
       const subRes = await getSubmittedPermohonan();
@@ -505,6 +523,7 @@ export default function PenelitiWorkspace() {
       setError('Gagal memuat data dari server.');
     } finally {
       setListLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -747,7 +766,6 @@ export default function PenelitiWorkspace() {
     const matchesSearch =
       item.namaWajibPajak.toLowerCase().includes(searchSubmittedQuery.toLowerCase()) ||
       item.nop.includes(searchSubmittedQuery) ||
-      item.nomorPermohonan.toLowerCase().includes(searchSubmittedQuery.toLowerCase()) ||
       (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(searchSubmittedQuery.toLowerCase()));
 
     const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
@@ -763,6 +781,12 @@ export default function PenelitiWorkspace() {
     activeSubmittedPage * itemsPerSubmittedPage
   );
 
+  const currentActiveCount = useMemo(() => {
+    if (viewMode === 'bundle') return filteredBundlesList.length;
+    if (viewMode === 'list') return filteredSubmittedList.length;
+    return selectedBundle?.permohonan?.length || 0;
+  }, [viewMode, filteredBundlesList.length, filteredSubmittedList.length, selectedBundle?.permohonan?.length]);
+
   return (
     <div id="peneliti-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-6">
 
@@ -774,15 +798,30 @@ export default function PenelitiWorkspace() {
 
         {/* Header with View switcher toggle — aligned with Penginput style */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] p-5 rounded-2xl shadow-md transition-all duration-300">
-          <div className="flex items-center gap-2.5 text-xs font-bold tracking-wider font-display select-none">
-            <div className="flex items-center gap-1.5 text-[#2c333f]/80 hover:text-[#2c333f] transition-colors">
-              <span>Tugas Saya</span>
-            </div>
-            <span className="text-[#2c333f]/50 font-medium select-none">&gt;</span>
-            <div className="flex items-center gap-1.5 bg-white/40 border border-white/50 px-2.5 py-1 rounded-lg shadow-3xs animate-fadeIn">
-              <span className="font-extrabold capitalize text-[#2c333f]">
-                {viewMode === 'bundle' ? 'daftar bundle' : viewMode === 'list' ? 'daftar antrean' : 'kunci & cetak'}
-              </span>
+          <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto select-none">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-white/30 border border-white/40 p-0.5 sm:p-1 rounded-lg sm:rounded-xl shadow-xs">
+              {/* Root tag */}
+              <div
+                onClick={() => setViewMode('bundle')}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg border border-slate-400/10 cursor-pointer transition-all duration-150 hover:bg-white/25 active:scale-95 text-slate-700/70"
+              >
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+                <span className="text-[11px] sm:text-[12px] font-bold">Tugas Saya</span>
+              </div>
+
+              {/* Slash Separator */}
+              <Slash className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-500/25 -rotate-[12deg]" />
+
+              {/* Active tag */}
+              <div className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg border border-violet-500/30 bg-white/70 cursor-default shadow-3xs">
+                <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full bg-violet-600 shadow-[0_0_5px_#7c3aed]" />
+                <span className="text-[11px] sm:text-[12px] text-violet-800 font-extrabold tracking-wide">
+                  {viewMode === 'bundle' ? 'Daftar Bundle' : viewMode === 'list' ? 'Daftar Antrean' : 'Kunci & Cetak'}
+                </span>
+                <div className="flex items-center justify-center bg-violet-100 rounded sm:rounded-md px-1 sm:px-1.5 py-0.5 ml-0.5 sm:ml-1 border border-violet-200">
+                  <span className="text-[9px] sm:text-[10px] text-violet-700 font-extrabold leading-none">{currentActiveCount}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -841,15 +880,9 @@ export default function PenelitiWorkspace() {
           <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
 
             {/* Action Row: Search & Filter — styled identical to Penginput */}
-            <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display">
-                  Antrean Permohonan Masuk
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-                <div className={`relative w-full sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
+            <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-end gap-4">
+              <div className="flex flex-row items-center gap-2.5 w-full md:w-auto">
+                <div className={`relative flex-1 sm:flex-none sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
                   <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                   <input
                     ref={searchSubmittedInputRef}
@@ -859,7 +892,7 @@ export default function PenelitiWorkspace() {
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
                     className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                    placeholder="Cari nomor pelayanan, NOP, WP..."
+                    placeholder="Cari No. Pelayanan, NOP, Nama."
                   />
                   {!isSearchFocused && !searchSubmittedQuery && (
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
@@ -873,13 +906,13 @@ export default function PenelitiWorkspace() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {/* Filter Jenis Layanan (Popover Icon) — identical to Penginput */}
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                      className={`p-2 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer text-xs font-bold ${filterJenisLayanan !== 'ALL'
+                      className={`relative p-2 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer text-xs font-bold ${filterJenisLayanan !== 'ALL'
                         ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent shadow-sm scale-105'
                         : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs'
                         }`}
@@ -971,12 +1004,12 @@ export default function PenelitiWorkspace() {
 
                   {/* Tombol Refresh Manual */}
                   <button
-                    onClick={() => fetchData()}
-                    disabled={listLoading}
+                    onClick={() => fetchData(true)}
+                    disabled={isRefreshing || listLoading}
                     className="p-2 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40"
                     title="Refresh Data"
                   >
-                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${listLoading ? 'animate-spin text-indigo-500' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -987,17 +1020,17 @@ export default function PenelitiWorkspace() {
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200">
-                        <th className="py-3 px-5 text-center">No</th>
-                        <th className="py-3 px-2 text-center select-none w-10">⭐</th>
-                        <th className="py-3 px-5">Tgl. Nopel</th>
-                        <th className="py-3 px-5">Tgl. Selesai</th>
-                        <th className="py-3 px-5">No. Pelayanan</th>
-                        <th className="py-3 px-5">Nomor Objek Pajak</th>
-                        <th className="py-3 px-5">Nama Pemohon</th>
-                        <th className="py-3 px-5">Jenis Layanan</th>
-                        <th className="py-3 px-5 text-center">Status</th>
-                        <th className="py-3 px-5 text-right pr-6 w-24">Aksi</th>
+                      <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200 whitespace-nowrap">
+                        <th className="py-3 px-5 text-center w-12 min-w-[48px]">No</th>
+                        <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
+                        <th className="py-3 px-5 min-w-[110px]">Tgl. Nopel</th>
+                        <th className="py-3 px-5 min-w-[110px]">Tgl. Selesai</th>
+                        <th className="py-3 px-5 min-w-[160px]">No. Pelayanan</th>
+                        <th className="py-3 px-5 min-w-[180px]">Nomor Objek Pajak</th>
+                        <th className="py-3 px-5 min-w-[150px]">Nama Pemohon</th>
+                        <th className="py-3 px-5 min-w-[120px]">Jenis Layanan</th>
+                        <th className="py-3 px-5 text-center min-w-[100px]">Status</th>
+                        <th className="py-3 px-5 text-right pr-6 w-24 min-w-[96px]">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -1118,8 +1151,8 @@ export default function PenelitiWorkspace() {
                               </td>
                               <td className="py-4 px-5 group/cell relative">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-slate-700 whitespace-nowrap capitalize">
-                                    {highlightText(item.namaWajibPajak.toLowerCase(), searchSubmittedQuery)}
+                                  <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase">
+                                    {highlightText(item.namaWajibPajak.toUpperCase(), searchSubmittedQuery)}
                                   </span>
                                   <button
                                     onClick={(e) => handleCopy(e, item.namaWajibPajak)}
@@ -1263,49 +1296,118 @@ export default function PenelitiWorkspace() {
         {/* ==================== VIEW MODE: BUNDLE (Buat Bundle) ==================== */}
         {viewMode === 'bundle' && (
           <div className="bg-[#dde3ea] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[300px]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4 select-none">
-              <div>
-                <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display">
-                  Daftar Bundle Operasional
-                </h2>
-              </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 border-b border-slate-200 pb-4 select-none">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-                {/* Search input for Bundles */}
-                <div className={`relative w-full sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isBundleSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-                  <input
-                    type="text"
-                    value={searchBundleQuery}
-                    onChange={(e) => setSearchBundleQuery(e.target.value)}
-                    onFocus={() => setIsBundleSearchFocused(true)}
-                    onBlur={() => setIsBundleSearchFocused(false)}
-                    className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                    placeholder="Cari nomor bundle, jenis..."
-                  />
-                  {!isBundleSearchFocused && !searchBundleQuery && (
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
-                      Ctrl+K
-                    </span>
-                  )}
-                  {searchBundleQuery && (
-                    <button onClick={() => setSearchBundleQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10">
-                      <X className="w-3.5 h-3.5" />
+                <div className="flex flex-row items-center gap-2.5 flex-1 w-full sm:w-auto">
+                  {/* Search input for Bundles */}
+                  <div className={`relative flex-1 sm:flex-none sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isBundleSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+                    <input
+                      type="text"
+                      value={searchBundleQuery}
+                      onChange={(e) => setSearchBundleQuery(e.target.value)}
+                      onFocus={() => setIsBundleSearchFocused(true)}
+                      onBlur={() => setIsBundleSearchFocused(false)}
+                      className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
+                      placeholder="Cari No. Bundle, Jenis Pelayanan."
+                    />
+                    {!isBundleSearchFocused && !searchBundleQuery && (
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
+                        Ctrl+K
+                      </span>
+                    )}
+                    {searchBundleQuery && (
+                      <button onClick={() => setSearchBundleQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Filter Jenis Layanan (Popover Icon) — identical to Penginput */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsBundleFilterDropdownOpen(!isBundleFilterDropdownOpen)}
+                        className={`relative p-2 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer text-xs font-bold ${filterBundleJenisLayanan !== 'ALL'
+                          ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent shadow-sm scale-105'
+                          : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs'
+                          }`}
+                        title="Filter Jenis Layanan"
+                      >
+                        <ListFilter className="w-4 h-4" />
+                        {filterBundleJenisLayanan !== 'ALL' && (
+                          <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+                        )}
+                      </button>
+
+                      {isBundleFilterDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsBundleFilterDropdownOpen(false)}
+                          />
+                          <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-60 bg-white border border-slate-100 rounded-xl shadow-lg py-2 z-50 animate-fadeIn text-xs text-slate-700 font-semibold flex flex-col gap-0.5">
+                            <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 capitalize tracking-wider border-b border-slate-50 mb-1 select-none">
+                              Pilih Jenis Layanan
+                            </div>
+                            {[
+                              { val: 'ALL', label: 'Semua Layanan' },
+                              { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                              { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                              { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                              { val: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
+                              { val: 'PEMBETULAN', label: 'Pembetulan' },
+                              { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+                            ].map((item) => {
+                              const isSelected = filterBundleJenisLayanan === item.val;
+                              return (
+                                <button
+                                  key={item.val}
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterBundleJenisLayanan(item.val);
+                                    setCurrentBundlePage(1);
+                                    setIsBundleFilterDropdownOpen(false);
+                                  }}
+                                  className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'text-indigo-650 bg-indigo-50/30 font-bold' : ''
+                                    }`}
+                                >
+                                  <span>{item.label}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Tombol Refresh Manual */}
+                    <button
+                      onClick={() => fetchData(true)}
+                      disabled={isRefreshing || listLoading}
+                      className="p-2 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40"
+                      title="Refresh Data"
+                    >
+                      <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
                     </button>
-                  )}
+                  </div>
                 </div>
+
                 <button
                   onClick={handleCreateBundle}
                   disabled={loading}
-                  className="px-4 py-2 bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] hover:brightness-[1.03] active:scale-95 text-[#2c333f] font-bold text-xs rounded-xl border border-white/20 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                  className="px-4 py-2 bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] hover:brightness-[1.03] active:scale-95 text-[#2c333f] font-bold text-xs rounded-xl border border-white/20 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Buat Bundle</span>
+                  <span>Buat</span>
                 </button>
               </div>
             </div>
 
             {/* Filter Status Pills for Bundles */}
-            <div className="flex flex-wrap items-center gap-2 select-none pb-1">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 select-none pb-1">
               {['ALL', 'DRAFT', 'LOCKED', 'IN_MANIFEST'].map((st) => {
                 const isActive = filterBundleStatus === st;
                 const count = bundleStatusCounts[st] ?? 0;
@@ -1378,65 +1480,60 @@ export default function PenelitiWorkspace() {
                   <div
                     key={b.id}
                     onClick={() => setSelectedBundle(b)}
-                    className={`p-4 rounded-2xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden group select-none min-h-[110px] ${isSelected
-                      ? 'bg-gradient-to-br from-sky-50/60 via-[#9cb4fe]/10 to-white/90 border-[#9cb4fe]/60 shadow-md ring-2 ring-[#7dd4fc]/25'
-                      : `bg-white/85 border-slate-200 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
+                    className={`p-4 rounded-2xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[110px] ${isSelected
+                      ? 'bg-gradient-to-br from-sky-50/50 via-[#9cb4fe]/5 to-white border-indigo-400 shadow-md ring-2 ring-indigo-400/20'
+                      : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
                       }`}
                   >
-                    {/* Status Pill Badge (Top-Right) */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold border leading-none uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all ${b.status === 'LOCKED'
-                        ? 'bg-slate-900 text-slate-100 border-slate-800'
-                        : b.status === 'IN_MANIFEST'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}>
-                        {renderStatusIcon()}
-                        <span>{b.status.toLowerCase()}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex gap-2.5 items-start">
-                      {/* Left: Premium Representative Folder Icon Wrapper */}
-                      <div className={`p-2 rounded-xl border flex items-center justify-center transition-all ${isSelected
-                        ? 'bg-sky-50/80 border-sky-150'
-                        : b.status === 'LOCKED'
-                          ? 'bg-slate-100 border-slate-200'
-                          : 'bg-slate-50 border-slate-200/40'
-                        }`}>
-                        {renderFolderIconOrCount()}
-                      </div>
-
-                      {/* Right: Info */}
-                      <div className="flex flex-col min-w-0 flex-1 justify-center pr-12 self-center">
-                        <span className="text-xs font-black text-slate-850 font-mono tracking-tight truncate block" title={b.nomorBundle}>
+                    {/* Top Row: Number & Count Badge */}
+                    <div className="flex items-center justify-between gap-3 w-full">
+                      <div className="flex items-center min-w-0 flex-1">
+                        <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
                           {b.nomorBundle}
                         </span>
                       </div>
+
+                      {/* Count Badge (like homepage) */}
+                      <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md leading-none shrink-0" title={`${berkasCount} Berkas`}>
+                        {berkasCount}
+                      </span>
                     </div>
 
-                    {/* Bottom: Service Type Badge & Action */}
-                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-100/80">
+                    {/* Bottom: Service Type Badge & Status / Actions */}
+                    <div className="flex flex-col gap-2 pt-2.5 border-t border-slate-100/80">
                       <div className="flex items-center justify-between gap-2.5">
                         {/* Service Type Tag */}
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
                           {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : '—'}
                         </span>
 
-                        {/* Reset button inside card if empty draft bundle is locked */}
-                        {b.status === 'DRAFT' && berkasCount === 0 && b.jenisPermohonan && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleResetBundleType(b.id);
-                            }}
-                            disabled={loading}
-                            className="text-[9px] text-amber-600 hover:text-amber-800 hover:underline font-extrabold cursor-pointer shrink-0 animate-fadeIn"
-                            title="Reset jenis permohonan bundle yang terkunci"
-                          >
-                            Reset
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Status Pill Badge (moved here) */}
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold border leading-none uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
+                            ? 'bg-slate-900 text-slate-100 border-slate-800'
+                            : b.status === 'IN_MANIFEST'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            }`}>
+                            {renderStatusIcon()}
+                            <span>{b.status.toLowerCase()}</span>
+                          </span>
+
+                          {/* Reset button inside card if empty draft bundle is locked */}
+                          {b.status === 'DRAFT' && berkasCount === 0 && b.jenisPermohonan && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetBundleType(b.id);
+                              }}
+                              disabled={loading}
+                              className="text-[10px] text-amber-600 hover:text-amber-800 hover:underline font-extrabold cursor-pointer shrink-0 animate-fadeIn"
+                              title="Reset jenis permohonan bundle yang terkunci"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1623,17 +1720,17 @@ export default function PenelitiWorkspace() {
                           <div className="overflow-x-auto scrollbar-thin flex-1">
                             <table className="w-full text-left border-collapse">
                               <thead>
-                                <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200">
-                                  <th className="py-3 px-5 text-center">No</th>
-                                  <th className="py-3 px-2 text-center select-none w-10">⭐</th>
-                                  <th className="py-3 px-5">Tgl. Nopel</th>
-                                  <th className="py-3 px-5">Tgl. Selesai</th>
-                                  <th className="py-3 px-5">No. Pelayanan</th>
-                                  <th className="py-3 px-5">Nomor Objek Pajak</th>
-                                  <th className="py-3 px-5">Nama Pemohon</th>
-                                  <th className="py-3 px-5">Jenis Layanan</th>
-                                  <th className="py-3 px-5 text-center">Status</th>
-                                  <th className="py-3 px-5 text-right pr-6 w-24">Aksi</th>
+                                <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200 whitespace-nowrap">
+                                  <th className="py-3 px-5 text-center w-12 min-w-[48px]">No</th>
+                                  <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
+                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Nopel</th>
+                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Selesai</th>
+                                  <th className="py-3 px-5 min-w-[160px]">No. Pelayanan</th>
+                                  <th className="py-3 px-5 min-w-[180px]">Nomor Objek Pajak</th>
+                                  <th className="py-3 px-5 min-w-[150px]">Nama Pemohon</th>
+                                  <th className="py-3 px-5 min-w-[120px]">Jenis Layanan</th>
+                                  <th className="py-3 px-5 text-center min-w-[100px]">Status</th>
+                                  <th className="py-3 px-5 text-right pr-6 w-24 min-w-[96px]">Aksi</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100 text-xs font-semibold text-gray-700 bg-white">
@@ -1735,8 +1832,8 @@ export default function PenelitiWorkspace() {
                                         </td>
                                         <td className="py-4 px-5 group/cell relative">
                                           <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap capitalize">
-                                              {item.namaWajibPajak.toLowerCase()}
+                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase">
+                                              {item.namaWajibPajak.toUpperCase()}
                                             </span>
                                             <button
                                               onClick={(e) => {
@@ -1818,11 +1915,30 @@ export default function PenelitiWorkspace() {
 
                           {/* Table Footer / Pagination for Print Table — identical to Antrean */}
                           <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 rounded-b-xl">
-                            <span className="text-[11px] font-semibold text-gray-500 font-sans">
-                              {selectedBundle.permohonan && selectedBundle.permohonan.length > 0
-                                ? `Menampilkan ${((activePrintPage - 1) * itemsPerPrintPage) + 1}–${Math.min(activePrintPage * itemsPerPrintPage, selectedBundle.permohonan.length)} dari ${selectedBundle.permohonan.length} permohonan`
-                                : 'Tidak ada data'}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[11px] font-semibold text-gray-500 font-sans">
+                                {selectedBundle.permohonan && selectedBundle.permohonan.length > 0
+                                  ? `Menampilkan ${((activePrintPage - 1) * itemsPerPrintPage) + 1}–${Math.min(activePrintPage * itemsPerPrintPage, selectedBundle.permohonan.length)} dari ${selectedBundle.permohonan.length} permohonan`
+                                  : 'Tidak ada data'}
+                              </span>
+                              {/* Items per page */}
+                              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5">
+                                {[10, 20, 50].map(n => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setItemsPerPrintPage(n)}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerPrintPage === n
+                                      ? 'bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] text-[#1e2022] shadow-sm font-extrabold'
+                                      : 'text-slate-500 hover:text-slate-700'
+                                      }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                                <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
+                              </div>
+                            </div>
                             {totalPrintPages > 1 && (
                               <div className="flex items-center gap-1">
                                 <button

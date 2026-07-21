@@ -15,6 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
+import { useSession } from 'next-auth/react';
 
 interface CalendarNote {
   id: string;
@@ -38,7 +39,11 @@ const CATEGORIES = [
 
 export default function CalendarCard() {
   const { showConfirm } = useDashboard();
+  const { data: session } = useSession();
   const today = new Date();
+
+  const resolvedRole = (session?.user as any)?.role || 'PENGINPUT';
+  const notesStorageKey = useMemo(() => `architax_calendar_notes_${resolvedRole}`, [resolvedRole]);
 
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
@@ -65,10 +70,10 @@ export default function CalendarCard() {
   const [editingText, setEditingText] = useState('');
   const [editingCategory, setEditingCategory] = useState<'kerja' | 'pribadi' | 'penting' | 'lainnya'>('kerja');
 
-  // Load notes from localStorage on mount
+  // Load notes from localStorage on mount or key changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedNotes = localStorage.getItem('architax_calendar_notes');
+      const savedNotes = localStorage.getItem(notesStorageKey);
       if (savedNotes) {
         try {
           const parsed = JSON.parse(savedNotes);
@@ -107,14 +112,16 @@ export default function CalendarCard() {
         } catch (e) {
           console.error('Failed to parse calendar notes', e);
         }
+      } else {
+        setNotes({});
       }
     }
-  }, []);
+  }, [notesStorageKey]);
 
   // Save notes helper
   const saveNotes = (updatedNotes: Record<string, CalendarNote[]>) => {
     setNotes(updatedNotes);
-    localStorage.setItem('architax_calendar_notes', JSON.stringify(updatedNotes));
+    localStorage.setItem(notesStorageKey, JSON.stringify(updatedNotes));
   };
 
   // Helper date functions

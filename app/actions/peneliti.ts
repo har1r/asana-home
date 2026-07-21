@@ -378,10 +378,11 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
         });
 
         if (remaining.length === 0) {
-          // Reset locked type, but keep status as DRAFT
+          // Reset locked type and set status to VOID
           await tx.bundle.update({
             where: { id: bundleId },
             data: {
+              status: 'VOID',
               jenisPermohonan: null
             }
           });
@@ -390,7 +391,7 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
             data: {
               entityType: 'BUNDLE',
               entityId: bundleId,
-              aksi: 'Jenis permohonan bundle direset karena seluruh permohonan dikeluarkan (tetap DRAFT)',
+              aksi: 'Bundle divoid karena seluruh permohonan dikeluarkan',
               pelakuId: session.user.id
             }
           });
@@ -572,8 +573,14 @@ export async function getPenelitiStats() {
     });
     const unbundledCount = allSubmitted.filter(p => !p.bundleId).length;
 
-    // Total bundles (excluding VOID)
-    const totalCount = await prisma.bundle.count({ where: { status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST'] } } });
+    const voidCount = await prisma.bundle.count({ where: { status: 'VOID' } });
+
+    // Total bundles (including VOID)
+    const totalCount = await prisma.bundle.count({
+      where: {
+        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'] }
+      }
+    });
 
     // Pending correction requests count
     const pendingCorrectionCount = await prisma.permintaanKoreksi.count({
@@ -587,6 +594,7 @@ export async function getPenelitiStats() {
         draft: draftCount,
         locked: lockedCount,
         inManifest: inManifestCount,
+        void: voidCount,
         total: totalCount,
         pendingKoreksi: pendingCorrectionCount
       }
@@ -595,7 +603,7 @@ export async function getPenelitiStats() {
     console.error('[ACTION-GET-PENELITI-STATS-ERR]', error);
     return {
       success: false,
-      stats: { unbundled: 0, draft: 0, locked: 0, inManifest: 0, total: 0, pendingKoreksi: 0 },
+      stats: { unbundled: 0, draft: 0, locked: 0, inManifest: 0, void: 0, total: 0, pendingKoreksi: 0 },
       error: 'Gagal mengambil statistik peneliti.'
     };
   }
@@ -676,3 +684,65 @@ export async function resetEmptyBundleType(bundleId: string) {
     return { success: false, error: error.message || 'Gagal mereset jenis bundle.' };
   }
 }
+
+/**
+ * Retrieve voided bundles for Peneliti dashboard
+ */
+export async function getVoidedBundles(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const list = await prisma.bundle.findMany({
+      where: {
+        status: 'VOID'
+      },
+      include: {
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit
+    });
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-VOIDED-BUNDLES-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil daftar bundle void.' };
+  }
+}
+
+/**
+ * Retrieve draft bundles for Peneliti dashboard
+ */
+export async function getDraftBundles(limit = 5) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const list = await prisma.bundle.findMany({
+      where: {
+        status: 'DRAFT'
+      },
+      include: {
+        permohonan: { select: { id: true } },
+        peneliti: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    const total = await prisma.bundle.count({
+      where: {
+        status: 'DRAFT'
+      }
+    });
+    return { success: true, list, total };
+  } catch (error: any) {
+    console.error('[ACTION-GET-DRAFT-BUNDLES-ERR]', error);
+    return { success: false, list: [], total: 0, error: 'Gagal mengambil daftar bundle draf.' };
+  }
+}
+
+
