@@ -137,6 +137,7 @@ model DataBaru {
   sertifikatBaru       String
   
   permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
+  arsipDigital         ArsipDigital[]
 }
 
 model Bundle {
@@ -177,9 +178,11 @@ model ArsipDigital {
   versi         Int                // nomor versi (increment per upload)
   
   pengarsipId   String             @db.ObjectId
+  dataBaruId    String?            @db.ObjectId
   createdAt     DateTime           @default(now())
   
   permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
+  dataBaru      DataBaru?          @relation(fields: [dataBaruId], references: [id])
   pengarsip     User               @relation(fields: [pengarsipId], references: [id])
 }
 

@@ -1,11 +1,12 @@
-export { default as PemantauWorkspace } from './PemantauWorkspace';
-export { default as PenelitiWorkspace } from './PenelitiWorkspace';
-export { default as PengarsipWorkspace } from './PengarsipWorkspace';
-export { default as PenginputWorkspace } from './PenginputWorkspace';
-export { default as PengirimWorkspace } from './PengirimWorkspace';
-export { default as SupervisorWorkspace } from './SupervisorWorkspace';
-export { DetailsModal } from './DetailsModal';
-export { EditModal } from './EditModal';
-export { CreateForm } from './CreateForm';
-export { ActionStatusModal } from './ActionStatusModal';
-
+export { default as PemantauWorkspace } from './pemantau/PemantauWorkspace';
+export { default as PenelitiWorkspace } from './peneliti/PenelitiWorkspace';
+export { default as PengarsipWorkspace } from './pengarsip/PengarsipWorkspace';
+export { default as PenginputWorkspace } from './penginput/PenginputWorkspace';
+export { default as PengirimWorkspace } from './pengirim/PengirimWorkspace';
+export { default as SupervisorWorkspace } from './supervisor/SupervisorWorkspace';
+export { DetailsModal } from './shared/DetailsModal';
+export { EditModal } from './shared/EditModal';
+export { CreateForm } from './shared/CreateForm';
+export { ActionStatusModal } from './shared/ActionStatusModal';
+export { default as TrackingTab } from './shared/TrackingTab';
+export { default as ProjectDetailsDrawer } from './shared/ProjectDetailsDrawer';

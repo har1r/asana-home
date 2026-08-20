@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
+import { Karla } from 'next/font/google';
 import './globals.css';
-import { Providers } from '@/components/Providers';
+import { Providers } from '@/components/layout/Providers';
+
+const karla = Karla({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Architax',
@@ -16,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={karla.className}>
       <body className="antialiased">
         <Providers>
           {children}

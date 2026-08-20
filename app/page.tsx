@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import DashboardPageClient from '@/components/DashboardPageClient';
+import DashboardAppShell from '@/components/layout/DashboardAppShell';
 import { isValidTab, isValidRole, ROLE_COOKIE_NAME } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +17,5 @@ export default async function Page({
   const roleCookie = cookieStore.get(ROLE_COOKIE_NAME)?.value;
   const initialRole = isValidRole(roleCookie) ? roleCookie : null;
 
-  return <DashboardPageClient initialRole={initialRole} initialTab={initialTab} />;
+  return <DashboardAppShell initialRole={initialRole} initialTab={initialTab} />;
 }
-

@@ -30,6 +30,8 @@ export async function getMonitoringPermohonan() {
         }
       },
       include: {
+        penginput: { select: { name: true } },
+        dataBaru: true,
         bundle: {
           include: {
             manifest: {
@@ -41,7 +43,10 @@ export async function getMonitoringPermohonan() {
           }
         },
         arsipDigital: {
-          orderBy: { versi: "desc" }
+          orderBy: { versi: "desc" },
+          include: {
+            pengarsip: { select: { name: true } }
+          }
         },
         permintaanKoreksi: {
           where: { status: "PENDING_APPROVAL" }

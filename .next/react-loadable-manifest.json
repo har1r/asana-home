@@ -1,164 +1,164 @@
 {
-  "components\\DashboardPageClient.tsx -> @/components/CalendarCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/CalendarCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/widgets/CalendarCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/widgets/CalendarCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_CalendarCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_widgets_CalendarCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/FavoritesCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/FavoritesCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/widgets/MessageTeamCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/widgets/MessageTeamCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_FavoritesCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_widgets_MessageTeamCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/MessageTeamCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/MessageTeamCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauActiveQueueCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauActiveQueueCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_MessageTeamCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pemantau_PemantauActiveQueueCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PemantauActiveQueueCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PemantauActiveQueueCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauRecentCompletedCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauRecentCompletedCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PemantauActiveQueueCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pemantau_PemantauRecentCompletedCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PemantauRecentCompletedCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PemantauRecentCompletedCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PemantauRecentCompletedCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pemantau_PemantauStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PemantauStatsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PemantauStatsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pemantau/PemantauWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_PemantauStatsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pemantau_PemantauWorkspace_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleDraftCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleDraftCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleDraftCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleDraftCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PenelitiBundleDraftCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_peneliti_PenelitiBundleDraftCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleStatsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleStatsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PenelitiBundleStatsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_peneliti_PenelitiBundleStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleVoidCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PenelitiBundleVoidCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleVoidCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiBundleVoidCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PenelitiBundleVoidCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_peneliti_PenelitiBundleVoidCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengarsipDigitizationQueueCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipDigitizationQueueCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/peneliti/PenelitiWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengarsipDigitizationQueueCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_peneliti_PenelitiWorkspace_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengarsipRecentUploadsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipRecentUploadsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipDigitizationQueueCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipDigitizationQueueCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengarsipRecentUploadsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengarsip_PengarsipDigitizationQueueCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengarsipReuploadCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipReuploadCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipRecentUploadsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipRecentUploadsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengarsipReuploadCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengarsip_PengarsipRecentUploadsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengarsipStatsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengarsipStatsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipReuploadCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipReuploadCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengarsipStatsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengarsip_PengarsipReuploadCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengirimEligibleBundlesCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengirimEligibleBundlesCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengirimEligibleBundlesCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengarsip_PengarsipStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengirimManifestListCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengirimManifestListCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengarsip/PengarsipWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengirimManifestListCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengarsip_PengarsipWorkspace_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/PengirimStatsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/PengirimStatsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputRecentTasksCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputRecentTasksCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_PengirimStatsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_penginput_PenginputRecentTasksCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/RecentTasksCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/RecentTasksCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_RecentTasksCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_penginput_PenginputStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/SupervisorPendingCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/SupervisorPendingCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputTasksRevisionCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputTasksRevisionCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_SupervisorPendingCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_penginput_PenginputTasksRevisionCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/SupervisorStatsCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/SupervisorStatsCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/penginput/PenginputWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_SupervisorStatsCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_penginput_PenginputWorkspace_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/TasksRevisionCard": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/TasksRevisionCard",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimEligibleBundlesCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimEligibleBundlesCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_TasksRevisionCard_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengirim_PengirimEligibleBundlesCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/PemantauWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/PemantauWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimManifestListCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimManifestListCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_PemantauWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengirim_PengirimManifestListCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/PenelitiWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/PenelitiWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_PenelitiWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengirim_PengirimStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/PengarsipWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/PengarsipWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/pengirim/PengirimWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_PengarsipWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_pengirim_PengirimWorkspace_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/PenginputWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/PenginputWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/shared/TrackingTab": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/shared/TrackingTab",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_PenginputWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_shared_TrackingTab_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/PengirimWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/PengirimWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorPendingCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorPendingCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_PengirimWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_supervisor_SupervisorPendingCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/SupervisorWorkspace": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/SupervisorWorkspace",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorStatsCard": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorStatsCard",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_SupervisorWorkspace_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_supervisor_SupervisorStatsCard_tsx.js"
     ]
   },
-  "components\\DashboardPageClient.tsx -> @/components/workspaces/TrackingTab": {
-    "id": "components\\DashboardPageClient.tsx -> @/components/workspaces/TrackingTab",
+  "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorWorkspace": {
+    "id": "components\\layout\\DashboardAppShell.tsx -> @/components/workspaces/supervisor/SupervisorWorkspace",
     "files": [
-      "static/chunks/_app-pages-browser_components_workspaces_TrackingTab_tsx.js"
+      "static/chunks/_app-pages-browser_components_workspaces_supervisor_SupervisorWorkspace_tsx.js"
     ]
   },
   "node_modules\\next\\dist\\client\\dev\\hot-reloader\\app\\use-websocket.js -> @vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts": {

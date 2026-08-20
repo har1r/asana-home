@@ -29,6 +29,7 @@ export async function getDigitizationBundles() {
       include: {
         permohonan: {
           include: {
+            dataBaru: true,
             arsipDigital: {
               orderBy: { versi: "desc" }
             },
@@ -79,6 +80,7 @@ export async function getBundleDetails(bundleId: string) {
       include: {
         permohonan: {
           include: {
+            dataBaru: true,
             arsipDigital: {
               orderBy: { versi: "desc" }
             },
@@ -113,6 +115,7 @@ export async function uploadArsipDigital(formData: FormData) {
   }
 
   const permohonanId = formData.get("permohonanId") as string;
+  const dataBaruId = formData.get("dataBaruId") as string || null;
   const file = formData.get("file") as File;
 
   if (!permohonanId) {
@@ -164,17 +167,18 @@ export async function uploadArsipDigital(formData: FormData) {
     }
 
     // Write file locally — disk write outside of transaction
-    const fileName = `arsip_${permohonanId}_v${Date.now()}.pdf`;
+    const suffix = dataBaruId ? `_db_${dataBaruId}` : "";
+    const fileName = `arsip_${permohonanId}${suffix}_v${Date.now()}.pdf`;
     const filePath = path.join(uploadsDir, fileName);
     await fs.promises.writeFile(filePath, buffer);
     
     const urlBlob = `/uploads/${fileName}`;
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Fetch the permohonan and its bundle
       const permohonan = await tx.permohonan.findUnique({
         where: { id: permohonanId },
-        include: { bundle: true }
+        include: { bundle: true, dataBaru: true }
       });
 
       if (!permohonan) {
@@ -196,6 +200,7 @@ export async function uploadArsipDigital(formData: FormData) {
       const lastActive = await tx.arsipDigital.findFirst({
         where: {
           permohonanId,
+          dataBaruId: dataBaruId || null,
           status: "ACTIVE"
         },
         orderBy: { versi: "desc" }
@@ -215,6 +220,7 @@ export async function uploadArsipDigital(formData: FormData) {
       const newArchive = await tx.arsipDigital.create({
         data: {
           permohonanId,
+          dataBaruId: dataBaruId || null,
           urlBlob,
           status: "ACTIVE",
           versi: nextVersion,
@@ -227,11 +233,34 @@ export async function uploadArsipDigital(formData: FormData) {
 
       // Update permohonan status to ARCHIVED if it was BUNDLED
       if (oldStatus === "BUNDLED") {
-        newStatus = "ARCHIVED";
-        await tx.permohonan.update({
-          where: { id: permohonanId },
-          data: { status: "ARCHIVED" }
-        });
+        let shouldArchive = false;
+
+        if (permohonan.jenisPermohonan === "MUTASI_SEBAGIAN") {
+          const totalFractions = permohonan.dataBaru.length;
+          // Count active uploads for all fractions (including the one just created)
+          const activeFractionsCount = await tx.arsipDigital.count({
+            where: {
+              permohonanId,
+              status: "ACTIVE",
+              dataBaruId: { not: null }
+            }
+          });
+
+          if (activeFractionsCount >= totalFractions) {
+            shouldArchive = true;
+          }
+        } else {
+          // For other types, 1 file is enough
+          shouldArchive = true;
+        }
+
+        if (shouldArchive) {
+          newStatus = "ARCHIVED";
+          await tx.permohonan.update({
+            where: { id: permohonanId },
+            data: { status: "ARCHIVED" }
+          });
+        }
       }
 
       // Handle Re-upload check from Fase 4 (returned from logistik):
@@ -282,6 +311,8 @@ export async function uploadArsipDigital(formData: FormData) {
 
       return { success: true, archive: newArchive, permohonanStatus: newStatus };
     });
+    revalidatePath('/');
+    return result;
   } catch (error: any) {
     console.error("[ACTION-UPLOAD-ARSIP-ERR]", error);
     return { success: false, error: error.message || "Gagal menyimpan arsip digital." };
@@ -400,18 +431,20 @@ export async function getPengarsipStats() {
   }
 
   try {
-    // 1. Digitization Queue Count (LOCKED + returned IN_MANIFEST bundles)
+    // 1. Get active bundles in the queue (LOCKED + returned IN_MANIFEST bundles)
     const bundles = await prisma.bundle.findMany({
       where: { status: { in: ["LOCKED", "IN_MANIFEST"] } },
       include: {
         permohonan: {
           include: {
+            dataBaru: true,
             arsipDigital: { orderBy: { versi: "desc" } }
           }
         }
       }
     });
-    const queueCount = bundles.filter((bundle) => {
+
+    const activeBundles = bundles.filter((bundle) => {
       if (bundle.status === "LOCKED") return true;
       if (bundle.status === "IN_MANIFEST") {
         return bundle.permohonan.some(
@@ -419,34 +452,65 @@ export async function getPengarsipStats() {
         );
       }
       return false;
-    }).length;
-
-    // 2. Total Permohonan currently in ARCHIVED status (Awaiting manifest phase)
-    const archivedCount = await prisma.permohonan.count({
-      where: { status: "ARCHIVED" }
     });
 
-    // 3. Total uploaded archives by this user
+    // Calculate digitization queue and pending re-upload counts per file (pecahan or regular application)
+    let queueFileCount = 0;
+    let reuploadFileCount = 0;
+
+    for (const b of activeBundles) {
+      for (const p of b.permohonan) {
+        if (p.status !== "ARCHIVED") {
+          // digitization queue: files that do NOT have ACTIVE digital archive
+          if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
+            const unarchivedFractions = p.dataBaru.filter(db => 
+              !p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "ACTIVE")
+            ).length;
+            queueFileCount += (unarchivedFractions === 0 && p.dataBaru.length === 0) ? 1 : unarchivedFractions;
+
+            // re-upload queue: fractions that have SUPERSEDED archive and no ACTIVE archive
+            const supersededFractions = p.dataBaru.filter(db => 
+              p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "SUPERSEDED") &&
+              !p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "ACTIVE")
+            ).length;
+            reuploadFileCount += supersededFractions;
+          } else {
+            queueFileCount += 1;
+
+            const hasSuperseded = p.arsipDigital.some(ad => ad.dataBaruId === null && ad.status === "SUPERSEDED");
+            const hasActive = p.arsipDigital.some(ad => ad.dataBaruId === null && ad.status === "ACTIVE");
+            if (hasSuperseded && !hasActive) {
+              reuploadFileCount += 1;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Total files currently in ARCHIVED status (Awaiting manifest phase)
+    const archivedPermohonan = await prisma.permohonan.findMany({
+      where: { status: "ARCHIVED" },
+      include: { dataBaru: true }
+    });
+    const archivedPendingCount = archivedPermohonan.reduce((acc, p) => {
+      if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
+        return acc + (p.dataBaru.length || 1);
+      }
+      return acc + 1;
+    }, 0);
+
+    // 3. Total uploaded active/all archives by this user (counts every separate file row)
     const totalUploadedCount = await prisma.arsipDigital.count({
       where: { pengarsipId: session.user.id }
-    });
-
-    // 4. Pending koreksi requests (KEMBALIKAN_KE_PENELITI) submitted by this user
-    const pendingKoreksiCount = await prisma.permintaanKoreksi.count({
-      where: {
-        pengajuId: session.user.id,
-        status: "PENDING_APPROVAL",
-        jenisKoreksi: "KEMBALIKAN_KE_PENELITI"
-      }
     });
 
     return {
       success: true,
       stats: {
-        digitizationQueue: queueCount,
-        archivedPending: archivedCount,
+        digitizationQueue: queueFileCount,
+        archivedPending: archivedPendingCount,
         totalUploaded: totalUploadedCount,
-        pendingKoreksi: pendingKoreksiCount
+        pendingKoreksi: reuploadFileCount
       }
     };
   } catch (error: any) {

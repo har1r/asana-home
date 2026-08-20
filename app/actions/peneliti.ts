@@ -138,6 +138,7 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
     const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${result.nomorPermohonan} memerlukan kelengkapan berkas. Harap segera hubungi petugas untuk informasi lebih lanjut.`;
     await sendWhatsApp(result.noWhatsapp, whatsappMessage);
 
+    revalidatePath('/');
     return { success: true, permohonan: result.updatedPermohonan };
   } catch (error: any) {
     console.error('[ACTION-MINTA-REVISI-ERR]', error);
@@ -235,7 +236,7 @@ export async function getBundles() {
   try {
     const list = await prisma.bundle.findMany({
       where: {
-        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST'] }
+        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'] }
       },
       include: {
         permohonan: true,
@@ -260,7 +261,7 @@ export async function addPermohonanToBundle(bundleId: string, permohonanId: stri
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Fetch the bundle
       const bundle = await tx.bundle.findUnique({
         where: { id: bundleId },
@@ -327,6 +328,8 @@ export async function addPermohonanToBundle(bundleId: string, permohonanId: stri
 
       return { success: true, permohonan: updatedPermohonan };
     });
+    revalidatePath('/');
+    return result;
   } catch (error: any) {
     console.error('[ACTION-ADD-TO-BUNDLE-ERR]', error);
     return { success: false, error: error.message || 'Gagal memasukkan permohonan ke bundle.' };
@@ -335,7 +338,7 @@ export async function addPermohonanToBundle(bundleId: string, permohonanId: stri
 
 /**
  * Action: Remove Permohonan from Bundle
- * If DRAFT: Immediate extraction. If empty, Bundle becomes VOID.
+ * If DRAFT: Immediate extraction. If empty, Bundle stays DRAFT but type is reset to null.
  * If LOCKED: Creates a PENDING_APPROVAL request for the Supervisor.
  */
 export async function removePermohonanFromBundle(bundleId: string, permohonanId: string, alasan?: string) {
@@ -378,11 +381,10 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
         });
 
         if (remaining.length === 0) {
-          // Reset locked type and set status to VOID
+          // Reset locked type and keep status as DRAFT so it can be reused
           await tx.bundle.update({
             where: { id: bundleId },
             data: {
-              status: 'VOID',
               jenisPermohonan: null
             }
           });
@@ -391,7 +393,7 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
             data: {
               entityType: 'BUNDLE',
               entityId: bundleId,
-              aksi: 'Bundle divoid karena seluruh permohonan dikeluarkan',
+              aksi: 'Jenis permohonan bundle direset karena kosong setelah seluruh permohonan dikeluarkan (tetap DRAFT)',
               pelakuId: session.user.id
             }
           });
@@ -466,6 +468,7 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
       });
     }
 
+    revalidatePath('/');
     return result;
   } catch (error: any) {
     console.error('[ACTION-REMOVE-FROM-BUNDLE-ERR]', error);
@@ -528,6 +531,7 @@ export async function lockBundle(bundleId: string) {
       await notifyAllUsersOfRole('PENGARSIP', 'Bundle Siap Didigitalisasi', notifPesan, { bundleId });
     }
 
+    revalidatePath('/');
     return { success: true, bundle: result.bundle };
   } catch (error: any) {
     console.error('[ACTION-LOCK-BUNDLE-ERR]', error);

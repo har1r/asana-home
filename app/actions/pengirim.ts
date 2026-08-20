@@ -26,6 +26,7 @@ export async function getEligibleBundles() {
       include: {
         permohonan: {
           include: {
+            dataBaru: true,
             arsipDigital: {
               orderBy: { versi: "desc" }
             }
@@ -101,6 +102,7 @@ export async function getManifestDetails(manifestId: string) {
           include: {
             permohonan: {
               include: {
+                dataBaru: true,
                 arsipDigital: {
                   orderBy: { versi: "desc" }
                 },
