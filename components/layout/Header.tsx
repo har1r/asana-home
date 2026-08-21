@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Zap } from 'lucide-react';
+import { Search, Zap, Menu } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 
 export default function Header() {
-  const { searchQuery, setSearchQuery } = useDashboard();
+  const { searchQuery, setSearchQuery, setIsMobileMenuOpen } = useDashboard();
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -35,27 +35,37 @@ export default function Header() {
     <div className="sticky top-0 z-20 flex flex-col w-full relative">
       <header
         id="top-nav-bar"
-        className={`bg-[#f3f6f8] px-6 pt-4 pb-3 flex items-center justify-between shrink-0 select-none transition-all duration-200 ${isScrolled ? 'border-b border-slate-200/80 shadow-3xs' : 'border-b border-transparent'
-          }`}
+        className={`bg-[#f3f6f8] px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between shrink-0 select-none transition-all duration-200 ${
+          isScrolled ? 'border-b border-gray-200/80 shadow-3xs' : 'border-b border-transparent'
+        }`}
       >
-        {/* Left: LottieFiles-style Global Search Input (Exact DevTools Box Model: 349x22 content, 40px left pad, 12px right pad, 8px top/bottom pad, 403px total width) */}
-        <div className="w-[403px] max-w-full relative h-[40px] flex items-center">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-4 h-4" />
+        {/* Left: Mobile Hamburger Button & Search Input */}
+        <div className="flex items-center gap-2.5 w-[403px] max-w-full">
+          <button
+            onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(true)}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-200/70 hover:text-gray-900 transition-colors cursor-pointer shrink-0"
+            title="Buka Menu Navigation"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="w-full relative h-[40px] flex items-center">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Mufti's Workspace"
+              className="w-full h-[40px] bg-white hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-[#00a389] rounded-lg pl-10 pr-3 text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none transition-all shadow-3xs"
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Mufti's Workspace..."
-            className="w-full h-[40px] bg-white hover:bg-slate-50 focus:bg-white border border-slate-300 hover:border-slate-400 focus:border-indigo-600 rounded-lg pl-[40px] pr-[12px] pt-[8px] pb-[8px] text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
-          />
         </div>
 
-        {/* Right: Upgrade Workspace Green CTA Button (Height: 40px) */}
+        {/* Right: Upgrade Workspace Green Teal CTA Button */}
         <div className="flex items-center gap-3">
-          <button className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-all shadow-3xs cursor-pointer flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 fill-white" />
+          <button className="h-[40px] px-4 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-lg transition-all shadow-xs cursor-pointer flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 fill-white text-white" />
             <span>Upgrade workspace</span>
           </button>
         </div>

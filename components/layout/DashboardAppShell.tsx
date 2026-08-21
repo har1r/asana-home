@@ -27,104 +27,15 @@ import ProjectDetailsDrawer from '@/components/workspaces/shared/ProjectDetailsD
 import { useSession, signOut } from 'next-auth/react';
 import { ROLE_COOKIE_NAME } from '@/lib/constants';
 import {
-  SkeletonBox, SkeletonCircle, SkeletonText, SkeletonProgressBar, SkeletonBadge,
-  PenginputSkeleton, PenelitiSkeleton, PengarsipSkeleton, PengirimSkeleton, PemantauSkeleton,
-  TasksRevisionCardSkeleton, FavoritesCardSkeleton, RecentTasksCardSkeleton,
-  MessageTeamCardSkeleton, CalendarCardSkeleton
+  SkeletonBox, SkeletonCircle, SkeletonText, RecentTasksCardSkeleton
 } from '@/components/skeletons/SkeletonBase';
 
-const PenginputTasksRevisionCard = dynamic(() => import('@/components/workspaces/penginput/PenginputTasksRevisionCard'), {
+const GlobalBerandaDashboard = dynamic(() => import('@/components/widgets/GlobalBerandaDashboard'), {
   ssr: false,
-  loading: () => <TasksRevisionCardSkeleton />
+  loading: () => <MascotLoadingSpinner />
 });
-const PenginputStatsCard = dynamic(() => import('@/components/workspaces/penginput/PenginputStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
+
 const PenginputRecentTasksCard = dynamic(() => import('@/components/workspaces/penginput/PenginputRecentTasksCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-const MessageTeamCard = dynamic(() => import('@/components/widgets/MessageTeamCard'), {
-  ssr: false,
-  loading: () => <MessageTeamCardSkeleton />
-});
-const CalendarCard = dynamic(() => import('@/components/widgets/CalendarCard'), {
-  ssr: false,
-  loading: () => <CalendarCardSkeleton />
-});
-
-const PenelitiBundleStatsCard = dynamic(() => import('@/components/workspaces/peneliti/PenelitiBundleStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
-
-const PenelitiBundleVoidCard = dynamic(() => import('@/components/workspaces/peneliti/PenelitiBundleVoidCard'), {
-  ssr: false,
-  loading: () => <TasksRevisionCardSkeleton />
-});
-
-const PenelitiBundleDraftCard = dynamic(() => import('@/components/workspaces/peneliti/PenelitiBundleDraftCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const PengarsipStatsCard = dynamic(() => import('@/components/workspaces/pengarsip/PengarsipStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
-
-const PengarsipReuploadCard = dynamic(() => import('@/components/workspaces/pengarsip/PengarsipReuploadCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const PengarsipDigitizationQueueCard = dynamic(() => import('@/components/workspaces/pengarsip/PengarsipDigitizationQueueCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const PengarsipRecentUploadsCard = dynamic(() => import('@/components/workspaces/pengarsip/PengarsipRecentUploadsCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const PengirimStatsCard = dynamic(() => import('@/components/workspaces/pengirim/PengirimStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
-
-const PengirimManifestListCard = dynamic(() => import('@/components/workspaces/pengirim/PengirimManifestListCard'), {
-  ssr: false,
-  loading: () => <TasksRevisionCardSkeleton />
-});
-
-const PengirimEligibleBundlesCard = dynamic(() => import('@/components/workspaces/pengirim/PengirimEligibleBundlesCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const PemantauStatsCard = dynamic(() => import('@/components/workspaces/pemantau/PemantauStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
-
-const PemantauActiveQueueCard = dynamic(() => import('@/components/workspaces/pemantau/PemantauActiveQueueCard'), {
-  ssr: false,
-  loading: () => <TasksRevisionCardSkeleton />
-});
-
-const PemantauRecentCompletedCard = dynamic(() => import('@/components/workspaces/pemantau/PemantauRecentCompletedCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
-
-const SupervisorStatsCard = dynamic(() => import('@/components/workspaces/supervisor/SupervisorStatsCard'), {
-  ssr: false,
-  loading: () => <FavoritesCardSkeleton />
-});
-
-const SupervisorPendingCard = dynamic(() => import('@/components/workspaces/supervisor/SupervisorPendingCard'), {
   ssr: false,
   loading: () => <RecentTasksCardSkeleton />
 });
@@ -302,99 +213,12 @@ interface BerandaTabProps {
 
 const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole }: BerandaTabProps) {
   const { isInitialized } = useDashboard();
-  const { data: session } = useSession();
-  const resolvedRole = (session?.user as any)?.role || initialRole;
 
   if (!isInitialized) {
     return <MascotLoadingSpinner />;
   }
 
-  // Render Peneliti-specific home dashboard if role is PENELITI
-  if (resolvedRole === 'PENELITI') {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PenelitiBundleVoidCard onViewAll={onViewAllTasks} />
-        <PenelitiBundleStatsCard />
-        <PenelitiBundleDraftCard onViewAll={onViewAllTasks} />
-        <MessageTeamCard />
-        <div className="col-span-1 lg:col-span-2">
-          <CalendarCard />
-        </div>
-      </div>
-    );
-  }
-
-  // Render Pengarsip-specific home dashboard if role is PENGARSIP
-  if (resolvedRole === 'PENGARSIP') {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PengarsipReuploadCard onViewAll={onViewAllTasks} />
-        <PengarsipStatsCard />
-        <PengarsipDigitizationQueueCard onViewAll={onViewAllTasks} />
-        <MessageTeamCard />
-        <div className="col-span-1 lg:col-span-2">
-          <CalendarCard />
-        </div>
-      </div>
-    );
-  }
-
-  // Render Pengirim-specific home dashboard if role is PENGIRIM
-  if (resolvedRole === 'PENGIRIM') {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PengirimManifestListCard onViewAll={onViewAllTasks} />
-        <PengirimStatsCard />
-        <PengirimEligibleBundlesCard onViewAll={onViewAllTasks} />
-        <MessageTeamCard />
-        <div className="col-span-1 lg:col-span-2">
-          <CalendarCard />
-        </div>
-      </div>
-    );
-  }
-
-  // Render Pemantau-specific home dashboard if role is PEMANTAU
-  if (resolvedRole === 'PEMANTAU') {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <PemantauActiveQueueCard onViewAll={onViewAllTasks} />
-        <PemantauStatsCard />
-        <PemantauRecentCompletedCard onViewAll={onViewAllTasks} />
-        <MessageTeamCard />
-        <div className="col-span-1 lg:col-span-2">
-          <CalendarCard />
-        </div>
-      </div>
-    );
-  }
-
-  // Render Supervisor-specific home dashboard if role is SUPERVISOR
-  if (resolvedRole === 'SUPERVISOR') {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-        <SupervisorPendingCard onViewAll={onViewAllTasks} />
-        <SupervisorStatsCard />
-        <MessageTeamCard />
-        <div className="col-span-1 lg:col-span-2">
-          <CalendarCard />
-        </div>
-      </div>
-    );
-  }
-
-  // Default Penginput-specific home dashboard
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-8 xl:gap-10 2xl:gap-12 items-start">
-      <PenginputTasksRevisionCard onViewAll={onViewAllTasks} />
-      <PenginputStatsCard />
-      <PenginputRecentTasksCard onViewAll={onViewAllTasks} />
-      <MessageTeamCard />
-      <div className="col-span-1 lg:col-span-2">
-        <CalendarCard />
-      </div>
-    </div>
-  );
+  return <GlobalBerandaDashboard onViewAllTasks={onViewAllTasks} />;
 });
 
 

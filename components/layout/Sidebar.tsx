@@ -1,86 +1,124 @@
 "use client";
 
+// ==========================================
+// 1. IMPORT MODULE & IKON (LUCIDE REACT)
+// ==========================================
 import React, { useState, useMemo, useEffect } from 'react';
 import NotificationBell from './NotificationBell';
 import {
-  LayoutDashboard,
-  FileText,
-  Sparkles,
-  Layers,
-  FolderKanban,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
-  Users,
-  Bell,
   Trash2,
   Share2,
   GraduationCap,
   Gift,
-  User,
-  Plus,
+  Globe,
   Star,
   Zap,
-  MoreHorizontal,
   Home,
   CheckSquare,
   Inbox,
   Search,
   HelpCircle,
-  Calendar
+  Calendar,
+  UserPlus,
+  LucideIcon,
+  Folder,
+  Layers,
+  X,
+  Clock
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-import { getLatestPermohonans, getPermohonanStats } from '@/app/actions/penginput';
+import { getLatestPermohonans, getPermohonanStats, getGlobalBerandaStats } from '@/app/actions/penginput';
 
+// ==========================================
+// 2. TYPE DEFINITIONS & INTERFACES
+// ==========================================
+interface DataBaruItem {
+  id: string;
+  namaPemilikBaru: string;
+  nopel: string;
+  permohonanId: string;
+}
+
+interface PermohonanStatsState {
+  total: number;
+  scanned: number;
+}
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+// ==========================================
+// 3. KOMPONEN UTAMA SIDEBAR (99% PRESISI LOTTIEFILES - PURE TAILWIND)
+// ==========================================
 export default function Sidebar() {
+  // --- Context Dashboard ---
   const {
     activeTab,
     setActiveTab,
-    teams,
-    selectedTeamId,
-    setSelectedTeamId,
-    setShowAddTeamModal,
-    setSelectedProject,
     favoritePermohonans,
     setSearchQuery,
-    setIsPersonalProfileDrawerOpen
+    setSelectedProject,
+    setIsPersonalProfileDrawerOpen,
+    setIsMobileMenuOpen
   } = useDashboard();
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // --- Local UI State (Toggle Menu Dropdown) ---
   const [showProjects, setShowProjects] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
   const [showAllFavorites, setShowAllFavorites] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>('');
 
-  // Dynamic Permohonan Stats & List
+  // --- Live Digital Clock Timer ---
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      );
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // --- State Data Permohonan & Statistik ---
   const [permohonanList, setPermohonanList] = useState<any[]>([]);
-  const [stats, setStats] = useState({ total: 0, scanned: 0 });
+  const [stats, setStats] = useState<PermohonanStatsState>({ total: 0, scanned: 0 });
 
+  // ==========================================
+  // 4. DATA FETCHING & LOGIKA DIHUBUNGKAN
+  // ==========================================
   useEffect(() => {
     async function loadPermohonanData() {
       try {
-        const [latestRes, statsRes] = await Promise.all([
-          getLatestPermohonans(15),
+        const [globalRes, statsRes] = await Promise.all([
+          getGlobalBerandaStats(),
           getPermohonanStats()
         ]);
-        if (latestRes.success && latestRes.list) {
-          setPermohonanList(latestRes.list);
+        if (globalRes.success && globalRes.recentList) {
+          setPermohonanList(globalRes.recentList);
         }
         if (statsRes.success && statsRes.stats) {
           setStats({
-            total: statsRes.stats.total || 0,
+            total: globalRes.totalPemohon || statsRes.stats.total || 0,
             scanned: (statsRes.stats.completed || 0) + (statsRes.stats.sent || 0)
           });
         }
       } catch (e) {
-        console.error('Failed to load permohonan data for sidebar:', e);
+        console.error('Gagal memuat data permohonan untuk sidebar:', e);
       }
     }
     loadPermohonanData();
   }, []);
 
-  // Flatten permohonan list into individual new applicant (DataBaru) items
-  const dataBaruItems = useMemo(() => {
-    const items: Array<{ id: string; namaPemilikBaru: string; nopel: string; permohonanId: string }> = [];
+  // Memecah list permohonan menjadi item permohonan individu (Pemohon Baru / Data Baru)
+  const dataBaruItems = useMemo<DataBaruItem[]>(() => {
+    const items: DataBaruItem[] = [];
     permohonanList.forEach((perm) => {
       if (perm.dataBaru && perm.dataBaru.length > 0) {
         perm.dataBaru.forEach((db: any, idx: number) => {
@@ -105,8 +143,10 @@ export default function Sidebar() {
     return items;
   }, [permohonanList]);
 
-  const totalApplicantsCount = dataBaruItems.length > 0 ? dataBaruItems.length : stats.total;
+  // Hitung total pemohon aktif (62 Pemohon)
+  const totalApplicantsCount = stats.total > 0 ? stats.total : dataBaruItems.length;
 
+  // Format Tanggal Hari Ini (Indonesia)
   const todayFormatted = useMemo(() => {
     return new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
@@ -116,304 +156,343 @@ export default function Sidebar() {
     });
   }, []);
 
-  const mainMenuItems = [
-    { id: 'beranda', label: 'Beranda', icon: Home },
+  // Menu Navigasi Utama
+  const mainMenuItems: MenuItem[] = [
+    { id: 'beranda', label: 'Beranda Saya', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
-    { id: 'inbox', label: 'Inbox', icon: Inbox },
-    { id: 'tracking', label: 'Pelacakan', icon: Search },
-    { id: 'help', label: 'Help', icon: HelpCircle },
+    { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },
+    { id: 'tracking', label: 'Tracking', icon: Search },
+    { id: 'help', label: 'Bantuan', icon: HelpCircle },
   ];
 
+  // ==========================================
+  // 5. RENDERING VISUAL SIDEBAR (99% IDENTIK LOTTIEFILES - PURE TAILWIND CSS)
+  // ==========================================
   return (
     <aside
       id="sidebar-nav"
-      style={{ fontFamily: "'Karla', var(--font-karla), system-ui, 'Segoe UI', Roboto, sans-serif" }}
-      className={`${isCollapsed ? 'w-16 p-3' : 'w-[289px] p-4'
-        } min-h-screen flex flex-col justify-between shrink-0 select-none relative bg-white border-r border-slate-200/90 text-slate-700 transition-all duration-300 z-30`}
+      style={{ fontFamily: "'Karla', var(--font-karla), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}
+      className="max-w-[289px] w-[289px] p-4 h-screen sticky top-0 border-r border-gray-200/80 flex flex-col justify-between shrink-0 select-none relative bg-white text-gray-900 z-30"
     >
-      {/* Floating Collapse/Expand Trigger Button on the right edge */}
+      {/* MOBILE CLOSE BUTTON */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:scale-110 active:scale-95 transition-all cursor-pointer z-45"
-        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
+        className="md:hidden absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer z-50"
+        title="Tutup Menu"
       >
-        {isCollapsed ? (
-          <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
-        ) : (
-          <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-        )}
+        <X className="w-5 h-5" />
       </button>
 
-      {/* TOP SECTION */}
-      <div className="flex flex-col gap-4 overflow-y-auto scrollbar-none pr-0.5">
+      {/* INNER WRAPPER CONTAINER (PURE TAILWIND FLEX COL) */}
+      <div className="flex flex-col justify-between h-full w-full">
+        <div className="flex flex-col justify-between h-full">
 
-        {/* 1. WORKSPACE HEADER SELECTOR */}
-        {!isCollapsed ? (
-          <div className="flex items-center justify-between pb-2">
-            <div className="flex items-center gap-2.5 cursor-pointer group">
-              <div className="w-7 h-7 rounded-lg bg-slate-300 text-slate-900 text-xs font-semibold flex items-center justify-center shrink-0 shadow-xs">
-                MU
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-xs text-slate-800 group-hover:text-orange-600 transition-colors truncate max-w-[130px]">
-                    Mufti's Workspace
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-slate-600" />
+          {/* ========================================== */}
+          {/* SECTION 1: HEADER & PROGRESS TRACKER (ATAS) */}
+          {/* ========================================== */}
+          <div className="flex flex-col gap-3 shrink-0">
+
+            {/* 1. WORKSPACE SELECTOR & NOTIFICATION BELL */}
+            <div className="flex items-center justify-between h-[47px] pb-1">
+              <div>
+                <div className="bg-white rounded-lg">
+                  <button
+                    type="button"
+                    id="workspace-menu"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    data-state="closed"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-100 group transition-colors text-left"
+                  >
+                    <div className="flex gap-x-2 items-center">
+                      <div className="relative flex items-center gap-2 text-gray-600">
+                        <div className="w-7.5 h-7.5 rounded-lg bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
+                          <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">MU</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col max-w-[130px]">
+                        <div className="text-[#20272C] text-[13px] font-bold tracking-[-0.2px]">
+                          <div className="flex items-center gap-x-1">
+                            <div className="capitalize truncate">
+                              Mufti's Workspace
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-[#808E9A] text-[11px] font-normal not-italic leading-normal truncate">
+                          <div className="flex items-center gap-x-1">
+                            <span className="capitalize truncate">
+                              Starter Plan
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronDown className="w-3 h-3 shrink-0 text-gray-500 group-hover:text-gray-900 transition-colors ml-0.5" />
+                  </button>
                 </div>
-                <span className="text-[10px] font-medium text-slate-400">
-                  Starter Plan
-                </span>
+              </div>
+
+              {/* Notification Bell */}
+              <div className="flex items-center">
+                <NotificationBell />
               </div>
             </div>
 
-            {/* Notification Bell */}
-            <NotificationBell />
-          </div>
-        ) : (
-          <div className="flex justify-center pb-2">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              MU
+            {/* 2. USAGE TRACKER / PROGRESS & ACTION BUTTONS */}
+            <div className="flex flex-col gap-2.5 px-1 py-1">
+              <div className="flex flex-col gap-2">
+                {/* Tracker 1: Permohonan Masuk */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      Permohonan Masuk
+                    </span>
+                    <span className="text-[11px] text-gray-800 tabular-nums font-bold">
+                      {totalApplicantsCount}
+                    </span>
+                  </div>
+                  <div className="rounded-full bg-gray-200/80 w-full h-1.5 overflow-hidden">
+                    <div className="h-full bg-[#00a389] rounded-full w-full motion-safe:animate-progress-ok" />
+                  </div>
+                </div>
+
+                {/* Tracker 2: Scan permohonan diupload */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      Scan permohonan diupload
+                    </span>
+                    <span className="text-[11px] text-gray-800 tabular-nums font-bold">
+                      {stats.scanned}/{totalApplicantsCount}
+                    </span>
+                  </div>
+                  <div className="rounded-full bg-gray-200/80 w-full h-1.5 overflow-hidden">
+                    <div
+                      className="h-full bg-[#00a389] rounded-full transition-all duration-500 motion-safe:animate-progress-ok"
+                      style={{ width: `${totalApplicantsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicantsCount) * 100)) : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Digital Clock Badge */}
+              <div className="relative flex items-center justify-center rounded-lg px-3 py-2 text-xs text-white bg-[#00a389] shadow-xs select-none gap-2">
+                <Clock className="w-3.5 h-3.5 shrink-0 text-white stroke-[2]" />
+                <span className="font-mono text-xs font-extrabold tracking-wider text-white">{currentTime || '00:00:00'}</span>
+              </div>
+
+              {/* Today Date Badge */}
+              <div className="relative flex items-center justify-center rounded-lg px-3 py-1.5 border font-semibold text-xs border-gray-200 bg-white text-gray-700 shadow-3xs select-none mt-0.5 gap-2">
+                <Calendar className="w-3.5 h-3.5 shrink-0 text-gray-500" />
+                <span className="truncate text-xs font-semibold text-gray-700">{todayFormatted}</span>
+              </div>
             </div>
+
           </div>
-        )}
 
-        {/* 2. USAGE / PROGRESS TRACKER BOX (Borderless) */}
-        {!isCollapsed && (
-          <div className="rounded-lg p-3 bg-slate-50 flex flex-col gap-2.5">
-            {/* Line 1: Permohonan Masuk (Counts individual new applicant names) */}
-            <div className="flex flex-col gap-1 text-[10px] font-medium text-slate-500">
-              <div className="flex items-center justify-between">
-                <span>Permohonan Masuk</span>
-                <span className="text-slate-700 font-semibold">{totalApplicantsCount}</span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                <div className="h-full bg-slate-400 rounded-full w-full" />
-              </div>
-            </div>
+          {/* ========================================== */}
+          {/* SECTION 2: SCROLLABLE NAVIGATION AREA (TENGAH) */}
+          {/* ========================================== */}
+          <div className="px-1 border-t border-b border-transparent my-3 overflow-y-auto scrollbar-none flex-1">
+            <div className="flex flex-col gap-4 my-2">
 
-            {/* Line 2: Scan Permohonan Diupload */}
-            <div className="flex flex-col gap-1 text-[10px] font-medium text-slate-500">
-              <div className="flex items-center justify-between">
-                <span>Scan permohonan diupload</span>
-                <span className="text-slate-700 font-semibold">{stats.scanned}/{totalApplicantsCount}</span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                <div
-                  className="h-full bg-slate-400 rounded-full transition-all duration-500"
-                  style={{ width: `${totalApplicantsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicantsCount) * 100)) : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <button className="w-full py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-lg transition-all shadow-3xs cursor-pointer flex items-center justify-center gap-1.5 mt-0.5">
-              <Zap className="w-3.5 h-3.5 fill-white" />
-              <span>Upgrade</span>
-            </button>
-          </div>
-        )}
-
-        {/* 3. TODAY DATE DISPLAY */}
-        {!isCollapsed && (
-          <div className="w-full py-1.5 px-3 border border-slate-200/90 bg-slate-50/50 text-slate-700 font-bold text-xs rounded-lg flex items-center justify-center gap-2 select-none shadow-3xs">
-            <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-            <span className="capitalize text-slate-700">{todayFormatted}</span>
-          </div>
-        )}
-
-        {/* 4. MAIN NAVIGATION MENU */}
-        <nav className="flex flex-col gap-0.5 mt-1">
-          {mainMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSelectedProject(null);
-                }}
-                className={`w-full flex ${isCollapsed ? 'justify-center py-2 px-1' : 'items-center gap-3 px-3 py-2 text-left'
-                  } rounded-lg text-xs transition-all ${isActive
-                    ? 'bg-slate-100 text-slate-900 font-bold shadow-3xs'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-                  }`}
-                title={item.label}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-900' : 'text-slate-500'}`} />
-                {!isCollapsed && <span>{item.label}</span>}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* 5. EXPANDABLE CATEGORIES (Permohonan Masuk & Favorit) */}
-        {!isCollapsed && (
-          <div className="flex flex-col gap-0.5 pt-2 border-t border-slate-100">
-            {/* Permohonan Masuk Category */}
-            <button
-              onClick={() => setShowProjects(!showProjects)}
-              className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showProjects ? 'rotate-90' : ''}`} />
-                <span>Permohonan Masuk</span>
-              </div>
-              {totalApplicantsCount > 0 && (
-                <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                  {totalApplicantsCount}
-                </span>
-              )}
-            </button>
-            {showProjects && (
-              <div className="pl-7 flex flex-col gap-0.5 animate-fadeIn">
-                {dataBaruItems.length > 0 ? (
-                  dataBaruItems.map((item) => (
+              {/* 2.1 Navigasi Utama */}
+              <nav className="flex flex-col gap-0.5">
+                {mainMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
                     <button
                       key={item.id}
                       onClick={() => {
-                        setSearchQuery(item.namaPemilikBaru);
-                        setActiveTab('my-tasks');
+                        setActiveTab(item.id);
+                        setSelectedProject(null);
                       }}
-                      className="w-full text-left py-1 px-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-colors truncate cursor-pointer flex items-center justify-between gap-1.5"
-                      title={`Pemohon: ${item.namaPemilikBaru} (NOPEL: ${item.nopel})`}
+                      className={`w-full flex group items-center gap-2 px-2.5 py-2 text-left rounded-lg text-sm transition-all ${isActive
+                        ? 'bg-gray-100 text-black font-semibold'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-black font-medium'
+                        }`}
+                      title={item.label}
                     >
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                        <span className="truncate uppercase text-[11px] font-semibold">{item.namaPemilikBaru}</span>
-                      </div>
+                      <div className="w-3.5 h-3.5 shrink-0" />
+                      <Icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'text-black fill-black/15' : 'text-gray-500 fill-none group-hover:text-black'}`} />
+                      <span>{item.label}</span>
                     </button>
-                  ))
-                ) : (
-                  <div className="py-1 px-2 text-[10px] text-slate-400 font-medium italic select-none">
-                    Belum ada permohonan masuk
-                  </div>
-                )}
-              </div>
-            )}
+                  );
+                })}
+              </nav>
 
-            {/* Favorit Category */}
-            <button
-              onClick={() => setShowCollections(!showCollections)}
-              className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showCollections ? 'rotate-90' : ''}`} />
-                <span>Favorit</span>
-              </div>
-              {favoritePermohonans && favoritePermohonans.length > 0 && (
-                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
-                  {favoritePermohonans.length}
-                </span>
-              )}
-            </button>
+              {/* 2.2 Accordions (Permohonan Masuk & Favorit NOPEL) */}
+              <div className="flex flex-col gap-0.5 pt-1">
 
-            {showCollections && (
-              <div className="pl-7 flex flex-col gap-0.5 animate-fadeIn">
-                {favoritePermohonans && favoritePermohonans.length > 0 ? (
-                  <>
-                    {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => (
-                      <button
-                        key={fav.id}
-                        onClick={() => {
-                          setSearchQuery(fav.nomorPelayanan || fav.nomorPermohonan);
-                          setActiveTab('my-tasks');
-                        }}
-                        className="w-full flex items-center gap-2 text-left py-1 px-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-colors group/fav truncate cursor-pointer"
-                        title={`Lihat Permohonan: ${fav.nomorPelayanan || fav.nomorPermohonan}`}
-                      >
-                        <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                        <span className="truncate font-mono text-[11px]">
-                          {fav.nomorPelayanan || fav.nomorPermohonan}
-                        </span>
-                      </button>
-                    ))}
-                    {favoritePermohonans.length > 5 && (
-                      <button
-                        onClick={() => setShowAllFavorites(!showAllFavorites)}
-                        className="w-full text-left py-1 px-2 text-[10px] font-semibold text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                      >
-                        {showAllFavorites ? 'Tampilkan lebih sedikit' : 'Tampilkan lebih banyak'}
-                      </button>
+                {/* Permohonan Masuk Accordion */}
+                <div>
+                  <button
+                    onClick={() => setShowProjects(!showProjects)}
+                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 hover:text-black transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                        <ChevronRight className={`w-3.5 h-3.5 text-gray-500 group-hover:text-black transition-transform duration-200 ${showProjects ? 'rotate-90 text-black' : ''}`} />
+                      </div>
+                      <Folder className={`w-4 h-4 shrink-0 transition-all ${showProjects ? 'text-black fill-black/15' : 'text-gray-500 fill-none group-hover:text-black'}`} />
+                      <span className={showProjects ? 'text-black' : ''}>Projects</span>
+                    </div>
+                    {totalApplicantsCount > 0 && (
+                      <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {totalApplicantsCount}
+                      </span>
                     )}
-                  </>
-                ) : (
-                  <div className="py-1 px-2 text-[10px] text-slate-400 font-medium italic select-none">
-                    Belum ada NOPEL favorit
-                  </div>
-                )}
+                  </button>
+                  {showProjects && (
+                    <div className="pl-12 flex flex-col gap-0.5 animate-fadeIn">
+                      {dataBaruItems.length > 0 ? (
+                        dataBaruItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setSearchQuery(item.namaPemilikBaru);
+                              setActiveTab('my-tasks');
+                            }}
+                            className="w-full text-left py-1.5 px-2 text-xs font-semibold text-gray-700 hover:text-black hover:bg-gray-100 rounded-md transition-colors truncate cursor-pointer flex items-center justify-between gap-1.5"
+                            title={`Pemohon: ${item.namaPemilikBaru} (NOPEL: ${item.nopel})`}
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0" />
+                              <span className="truncate uppercase text-xs font-semibold text-gray-700">{item.namaPemilikBaru}</span>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="py-1 px-2 text-[10px] text-gray-400 font-semibold italic select-none">
+                          Belum ada permohonan masuk
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Favorit NOPEL Accordion */}
+                <div>
+                  <button
+                    onClick={() => setShowCollections(!showCollections)}
+                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 hover:text-black transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                        <ChevronRight className={`w-3.5 h-3.5 text-gray-500 group-hover:text-black transition-transform duration-200 ${showCollections ? 'rotate-90 text-black' : ''}`} />
+                      </div>
+                      <Layers className={`w-4 h-4 shrink-0 transition-all ${showCollections ? 'text-black fill-black/15' : 'text-gray-500 fill-none group-hover:text-black'}`} />
+                      <span className={showCollections ? 'text-black' : ''}>Favorit</span>
+                    </div>
+                    {favoritePermohonans && favoritePermohonans.length > 0 && (
+                      <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
+                        {favoritePermohonans.length}
+                      </span>
+                    )}
+                  </button>
+                  {showCollections && (
+                    <div className="pl-12 flex flex-col gap-0.5 animate-fadeIn">
+                      {favoritePermohonans && favoritePermohonans.length > 0 ? (
+                        <>
+                          {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => (
+                            <button
+                              key={fav.id}
+                              onClick={() => {
+                                setSearchQuery(fav.nomorPelayanan || fav.nomorPermohonan);
+                                setActiveTab('my-tasks');
+                              }}
+                              className="w-full flex items-center gap-2 text-left py-1.5 px-2 text-xs font-semibold text-gray-700 hover:text-black hover:bg-gray-100 rounded-md transition-colors group/fav truncate cursor-pointer"
+                              title={`Lihat Permohonan: ${fav.nomorPelayanan || fav.nomorPermohonan}`}
+                            >
+                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                              <span className="truncate font-mono text-xs font-semibold text-gray-700">
+                                {fav.nomorPelayanan || fav.nomorPermohonan}
+                              </span>
+                            </button>
+                          ))}
+                          {favoritePermohonans.length > 5 && (
+                            <button
+                              onClick={() => setShowAllFavorites(!showAllFavorites)}
+                              className="w-full text-left py-1 px-2 text-[10px] font-bold text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+                            >
+                              {showAllFavorites ? 'Tampilkan lebih sedikit' : 'Tampilkan lebih banyak'}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="py-1 px-2 text-[10px] text-gray-400 font-semibold italic select-none">
+                          Belum ada NOPEL favorit
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
               </div>
-            )}
+
+              {/* 2.3 Secondary Links */}
+              <div className="flex flex-col gap-0.5 pt-1">
+                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black rounded-lg transition-colors cursor-pointer">
+                  <div className="w-3.5 h-3.5 shrink-0" />
+                  <Share2 className="w-4 h-4 text-gray-500 group-hover:text-black shrink-0 transition-colors" />
+                  <span>Shared with Me</span>
+                </button>
+                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black rounded-lg transition-colors cursor-pointer">
+                  <div className="w-3.5 h-3.5 shrink-0" />
+                  <Trash2 className="w-4 h-4 text-gray-500 group-hover:text-black shrink-0 transition-colors" />
+                  <span>Recently Deleted</span>
+                </button>
+              </div>
+
+            </div>
           </div>
-        )}
 
-        {/* 6. SECONDARY LINKS (Shared with Me, Recently Deleted) */}
-        {!isCollapsed && (
-          <div className="flex flex-col gap-0.5 pt-2">
-            <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors">
-              <Share2 className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>Shared with Me</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors">
-              <Trash2 className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>Recently Deleted</span>
-            </button>
-          </div>
-        )}
+          {/* ========================================== */}
+          {/* SECTION 3: FOOTER & USER PROFILE (BAWAH)   */}
+          {/* ========================================== */}
+          <div className="mt-auto pt-3 px-1 pb-2 border-t border-gray-200/80 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black rounded-lg transition-colors cursor-pointer">
+                <div className="w-3.5 h-3.5 shrink-0" />
+                <GraduationCap className="w-4 h-4 text-gray-500 group-hover:text-black shrink-0 transition-colors" />
+                <span>Learn</span>
+              </button>
+              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black rounded-lg transition-colors cursor-pointer">
+                <div className="w-3.5 h-3.5 shrink-0" />
+                <Gift className="w-4 h-4 text-gray-500 group-hover:text-black shrink-0 transition-colors" />
+                <span>Refer & earn</span>
+              </button>
+              <button
+                onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
+                className="w-full flex items-center gap-2 group px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black rounded-lg transition-colors cursor-pointer"
+              >
+                <div className="w-3.5 h-3.5 shrink-0" />
+                <Globe className="w-4 h-4 text-gray-500 group-hover:text-black shrink-0 transition-colors" />
+                <span>Profile</span>
+              </button>
+            </div>
 
-      </div>
-
-      {/* BOTTOM FOOTER SECTION */}
-      <div className="flex flex-col gap-2 pt-3">
-        {!isCollapsed && (
-          <div className="flex flex-col gap-0.5">
-            <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors">
-              <GraduationCap className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>Learn</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors">
-              <Gift className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>Refer & earn</span>
-            </button>
-            <button
+            {/* User Profile Badge */}
+            <div
               onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-              className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors"
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors group mt-1"
             >
-              <User className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>Profile</span>
-            </button>
+              <div className="w-7 h-7 rounded-full bg-[#ffedd5] text-[#9a3412] font-extrabold text-xs flex items-center justify-center shrink-0 border border-[#fed7aa]">
+                M
+              </div>
+              <div className="flex flex-col truncate max-w-[180px]">
+                <span className="truncate font-extrabold text-xs text-gray-900 group-hover:text-black">
+                  Mufti Harir
+                </span>
+                <span className="truncate text-[10px] font-semibold text-gray-500">
+                  muftiharir3@gmail.com
+                </span>
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* User Profile Info Badge */}
-        {!isCollapsed ? (
-          <div
-            onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-            className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
-          >
-            <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center shrink-0 border border-orange-200/80">
-              M
-            </div>
-            <div className="flex flex-col truncate">
-              <span className="font-bold text-xs text-slate-800 group-hover:text-slate-900 truncate">
-                Mufti Harir
-              </span>
-              <span className="text-[10px] font-medium text-slate-400 truncate">
-                muftiharir3@gmail.com
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div
-            onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-            className="flex justify-center p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
-            title="Profile: Mufti Harir"
-          >
-            <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center shrink-0 border border-orange-200/80">
-              M
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </aside>
   );

@@ -166,7 +166,7 @@ export default function NotificationBell() {
           disabled
           className="w-10 h-10 rounded-lg text-slate-400 opacity-70 cursor-not-allowed animate-pulse flex items-center justify-center"
         >
-          <Bell className="w-4.5 h-4.5" />
+          <Bell className="w-5 h-5" />
         </button>
       </div>
     );
@@ -185,7 +185,7 @@ export default function NotificationBell() {
         className={`w-10 h-10 rounded-lg hover:bg-slate-200/60 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer flex items-center justify-center relative ${isShaking ? 'animate-bellShake' : ''}`}
         aria-label={`Notifikasi${unreadCount > 0 ? `, ${unreadCount} belum dibaca` : ''}`}
       >
-        <Bell className="w-4.5 h-4.5" />
+        <Bell className="w-5 h-5 text-slate-700 group-hover:text-slate-900 transition-colors" />
         {unreadCount > 0 && (
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
         )}
