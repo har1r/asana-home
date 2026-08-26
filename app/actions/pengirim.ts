@@ -73,6 +73,7 @@ export async function getManifests() {
           include: {
             permohonan: {
               include: {
+                dataBaru: true,
                 penginput: { select: { id: true, name: true, email: true } }
               }
             }

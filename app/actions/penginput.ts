@@ -7,22 +7,33 @@ import { sendWhatsApp } from '@/lib/fonnte';
 import { notifyAllUsersOfRole } from '@/lib/notifications';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { getGlobalBerandaStats as getGlobalBerandaStatsFromBeranda } from './beranda';
 
+/* ============================================================================
+ * BAGIAN 1: SKEMA VALIDASI ZOD & SANITASI INPUT DATA
+ * ============================================================================ */
 
-// Zod Schema for PBB Permohonan input validation
+/**
+ * Skema Validasi Zod untuk setiap item Objek Pajak / Pemohon Baru (Pecahan).
+ * Dilengkapi sanitasi otomatis `.trim()` untuk keamanan data.
+ */
 const dataBaruItemSchema = z.object({
-  namaPemilikBaru: z.string().min(1, 'Nama pemilik baru wajib diisi'),
-  alamatPemilikBaru: z.string().min(1, 'Alamat pemilik baru wajib diisi'),
-  kecamatanPemilikBaru: z.string().min(1, 'Kecamatan pemilik baru wajib diisi'),
-  desaPemilikBaru: z.string().min(1, 'Desa pemilik baru wajib diisi'),
-  alamatObjekBaru: z.string().min(1, 'Alamat objek baru wajib diisi'),
-  kecamatanObjekBaru: z.string().min(1, 'Kecamatan objek baru wajib diisi'),
-  desaObjekBaru: z.string().min(1, 'Desa objek baru wajib diisi'),
+  namaPemilikBaru: z.string().trim().min(1, 'Nama pemilik baru wajib diisi'),
+  alamatPemilikBaru: z.string().trim().min(1, 'Alamat pemilik baru wajib diisi'),
+  kecamatanPemilikBaru: z.string().trim().min(1, 'Kecamatan pemilik baru wajib diisi'),
+  desaPemilikBaru: z.string().trim().min(1, 'Desa pemilik baru wajib diisi'),
+  alamatObjekBaru: z.string().trim().min(1, 'Alamat objek baru wajib diisi'),
+  kecamatanObjekBaru: z.string().trim().min(1, 'Kecamatan objek baru wajib diisi'),
+  desaObjekBaru: z.string().trim().min(1, 'Desa objek baru wajib diisi'),
   luasTanahBaru: z.coerce.number().min(0, 'Luas tanah baru harus >= 0'),
   luasBangunanBaru: z.coerce.number().min(0, 'Luas bangunan baru harus >= 0'),
-  sertifikatBaru: z.string().min(1, 'Sertifikat baru wajib diisi')
+  sertifikatBaru: z.string().trim().min(1, 'Sertifikat baru wajib diisi')
 });
 
+/**
+ * Skema Validasi Utama Zod untuk Pembuatan/Penyuntingan Permohonan PBB.
+ * Memastikan jenis permohonan, format NOP 18-digit, dan nomor WhatsApp valid.
+ */
 const permohonanSchema = z.object({
   jenisPermohonan: z.enum([
     'MUTASI_SEBAGIAN',
@@ -32,11 +43,11 @@ const permohonanSchema = z.object({
     'PEMBETULAN',
     'PENGAKTIFAN'
   ] as const),
-  nomorPelayanan: z.string().min(1, 'Nomor pelayanan wajib diisi'),
-  tanggalNoPelayanan: z.string().min(1, 'Tanggal pelayanan wajib diisi'),
-  tanggalPenyelesaian: z.string().min(1, 'Tanggal penyelesaian wajib diisi'),
-  nop: z.string().regex(/^\d{18}$/, 'NOP harus terdiri dari 18 digit angka'),
-  noWhatsapp: z.string().regex(/^(08|628)\d{8,12}$/, 'Nomor WhatsApp tidak valid (contoh: 08123456789)'),
+  nomorPelayanan: z.string().trim().min(1, 'Nomor pelayanan wajib diisi'),
+  tanggalNoPelayanan: z.string().trim().min(1, 'Tanggal pelayanan wajib diisi'),
+  tanggalPenyelesaian: z.string().trim().min(1, 'Tanggal penyelesaian wajib diisi'),
+  nop: z.string().trim().regex(/^\d{18}$/, 'NOP harus terdiri dari 18 digit angka'),
+  noWhatsapp: z.string().trim().regex(/^(08|628)\d{8,12}$/, 'Nomor WhatsApp tidak valid (contoh: 08123456789)'),
 
   // Data Lama
   namaPemilikLama: z.string().optional().nullable(),
@@ -99,8 +110,13 @@ const permohonanSchema = z.object({
   }
 });
 
+
+/* ============================================================================
+ * BAGIAN 2: HELPER & UTILITY FUNCTIONS
+ * ============================================================================ */
+
 /**
- * Helper to generate a unique tracking number: PMH-YYYYMMDD-[4 Random Digits]
+ * Helper internal untuk membuat Nomor Permohonan acak unik: PMH-YYYYMMDD-[4 Digit Acak]
  */
 async function generateUniqueNomorPermohonan(): Promise<string> {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -125,17 +141,25 @@ async function generateUniqueNomorPermohonan(): Promise<string> {
   return nomor;
 }
 
+
+/* ============================================================================
+ * BAGIAN 3: SERVER ACTIONS - OLAH DATA PERMOHONAN (CREATE & EDIT)
+ * ============================================================================ */
+
 /**
- * Server Action: Create a new PBB Permohonan entry (Fase 1)
+ * Server Action: Membuat permohonan PBB baru ke database.
+ * 
+ * @param rawInput - Data mentah permohonan dari formulir input
+ * @returns Object `{ success: boolean, permohonan?: Permohonan, error?: string }`
  */
 export async function createPermohonan(rawInput: any) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'PENGINPUT') {
-    throw new Error('Unauthorized: Hanya peran PENGINPUT yang diizinkan untuk menginput data.');
+  if (!session || !['PENGINPUT', 'SUPERVISOR'].includes(session.user.role)) {
+    return { success: false, error: 'Unauthorized: Hanya peran PENGINPUT atau SUPERVISOR yang diizinkan menginput data.' };
   }
 
-  // Parse and validate input data
+  // Parse dan validasi data input
   const validated = permohonanSchema.parse(rawInput);
   const nomorPermohonan = await generateUniqueNomorPermohonan();
 
@@ -205,15 +229,23 @@ export async function createPermohonan(rawInput: any) {
         } : undefined,
 
         penginputId: session.user.id
+      },
+      include: {
+        dataBaru: true
       }
     });
 
-    // Send WhatsApp notification to the taxpayer
+    // 1. Kirim notifikasi WhatsApp ke Pemohon
     const readableJenis = validated.jenisPermohonan.replace(/_/g, ' ');
-    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${nomorPermohonan} telah berhasil diterima dan sedang dalam proses verifikasi.`;
+    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${nomorPermohonan} telah berhasil diajukan dan sedang dalam proses verifikasi.`;
     await sendWhatsApp(validated.noWhatsapp, whatsappMessage);
 
-    // Optional Audit Log for record keeping
+    // 2. Kirim Notifikasi In-App ke seluruh pengguna ber-role PENELITI
+    const notifTitle = 'Permohonan Baru Diajukan';
+    const notifPesan = `Permohonan ${readableJenis} nomor ${validated.nomorPelayanan || nomorPermohonan} telah diinput dan siap diajukan untuk diteliti.`;
+    await notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: permohonan.id });
+
+    // 3. Rekam Audit Log
     await prisma.auditLog.create({
       data: {
         entityType: 'PERMOHONAN',
@@ -235,13 +267,17 @@ export async function createPermohonan(rawInput: any) {
 }
 
 /**
- * Server Action: Update an existing Permohonan
+ * Server Action: Memperbarui data permohonan PBB yang belum terkunci.
+ * 
+ * @param id - ID dokumen permohonan yang akan diubah
+ * @param rawInput - Data permohonan baru dari formulir pengeditan
+ * @returns Object `{ success: boolean, permohonan?: Permohonan, error?: string }`
  */
 export async function updatePermohonan(id: string, rawInput: any) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'PENGINPUT') {
-    throw new Error('Unauthorized: Hanya peran PENGINPUT yang diizinkan untuk mengubah data.');
+  if (!session || !['PENGINPUT', 'SUPERVISOR'].includes(session.user.role)) {
+    return { success: false, error: 'Unauthorized: Hanya peran PENGINPUT atau SUPERVISOR yang diizinkan mengubah data.' };
   }
 
   const validated = permohonanSchema.parse(rawInput);
@@ -256,7 +292,7 @@ export async function updatePermohonan(id: string, rawInput: any) {
       return { success: false, error: 'Data permohonan tidak ditemukan.' };
     }
 
-    // Verify constraints: status must be SUBMITTED and bundleId must be null, OR status must be REVISION
+    // Verifikasi status: harus SUBMITTED & belum terbundel, ATAU berstatus REVISION
     const canUpdate = (existing.status === 'SUBMITTED' && !existing.bundleId) || existing.status === 'REVISION';
 
     if (!canUpdate) {
@@ -286,9 +322,9 @@ export async function updatePermohonan(id: string, rawInput: any) {
       'OBJEK_PAJAK_BARU'
     ].includes(validated.jenisPermohonan);
 
-    // Update permohonan and recreate dataBaru
+    // Update permohonan dan buat ulang dataBaru menggunakan Prisma Transaction
     const permohonan = await prisma.$transaction(async (tx) => {
-      // Delete old dataBaru entries
+      // Hapus dataBaru lama
       await tx.dataBaru.deleteMany({
         where: { permohonanId: id }
       });
@@ -333,16 +369,18 @@ export async function updatePermohonan(id: string, rawInput: any) {
               sertifikatBaru: item.sertifikatBaru
             }))
           } : undefined
+        },
+        include: {
+          dataBaru: true
         }
       });
     }, {
-      maxWait: 15000,
-      timeout: 25000
+      maxWait: 5000,
+      timeout: 10000
     });
 
-    // Create Audit Log if critical fields were updated
-    const isCriticalFieldUpdated = existing.nomorPelayanan !== validated.nomorPelayanan || existing.nop !== validated.nop;
-    if (isCriticalFieldUpdated) {
+    // Catat Audit Log jika NOP / No Pelayanan berubah
+    if (existing.nomorPelayanan !== validated.nomorPelayanan || existing.nop !== validated.nop) {
       await prisma.auditLog.create({
         data: {
           entityType: 'PERMOHONAN',
@@ -369,14 +407,22 @@ export async function updatePermohonan(id: string, rawInput: any) {
   }
 }
 
+
+/* ============================================================================
+ * BAGIAN 4: SERVER ACTIONS - WORKFLOW & REVISI PERMOHONAN
+ * ============================================================================ */
+
 /**
- * Server Action: Explicitly resubmit a permohonan that requires revision (REVISION -> SUBMITTED)
+ * Server Action: Mengajukan ulang permohonan yang telah diperbaiki dari status REVISION kembali ke SUBMITTED.
+ * 
+ * @param id - ID dokumen permohonan yang diajukan ulang
+ * @returns Object `{ success: boolean, permohonan?: Permohonan, error?: string }`
  */
 export async function resubmitPermohonan(id: string) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'PENGINPUT') {
-    throw new Error('Unauthorized: Hanya peran PENGINPUT yang diizinkan untuk resubmit data.');
+  if (!session || !['PENGINPUT', 'SUPERVISOR'].includes(session.user.role)) {
+    return { success: false, error: 'Unauthorized: Hanya peran PENGINPUT atau SUPERVISOR yang diizinkan melakukan resubmit data.' };
   }
 
   try {
@@ -393,23 +439,23 @@ export async function resubmitPermohonan(id: string) {
       return { success: false, error: 'Permohonan tidak berstatus REVISION. Resubmit tidak dapat dilakukan.' };
     }
 
-    // Update status to SUBMITTED
+    // Update status ke SUBMITTED
     const permohonan = await prisma.permohonan.update({
       where: { id },
       data: { status: 'SUBMITTED' }
     });
 
-    // 1. Send WhatsApp notification to the taxpayer
+    // 1. Kirim notifikasi WhatsApp ke Pemohon
     const readableJenis = existing.jenisPermohonan.replace(/_/g, ' ');
-    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${existing.nomorPermohonan} telah berhasil diterima and sedang dalam proses verifikasi.`;
+    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${existing.nomorPermohonan} telah berhasil diterima dan sedang dalam proses verifikasi.`;
     await sendWhatsApp(existing.noWhatsapp, whatsappMessage);
 
-    // 2. Send In-App Notification to all active PENELITI users
+    // 2. Kirim Notifikasi In-App ke seluruh pengguna ber-role PENELITI
     const notifTitle = 'Resubmit Permohonan';
     const notifPesan = `Permohonan ${readableJenis} nomor ${existing.nomorPelayanan || existing.nomorPermohonan} telah diperbaiki oleh Penginput dan siap diverifikasi kembali.`;
     await notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: id });
 
-    // 3. Create Audit Log record
+    // 3. Rekam Audit Log
     await prisma.auditLog.create({
       data: {
         entityType: 'PERMOHONAN',
@@ -430,14 +476,21 @@ export async function resubmitPermohonan(id: string) {
   }
 }
 
+
+/* ============================================================================
+ * BAGIAN 5: SERVER ACTIONS - QUERY & STATISTIK PENGINPUT
+ * ============================================================================ */
+
 /**
- * Server Action: Retrieve all permohonan created by the logged-in Penginput
+ * Server Action: Mengambil seluruh daftar permohonan PBB yang diinput oleh pengguna yang sedang login.
+ * 
+ * @returns Object `{ success: boolean, list: Permohonan[], error?: string }`
  */
 export async function getPenginputPermohonan() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    throw new Error('Unauthorized.');
+    return { success: false, list: [], error: 'Unauthorized: Sesi tidak ditemukan.' };
   }
 
   try {
@@ -479,13 +532,16 @@ export async function getPenginputPermohonan() {
 }
 
 /**
- * Server Action: Toggle favorite status of a permohonan
+ * Server Action: Mengubah status favorit (Bintang) pada permohonan PBB.
+ * 
+ * @param id - ID permohonan yang ditandai/dilepas favorit
+ * @returns Object `{ success: boolean, isFavorite?: boolean, error?: string }`
  */
 export async function togglePermohonanFavorite(id: string) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== 'PENGINPUT' && session.user.role !== 'PENELITI')) {
-    throw new Error('Unauthorized: Hanya Penginput atau Peneliti yang dapat menandai favorit.');
+  if (!session || !['PENGINPUT', 'PENELITI', 'SUPERVISOR'].includes(session.user.role)) {
+    return { success: false, error: 'Unauthorized: Peran Anda tidak memiliki akses untuk menandai favorit.' };
   }
 
   try {
@@ -512,13 +568,13 @@ export async function togglePermohonanFavorite(id: string) {
 }
 
 /**
- * Server Action: Get permohonan with status REVISION
+ * Server Action: Mengambil seluruh permohonan PBB yang berstatus REVISION.
  */
 export async function getRevisionPermohonans() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    throw new Error('Unauthorized');
+    return { success: false, list: [], error: 'Unauthorized: Sesi tidak ditemukan.' };
   }
 
   try {
@@ -545,13 +601,13 @@ export async function getRevisionPermohonans() {
 }
 
 /**
- * Server Action: Get latest permohonan (all statuses), ordered by newest
+ * Server Action: Mengambil permohonan PBB terbaru (termasuk jumlah SUBMITTED).
  */
 export async function getLatestPermohonans(limit = 10) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    throw new Error('Unauthorized');
+    return { success: false, list: [], submittedCount: 0, error: 'Unauthorized: Sesi tidak ditemukan.' };
   }
 
   try {
@@ -581,13 +637,13 @@ export async function getLatestPermohonans(limit = 10) {
 }
 
 /**
- * Server Action: Get statistics of Permohonans for the FavoritesCard replacement.
+ * Server Action: Mengambil ringkasan statistik permohonan berdasarkan status untuk widget statistik Penginput.
  */
 export async function getPermohonanStats() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    throw new Error('Unauthorized');
+    return { success: false, error: 'Unauthorized: Sesi tidak ditemukan.' };
   }
 
   try {
@@ -630,13 +686,13 @@ export async function getPermohonanStats() {
 }
 
 /**
- * Server Action: Get all favorite permohonans
+ * Server Action: Mengambil seluruh permohonan PBB yang ditandai sebagai favorit.
  */
 export async function getFavoritePermohonans() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return { success: false, error: 'Unauthorized', list: [] };
+    return { success: false, error: 'Unauthorized: Sesi tidak ditemukan.', list: [] };
   }
 
   try {
@@ -658,254 +714,14 @@ export async function getFavoritePermohonans() {
   }
 }
 
+
+/* ============================================================================
+ * BAGIAN 6: DELEGASI ACTIONS BERANDA (BACKWARD COMPATIBILITY)
+ * ============================================================================ */
+
 /**
- * Server Action: Get global unified beranda statistics (NOPEL vs Pemohon & breakdown per jenis layanan)
+ * Server Action: Mengambil statistik global Beranda (Didelegasikan ke app/actions/beranda.ts)
  */
 export async function getGlobalBerandaStats() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    throw new Error('Unauthorized');
-  }
-
-  try {
-    const list = await prisma.permohonan.findMany({
-      include: {
-        dataBaru: true,
-        penginput: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    let totalNopel = list.length;
-    let totalPemohon = 0;
-
-    const serviceTypes = [
-      'MUTASI_SEBAGIAN',
-      'MUTASI_HABIS_UPDATE',
-      'MUTASI_HABIS_REGULER',
-      'OBJEK_PAJAK_BARU',
-      'PEMBETULAN',
-      'PENGAKTIFAN'
-    ];
-
-    const breakdownByService: Record<string, {
-      totalNopel: number;
-      totalPemohon: number;
-      prosesCount: number;
-      selesaiCount: number;
-      revisiCount: number;
-      dikirimCount: number;
-    }> = {};
-
-    serviceTypes.forEach(st => {
-      breakdownByService[st] = {
-        totalNopel: 0,
-        totalPemohon: 0,
-        prosesCount: 0,
-        selesaiCount: 0,
-        revisiCount: 0,
-        dikirimCount: 0,
-      };
-    });
-
-    let globalProses = 0;
-    let globalSelesai = 0;
-    let globalRevisi = 0;
-    let globalDikirim = 0;
-    let mutasiSebagianMultiNopelCount = 0;
-
-    const kecamatanMap: Record<string, { kecamatan: string; totalPemohon: number; totalNopel: number }> = {};
-    const desaMap: Record<string, { desa: string; kecamatan: string; totalPemohon: number; totalNopel: number }> = {};
-
-    list.forEach((item) => {
-      const pemohonCountInItem = item.dataBaru && item.dataBaru.length > 0 ? item.dataBaru.length : 1;
-      totalPemohon += pemohonCountInItem;
-
-      const stKey = item.jenisPermohonan || 'MUTASI_SEBAGIAN';
-      if (!breakdownByService[stKey]) {
-        breakdownByService[stKey] = {
-          totalNopel: 0,
-          totalPemohon: 0,
-          prosesCount: 0,
-          selesaiCount: 0,
-          revisiCount: 0,
-          dikirimCount: 0,
-        };
-      }
-
-      breakdownByService[stKey].totalNopel += 1;
-      breakdownByService[stKey].totalPemohon += pemohonCountInItem;
-
-      if (stKey === 'MUTASI_SEBAGIAN' && pemohonCountInItem > 1) {
-        mutasiSebagianMultiNopelCount += 1;
-      }
-
-      const statusStr = String(item.status);
-      if (statusStr === 'COMPLETED') {
-        breakdownByService[stKey].selesaiCount += pemohonCountInItem;
-        globalSelesai += pemohonCountInItem;
-      } else if (statusStr === 'MANIFESTED' || statusStr === 'ARCHIVED') {
-        globalDikirim += pemohonCountInItem;
-        breakdownByService[stKey].dikirimCount += pemohonCountInItem;
-      } else if (statusStr === 'REVISION' || statusStr === 'REJECTED' || statusStr === 'VOID') {
-        breakdownByService[stKey].revisiCount += pemohonCountInItem;
-        globalRevisi += pemohonCountInItem;
-      } else {
-        breakdownByService[stKey].prosesCount += pemohonCountInItem;
-        globalProses += pemohonCountInItem;
-      }
-
-      // Aggregation Wilayah (Kecamatan & Desa)
-      if (item.dataBaru && item.dataBaru.length > 0) {
-        const kecSetInItem = new Set<string>();
-        const desaSetInItem = new Set<string>();
-
-        item.dataBaru.forEach((db: any) => {
-          const kec = (db.kecamatanObjekBaru || item.kecamatanObjekLama || 'KECAMATAN LAIN').trim().toUpperCase();
-          const desa = (db.desaObjekBaru || item.desaObjekLama || 'DESA LAIN').trim().toUpperCase();
-
-          if (!kecamatanMap[kec]) {
-            kecamatanMap[kec] = { kecamatan: kec, totalPemohon: 0, totalNopel: 0 };
-          }
-          kecamatanMap[kec].totalPemohon += 1;
-
-          if (!kecSetInItem.has(kec)) {
-            kecSetInItem.add(kec);
-            kecamatanMap[kec].totalNopel += 1;
-          }
-
-          const desaKey = `${kec}___${desa}`;
-          if (!desaMap[desaKey]) {
-            desaMap[desaKey] = { desa: desa, kecamatan: kec, totalPemohon: 0, totalNopel: 0 };
-          }
-          desaMap[desaKey].totalPemohon += 1;
-
-          if (!desaSetInItem.has(desaKey)) {
-            desaSetInItem.add(desaKey);
-            desaMap[desaKey].totalNopel += 1;
-          }
-        });
-      } else {
-        const kec = (item.kecamatanObjekLama || 'KECAMATAN LAIN').trim().toUpperCase();
-        const desa = (item.desaObjekLama || 'DESA LAIN').trim().toUpperCase();
-
-        if (!kecamatanMap[kec]) {
-          kecamatanMap[kec] = { kecamatan: kec, totalPemohon: 0, totalNopel: 0 };
-        }
-        kecamatanMap[kec].totalPemohon += 1;
-        kecamatanMap[kec].totalNopel += 1;
-
-        const desaKey = `${kec}___${desa}`;
-        if (!desaMap[desaKey]) {
-          desaMap[desaKey] = { desa: desa, kecamatan: kec, totalPemohon: 0, totalNopel: 0 };
-        }
-        desaMap[desaKey].totalPemohon += 1;
-        desaMap[desaKey].totalNopel += 1;
-      }
-    });
-
-    const bundles = await prisma.bundle.findMany({
-      include: { manifest: true }
-    });
-
-    let totalRekomDibuat = 0;
-    let totalRekomDikirim = 0;
-    let totalRekomVoid = 0;
-
-    const rekomBreakdownByService: Record<string, {
-      totalDibuat: number;
-      totalDikirim: number;
-      totalVoid: number;
-    }> = {};
-
-    serviceTypes.forEach(st => {
-      rekomBreakdownByService[st] = {
-        totalDibuat: 0,
-        totalDikirim: 0,
-        totalVoid: 0,
-      };
-    });
-
-    bundles.forEach((b: any) => {
-      const stKey = b.jenisPermohonan || 'MUTASI_SEBAGIAN';
-      if (!rekomBreakdownByService[stKey]) {
-        rekomBreakdownByService[stKey] = {
-          totalDibuat: 0,
-          totalDikirim: 0,
-          totalVoid: 0,
-        };
-      }
-
-      const isDibuat = b.status === 'LOCKED' || b.status === 'IN_MANIFEST';
-      const isDikirim = b.manifest?.status === 'SENT';
-      const isVoid = b.status === 'VOID';
-
-      if (isDibuat) {
-        totalRekomDibuat += 1;
-        rekomBreakdownByService[stKey].totalDibuat += 1;
-      }
-      if (isDikirim) {
-        totalRekomDikirim += 1;
-        rekomBreakdownByService[stKey].totalDikirim += 1;
-      }
-      if (isVoid) {
-        totalRekomVoid += 1;
-        rekomBreakdownByService[stKey].totalVoid += 1;
-      }
-    });
-
-    const byKecamatan = Object.values(kecamatanMap).sort((a, b) => b.totalPemohon - a.totalPemohon);
-    const byDesa = Object.values(desaMap).sort((a, b) => b.totalPemohon - a.totalPemohon);
-
-    return {
-      success: true,
-      totalNopel,
-      totalPemohon,
-      globalProses,
-      globalSelesai,
-      globalRevisi,
-      globalDikirim,
-      mutasiSebagianMultiNopelCount,
-      breakdownByService,
-      byKecamatan,
-      byDesa,
-      recentList: list.slice(0, 15),
-      rekomStats: {
-        totalDibuat: totalRekomDibuat,
-        totalDikirim: totalRekomDikirim,
-        totalVoid: totalRekomVoid,
-        breakdownByService: rekomBreakdownByService
-      }
-    };
-  } catch (error: any) {
-    console.error('[ACTION-GET-GLOBAL-BERANDA-STATS-ERR]', error);
-    return {
-      success: false,
-      totalNopel: 0,
-      totalPemohon: 0,
-      globalProses: 0,
-      globalSelesai: 0,
-      globalRevisi: 0,
-      globalDikirim: 0,
-      mutasiSebagianMultiNopelCount: 0,
-      breakdownByService: {},
-      byKecamatan: [],
-      byDesa: [],
-      recentList: [],
-      rekomStats: {
-        totalDibuat: 0,
-        totalDikirim: 0,
-        totalVoid: 0,
-        breakdownByService: {}
-      }
-    };
-  }
+  return getGlobalBerandaStatsFromBeranda();
 }
-
-

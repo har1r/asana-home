@@ -6,8 +6,7 @@ import {
   Plus, Search, Edit, RefreshCw,
   AlertTriangle, X, CheckCircle, FileText, Calendar,
   Trash2, ChevronLeft, ChevronRight, ChevronDown, Check, Lock,
-  FileSpreadsheet, Star, ListFilter, Copy, MessageSquare, Briefcase, ArrowRight,
-  Slash, FolderOpen, Users, Clock, CheckCircle2
+  FileSpreadsheet, Star, Copy, ArrowRight
 } from 'lucide-react';
 import { useSession } from "next-auth/react";
 import {
@@ -344,18 +343,7 @@ const highlightText = (text: string, search: string) => {
   );
 };
 
-const getStatusDotColor = (status: string) => {
-  switch (status) {
-    case 'FAVORITE': return 'bg-yellow-400';
-    case 'SUBMITTED': return 'bg-emerald-500';
-    case 'REVISION': return 'bg-orange-500';
-    case 'BUNDLED': return 'bg-blue-500';
-    case 'ARCHIVED': return 'bg-indigo-500';
-    case 'COMPLETED': return 'bg-cyan-500';
-    case 'REJECTED': return 'bg-rose-500';
-    default: return 'bg-slate-450';
-  }
-};
+
 
 // Helper: cek apakah tanggal penyelesaian sudah lewat tenggat
 const isOverdue = (dateStr: string | null | undefined, status: string): boolean => {
@@ -380,7 +368,6 @@ export default function PenginputWorkspace() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   // Next.js Router & Query Params sync for ?tab=my-tasks&view=create
   const searchParams = useSearchParams();
@@ -1082,32 +1069,32 @@ export default function PenginputWorkspace() {
                                     <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
                                   </button>
                                 </td>
-                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
-                                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
+                                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
                                 </td>
                                 <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap">
                                   <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || session?.user?.name || "Petugas Input"}>
-                                    <span className="truncate max-w-[130px] capitalize font-sans">{item.penginput?.name || session?.user?.name || "Petugas Input"}</span>
+                                    <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || session?.user?.name || "Petugas Input"}</span>
                                   </div>
                                 </td>
-                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
-                                  {new Date(item.tanggalPermohonan || item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
+                                  {new Date(item.tanggalPermohonan || item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
                                 </td>
                                 <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                                   {item.tanggalPenyelesaian ? (
                                     <div className="flex items-center gap-1.5">
-                                      <span className={`text-[11px] font-sans font-bold capitalize px-2 py-0.5 rounded ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                      <span className={`text-[11px] font-sans font-bold uppercase px-2 py-0.5 rounded ${isOverdue(item.tanggalPenyelesaian, item.status)
                                         ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
                                         : 'text-slate-600'
                                         }`}>
-                                        {new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        {new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
                                       </span>
                                     </div>
                                   ) : "-"}
                                 </td>
                                 <td className="py-2.5 px-4 min-w-[140px] group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight">
+                                    <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
                                       {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchQuery)}
                                     </span>
                                     <button
@@ -1125,7 +1112,7 @@ export default function PenginputWorkspace() {
                                 </td>
                                 <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap">
+                                    <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
                                       {highlightText(formatNop(item.nop), searchQuery)}
                                     </span>
                                     <button
@@ -1143,7 +1130,7 @@ export default function PenginputWorkspace() {
                                 </td>
                                 <td className="py-2.5 px-4 group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap capitalize font-sans">
+                                    <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
                                       {highlightText(item.displayNamaWajibPajak, searchQuery)}
                                     </span>
                                     {item.isPecahanRow && (
@@ -1166,7 +1153,7 @@ export default function PenginputWorkspace() {
                                 </td>
                                 <td className="py-2.5 px-4 font-sans">
                                   <span
-                                    className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide"
+                                    className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
                                     title={item.jenisPermohonan.replace(/_/g, ' ')}
                                   >
                                     {getAbbreviatedJenis(item.jenisPermohonan)}
@@ -1174,7 +1161,7 @@ export default function PenginputWorkspace() {
                                 </td>
                                 <td className="py-2.5 px-4 text-center font-sans">
                                   <div className="flex items-center justify-center gap-1">
-                                    <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                    <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
                                       {getStatusLabel(item.status)}
                                     </span>
                                   </div>

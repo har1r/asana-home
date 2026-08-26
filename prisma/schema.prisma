@@ -135,6 +135,7 @@ model DataBaru {
   luasTanahBaru        Float
   luasBangunanBaru     Float
   sertifikatBaru       String
+  isVerified           Boolean    @default(false)
   
   permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
   arsipDigital         ArsipDigital[]

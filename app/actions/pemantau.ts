@@ -55,7 +55,33 @@ export async function getMonitoringPermohonan() {
       orderBy: { updatedAt: "desc" }
     });
 
-    return { success: true, list };
+    // Enrich dataBaru with isVerified directly from MongoDB raw document
+    let verifiedMap: Record<string, boolean> = {};
+    try {
+      const rawDataBaru: any = await prisma.$runCommandRaw({
+        find: "DataBaru",
+        filter: {}
+      });
+      if (rawDataBaru && rawDataBaru.cursor && rawDataBaru.cursor.firstBatch) {
+        rawDataBaru.cursor.firstBatch.forEach((doc: any) => {
+          if (doc._id && doc._id.$oid) {
+            verifiedMap[doc._id.$oid] = !!doc.isVerified;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("[RAW-DATABARU-WARN]", e);
+    }
+
+    const enrichedList = list.map((p: any) => ({
+      ...p,
+      dataBaru: (p.dataBaru || []).map((db: any) => ({
+        ...db,
+        isVerified: p.status === "COMPLETED" || !!verifiedMap[db.id] || !!db.isVerified
+      }))
+    }));
+
+    return { success: true, list: enrichedList };
   } catch (error: any) {
     console.error("[ACTION-GET-MONITOR-PERMOHONAN-ERR]", error);
     return { success: false, list: [], error: "Gagal mengambil antrean pemantauan." };
@@ -105,16 +131,27 @@ export async function completePermohonan(permohonanId: string) {
         throw new Error("Permohonan dibekukan karena sedang menunggu persetujuan Supervisor.");
       }
 
-      // 2. Transition status to COMPLETED
+      // 2. Transition status to COMPLETED and set all dataBaru isVerified = true
       const updated = await tx.permohonan.update({
         where: { id: permohonanId },
         data: { status: "COMPLETED" }
       });
 
+      await tx.$runCommandRaw({
+        update: "DataBaru",
+        updates: [
+          {
+            q: { permohonanId: { $oid: permohonanId } },
+            u: { $set: { isVerified: true } },
+            multi: true
+          }
+        ]
+      });
+
       // 3. Dispatch WhatsApp Notification to the taxpayer
       const readableJenis = permohonan.jenisPermohonan.replace(/_/g, " ");
       const waMessage = `Halo Wajib Pajak, permohonan ${readableJenis} Anda dengan Nomor Pelayanan: ${permohonan.nomorPelayanan || "-"} (NOP: ${permohonan.nop}) telah selesai diproses oleh Kantor Pusat. Produk layanan berupa Surat Keputusan / SPPT telah diterbitkan. Terima kasih.`;
-      
+
       // Asynchronous, tolerating failure
       sendWhatsApp(permohonan.noWhatsapp, waMessage).catch((err) => {
         console.error(`[WA-COMPLETED-FAIL] Gagal kirim WA ke wajib pajak ${permohonan.namaWajibPajak}:`, err);
@@ -196,7 +233,7 @@ export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
       // Notify Supervisor
       const notifTitle = "Persetujuan Batal Selesai";
       const notifPesan = `Pemantau mengajukan pembatalan status selesai (Rollback) untuk Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan}. Alasan: "${alasan}"`;
-      
+
       const activeSupervisors = await tx.user.findMany({
         where: { role: "SUPERVISOR", isActive: true },
         select: { id: true }
@@ -284,5 +321,60 @@ export async function getPemantauStats() {
   } catch (error: any) {
     console.error("[ACTION-GET-PEMANTAU-STATS-ERR]", error);
     return { success: false, stats: null, error: "Gagal mengambil statistik pemantau." };
+  }
+}
+
+/**
+ * Action: Toggle verification status of a specific DataBaru (fraction/applicant) entry.
+ */
+export async function toggleVerifyDataBaru(dataBaruId: string, isVerified: boolean) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PEMANTAU", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    await prisma.$runCommandRaw({
+      update: "DataBaru",
+      updates: [
+        {
+          q: { _id: { $oid: dataBaruId } },
+          u: { $set: { isVerified } }
+        }
+      ]
+    });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    console.error("[ACTION-TOGGLE-VERIFY-DATABARU-ERR]", error);
+    return { success: false, error: error.message || "Gagal memperbarui status verifikasi." };
+  }
+}
+
+/**
+ * Action: Verify all DataBaru (fractions/applicants) entries for a permohonan.
+ */
+export async function verifyAllDataBaru(permohonanId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["PEMANTAU", "SUPERVISOR"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    await prisma.$runCommandRaw({
+      update: "DataBaru",
+      updates: [
+        {
+          q: { permohonanId: { $oid: permohonanId } },
+          u: { $set: { isVerified: true } },
+          multi: true
+        }
+      ]
+    });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    console.error("[ACTION-VERIFY-ALL-DATABARU-ERR]", error);
+    return { success: false, error: error.message || "Gagal memverifikasi semua pecahan." };
   }
 }

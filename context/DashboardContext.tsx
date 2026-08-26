@@ -43,8 +43,6 @@ interface DashboardContextType {
   // Modals
   showAddTeamModal: boolean;
   setShowAddTeamModal: (show: boolean) => void;
-  showAddProjectModal: boolean;
-  setShowAddProjectModal: (show: boolean) => void;
 
   // Operations
   handleAddTask: (newTaskParams: Omit<Task, 'id'>) => void;
@@ -105,7 +103,6 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
 
   // Modals state
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
 
   // Universal Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -414,8 +411,6 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
 
     showAddTeamModal,
     setShowAddTeamModal,
-    showAddProjectModal,
-    setShowAddProjectModal,
 
     handleAddTask,
     handleToggleTask,
@@ -450,7 +445,6 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     isMobileMenuOpen,
     isPersonalProfileDrawerOpen,
     showAddTeamModal,
-    showAddProjectModal,
     handleAddTask,
     handleToggleTask,
     handleDeleteTask,

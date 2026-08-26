@@ -37,7 +37,8 @@ import {
   Send,
   Layers,
   Slash,
-  CircleArrowLeft
+  CircleArrowLeft,
+  Copy
 } from "lucide-react";
 import {
   getEligibleBundles,
@@ -215,6 +216,29 @@ const STATUS_LABEL_MAP: Record<string, string> = {
 
 const getStatusLabel = (status: string) => STATUS_LABEL_MAP[status] || status;
 
+const getShortBundleNum = (bundleNum: string) => {
+  if (!bundleNum) return '—';
+  const parts = bundleNum.split('/');
+  return parts.length >= 2 ? parts[1] : bundleNum;
+};
+
+const cleanPecahanSuffix = (name?: string | null): string => {
+  if (!name) return '';
+  return name
+    .replace(/\s*\([^)]*pecahan[^)]*\)/gi, '')
+    .replace(/\s*\(Pecahan\s*\d+\)/gi, '')
+    .replace(/\s*Pecahan\s*\d+/gi, '')
+    .trim();
+};
+
+const isOverdue = (tanggalPenyelesaian?: string | null, status?: string) => {
+  if (!tanggalPenyelesaian) return false;
+  if (status === 'ARCHIVED' || status === 'SENT') return false;
+  const now = new Date();
+  const target = new Date(tanggalPenyelesaian);
+  return target < now;
+};
+
 const highlightText = (text: string, query: string) => {
   if (!query.trim()) return text;
   const parts = text.split(new RegExp(`(${query})`, 'gi'));
@@ -270,6 +294,33 @@ export default function PengirimWorkspace() {
   const [selectedManifest, setSelectedManifest] = useState<any | null>(null);
   const [selectedBundleInManifest, setSelectedBundleInManifest] = useState<any | null>(null);
 
+  // Display Mode & Search for Bundle Permohonan Table
+  const [bundleDisplayMode, setBundleDisplayMode] = useState<'berkas' | 'pemohon'>('berkas');
+  const [searchBundlePermohonanQuery, setSearchBundlePermohonanQuery] = useState("");
+
+  // Copy Feedback State
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const handleCopy = (e: React.MouseEvent, text?: string | null) => {
+    e.stopPropagation();
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1500);
+  };
+
+  const handleToggleFavorite = (permohonanId: string) => {
+    if (selectedBundleInManifest?.permohonan) {
+      const updatedPermohonan = selectedBundleInManifest.permohonan.map((p: any) =>
+        p.id === permohonanId ? { ...p, isFavorite: !p.isFavorite } : p
+      );
+      setSelectedBundleInManifest({
+        ...selectedBundleInManifest,
+        permohonan: updatedPermohonan,
+      });
+    }
+  };
+
   // Sync selectedBundleInManifest when selectedManifest changes
   useEffect(() => {
     if (selectedManifest?.bundle && selectedManifest.bundle.length > 0) {
@@ -300,9 +351,81 @@ export default function PengirimWorkspace() {
   const [correctionReason, setCorrectionReason] = useState("");
   const [selectedPermohonanForDetails, setSelectedPermohonanForDetails] = useState<any | null>(null);
 
-  // Pagination states
+  // Pagination states for manifest grid
   const [currentManifestPage, setCurrentManifestPage] = useState(1);
   const [itemsPerManifestPage, setItemsPerManifestPage] = useState(8);
+
+  // Pagination states for bundle permohonan table
+  const [currentBundlePermohonanPage, setCurrentBundlePermohonanPage] = useState(1);
+  const [itemsPerBundlePermohonanPage, setItemsPerBundlePermohonanPage] = useState(10);
+
+  // Process Permohonan List according to Display Mode (berkas vs pemohon)
+  const processedBundlePermohonanList = useMemo(() => {
+    const rawList = selectedBundleInManifest?.permohonan || [];
+    // Only display permohonans that are ready in Pengirim workspace (ARCHIVED or SENT).
+    // Permohonan returned to Pengarsip (status BUNDLED) will be excluded so the row disappears after Supervisor approval.
+    const permohonanList = rawList.filter((p: any) => p.status === 'ARCHIVED' || p.status === 'SENT');
+
+    if (bundleDisplayMode === 'pemohon') {
+      const result: any[] = [];
+      permohonanList.forEach((p: any) => {
+        if (p.jenisPermohonan === 'MUTASI_SEBAGIAN' && p.dataBaru && p.dataBaru.length > 0) {
+          p.dataBaru.forEach((db: any, idx: number) => {
+            result.push({
+              ...p,
+              isPecahanRow: true,
+              pecahanIndex: idx + 1,
+              totalPecahan: p.dataBaru.length,
+              displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || p.namaWajibPajak),
+              targetDataBaruId: db.id,
+              uniqueRowKey: `${p.id}-db-${idx}`
+            });
+          });
+        } else {
+          result.push({
+            ...p,
+            isPecahanRow: false,
+            displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+            uniqueRowKey: p.id
+          });
+        }
+      });
+      return result;
+    }
+
+    return permohonanList.map((p: any) => ({
+      ...p,
+      isPecahanRow: false,
+      displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+      uniqueRowKey: p.id
+    }));
+  }, [selectedBundleInManifest, bundleDisplayMode]);
+
+  // Filtered Bundle Permohonan List
+  const filteredBundlePermohonanList = useMemo(() => {
+    if (!searchBundlePermohonanQuery.trim()) return processedBundlePermohonanList;
+    const q = searchBundlePermohonanQuery.toLowerCase();
+    return processedBundlePermohonanList.filter((p: any) => {
+      const nopel = (p.nomorPelayanan || p.nomorPermohonan || '').toLowerCase();
+      const nop = (p.nop || '').toLowerCase();
+      const nama = (p.displayNamaWajibPajak || p.namaWajibPajak || '').toLowerCase();
+      const penginput = (p.penginput?.name || '').toLowerCase();
+      return nopel.includes(q) || nop.includes(q) || nama.includes(q) || penginput.includes(q);
+    });
+  }, [processedBundlePermohonanList, searchBundlePermohonanQuery]);
+
+  // Reset permohonan pagination when search or display mode change
+  useEffect(() => {
+    setCurrentBundlePermohonanPage(1);
+  }, [searchBundlePermohonanQuery, bundleDisplayMode, selectedBundleInManifest]);
+
+  const totalBundlePermohonanPages = Math.ceil(filteredBundlePermohonanList.length / itemsPerBundlePermohonanPage) || 1;
+  const activeBundlePermohonanPage = currentBundlePermohonanPage > totalBundlePermohonanPages ? 1 : currentBundlePermohonanPage;
+
+  const paginatedBundlePermohonanList = useMemo(() => {
+    const start = (activeBundlePermohonanPage - 1) * itemsPerBundlePermohonanPage;
+    return filteredBundlePermohonanList.slice(start, start + itemsPerBundlePermohonanPage);
+  }, [filteredBundlePermohonanList, activeBundlePermohonanPage, itemsPerBundlePermohonanPage]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const searchManifestInputRef = useRef<HTMLInputElement | null>(null);
@@ -378,7 +501,6 @@ export default function PengirimWorkspace() {
         const detail = await getManifestDetails(res.manifest.id);
         if (detail.success && 'manifest' in detail && detail.manifest) {
           setSelectedManifest(detail.manifest);
-          handleSwitchTab("kelola-pengiriman");
         }
         setTimeout(() => setSuccess(""), 4000);
       } else {
@@ -763,7 +885,7 @@ export default function PengirimWorkspace() {
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
-            Daftar Manifest Pengiriman
+            Pilih Manifest Pengiriman
           </button>
           <button
             type="button"
@@ -773,7 +895,7 @@ export default function PengirimWorkspace() {
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
-            Kelola Pengiriman & Detail
+            Kelola Pengiriman
           </button>
         </div>
 
@@ -914,11 +1036,10 @@ export default function PengirimWorkspace() {
                     <div
                       key={m.id}
                       onClick={() => handleSelectManifest(m)}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[140px] ${
-                        isSelected
-                          ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-                          : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
-                      }`}
+                      className={`p-4 rounded-md border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[140px] ${isSelected
+                        ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+                        : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
+                        }`}
                     >
                       {/* Top Row: Manifest Number & Status Badge */}
                       <div className="flex items-center justify-between gap-2 w-full">
@@ -926,13 +1047,12 @@ export default function PengirimWorkspace() {
                           {highlightText(m.nomorManifest, searchQuery)}
                         </span>
 
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider shrink-0 ${
-                          m.status === 'LOCKED'
-                            ? 'bg-slate-900 text-slate-100 border-slate-800'
-                            : m.status === 'SENT'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider shrink-0 ${m.status === 'LOCKED'
+                          ? 'bg-slate-900 text-slate-100 border-slate-800'
+                          : m.status === 'SENT'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          }`}>
                           <span>{getStatusLabel(m.status)}</span>
                         </span>
                       </div>
@@ -947,9 +1067,9 @@ export default function PengirimWorkspace() {
                         {/* Vertical Line Separator */}
                         <div className="w-px h-3.5 bg-slate-200/90 shrink-0" />
 
-                        {/* Right Column: Total Berkas */}
+                        {/* Right Column: Total Pemohon */}
                         <div className="flex-1 flex items-center justify-center font-semibold text-slate-600">
-                          <span>{totalPecahanCount} Berkas</span>
+                          <span>{totalPecahanCount} Pemohon</span>
                         </div>
                       </div>
 
@@ -1070,13 +1190,12 @@ export default function PengirimWorkspace() {
                   <div>
                     <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-2">
                       <span className="font-mono font-black text-slate-900 text-sm">{selectedManifest.nomorManifest}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider ${
-                        selectedManifest.status === 'LOCKED'
-                          ? 'bg-slate-900 text-slate-100 border-slate-800'
-                          : selectedManifest.status === 'SENT'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      }`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider ${selectedManifest.status === 'LOCKED'
+                        ? 'bg-slate-900 text-slate-100 border-slate-800'
+                        : selectedManifest.status === 'SENT'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}>
                         {getStatusLabel(selectedManifest.status)}
                       </span>
                     </h2>
@@ -1221,31 +1340,77 @@ export default function PengirimWorkspace() {
 
                 {/* CARD DETAIL PERMOHONAN */}
                 <div className="w-full">
-                  <div className="bg-white rounded-md border border-slate-200/90 p-6 flex flex-col gap-5 shadow-3xs animate-fadeIn">
+                  <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
 
-                    <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3.5 select-none">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-black text-slate-700 capitalize tracking-wider select-none">
-                          Daftar Berkas Permohonan Dalam Bundle
-                        </h4>
+                    {/* COMMAND BAR CARD */}
+                    <div className="bg-white border border-slate-200/90 rounded-md p-3 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-3 select-none">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                        {selectedBundleInManifest && (
+                          <div className="relative w-full md:w-80">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={searchBundlePermohonanQuery}
+                              onChange={(e) => setSearchBundlePermohonanQuery(e.target.value)}
+                              placeholder="Cari NOPEL, NOP, Pemohon... (Ctrl+K)"
+                              className="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200/90 rounded-md text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#00a389] focus:bg-white transition-all"
+                            />
+                            {searchBundlePermohonanQuery && (
+                              <button
+                                type="button"
+                                onClick={() => setSearchBundlePermohonanQuery('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {selectedBundleInManifest && (
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2.5 shrink-0 justify-end flex-wrap">
+                          {/* Segmented Display Mode Switcher */}
+                          <div className="inline-flex p-0.5 bg-slate-100 border border-slate-200/80 rounded-md select-none">
+                            <button
+                              type="button"
+                              onClick={() => setBundleDisplayMode('berkas')}
+                              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all cursor-pointer ${bundleDisplayMode === 'berkas'
+                                ? 'bg-white text-[#008f78] shadow-xs'
+                                : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                              Nopel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBundleDisplayMode('pemohon')}
+                              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all cursor-pointer ${bundleDisplayMode === 'pemohon'
+                                ? 'bg-white text-[#008f78] shadow-xs'
+                                : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                              Pemohon
+                            </button>
+                          </div>
+
+                          {/* Export Excel Button */}
                           <a
                             href={`/api/export/bundle/${selectedBundleInManifest.id}`}
                             download
-                            className="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-md transition-all shadow-3xs cursor-pointer flex items-center justify-center"
+                            className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-md transition-all shadow-3xs cursor-pointer flex items-center justify-center"
                             title="Ekspor daftar permohonan ke Excel"
                           >
                             <FileSpreadsheet className="w-4 h-4 text-[#00a389]" />
                           </a>
 
+                          {/* Remove Bundle Button */}
                           {selectedManifest.status === "DRAFT" && (
                             <button
+                              type="button"
                               onClick={() => handleRemoveBundle(selectedBundleInManifest.id)}
                               disabled={loading}
-                              className="p-2 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer shadow-3xs flex items-center justify-center disabled:opacity-40"
+                              className="p-1.5 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer shadow-3xs flex items-center justify-center disabled:opacity-40"
                               title="Keluarkan bundle dari manifest"
                             >
                               <Trash className="w-4 h-4 text-rose-600" />
@@ -1255,140 +1420,280 @@ export default function PengirimWorkspace() {
                       )}
                     </div>
 
+                    {/* DATA CANVAS & TABLE CARD */}
                     {selectedBundleInManifest ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="border border-slate-200/80 rounded-md overflow-hidden bg-white shadow-3xs flex flex-col">
-                          <div className="overflow-x-auto scrollbar-thin max-h-[380px]">
-                            <table className="w-full text-left border-collapse select-none">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider text-left border-b border-slate-200 sticky top-0 z-10 shadow-2xs whitespace-nowrap">
-                                  <th className="py-3 px-5 text-center w-12 min-w-[48px]">No</th>
-                                  <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
-                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Input</th>
-                                  <th className="py-3 px-5 min-w-[140px]">Petugas Input</th>
-                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Nopel</th>
-                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Selesai</th>
-                                  <th className="py-3 px-5 min-w-[160px]">No. Pelayanan</th>
-                                  <th className="py-3 px-5 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
-                                  <th className="py-3 px-5 min-w-[150px]">Nama Pemohon</th>
-                                  <th className="py-3 px-5 min-w-[120px]">Jenis Layanan</th>
-                                  <th className="py-3 px-5 text-center min-w-[100px]">Status</th>
-                                  <th className="py-3 px-5 text-right pr-6 w-24 min-w-[96px]">Aksi</th>
+                      <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-3xs overflow-hidden flex flex-col">
+                        <div className="overflow-x-auto scrollbar-thin max-h-[440px]">
+                          <table className="w-full text-left border-collapse select-none">
+                            <thead>
+                              <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider text-left border-b border-slate-200 sticky top-0 z-10 shadow-2xs whitespace-nowrap">
+                                <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
+                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
+                                <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
+                                <th className="py-3 px-4 min-w-[130px]">Petugas Input</th>
+                                <th className="py-3 px-4 min-w-[110px]">Tgl. Nopel</th>
+                                <th className="py-3 px-4 min-w-[110px]">Tgl. Selesai</th>
+                                <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
+                                <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
+                                <th className="py-3 px-4 min-w-[180px]">Nama Pemohon</th>
+                                <th className="py-3 px-4 min-w-[110px]">Jenis Layanan</th>
+                                <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
+                                <th className="py-3 px-4 text-center w-24 min-w-[96px]">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white text-xs font-semibold text-slate-700">
+                              {paginatedBundlePermohonanList.length === 0 ? (
+                                <tr>
+                                  <td colSpan={12} className="py-14 text-center text-xs text-slate-400 font-bold italic bg-slate-50/50">
+                                    Tidak ada berkas permohonan yang cocok.
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 bg-white">
-                                {(!selectedBundleInManifest.permohonan || selectedBundleInManifest.permohonan.length === 0) ? (
-                                  <tr>
-                                    <td colSpan={12} className="py-12 text-center text-xs text-slate-400 font-semibold italic bg-slate-50/50">
-                                      Tidak ada berkas permohonan di dalam bundle ini.
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  selectedBundleInManifest.permohonan.map((p: any, idx: number) => {
-                                    const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
-                                    const tglNopelText = p.tanggalNoPelayanan
-                                      ? new Date(p.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                                      : '—';
-                                    const tglSelesaiText = p.tanggalPenyelesaian
-                                      ? new Date(p.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                                      : '—';
+                              ) : (
+                                paginatedBundlePermohonanList.map((p: any, index: number) => {
+                                  const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
+                                  const itemNumber = (activeBundlePermohonanPage - 1) * itemsPerBundlePermohonanPage + index + 1;
+                                  const nopolDate = p.tanggalNoPelayanan
+                                    ? new Date(p.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    : '—';
+                                  const penyelesaianDate = p.tanggalPenyelesaian
+                                    ? new Date(p.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    : '—';
 
-                                    return (
-                                      <tr
-                                        key={p.id}
-                                        onClick={() => setSelectedPermohonanForDetails(p)}
-                                        className={`transition-colors duration-150 text-xs cursor-pointer ${isFrozen
-                                          ? 'border-l-2 border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/60'
-                                          : 'hover:bg-slate-50'
-                                          }`}
-                                      >
-                                        <td className="py-4 px-5 text-center text-xs font-bold text-slate-400 font-mono">
-                                          {idx + 1}
-                                        </td>
-                                        <td className="py-4 px-2 text-center select-none" onClick={(e) => e.stopPropagation()}>
-                                          <Star className={`w-4 h-4 mx-auto ${p.isFavorite
+                                  return (
+                                    <tr
+                                      key={p.uniqueRowKey || p.id}
+                                      onClick={() => setSelectedPermohonanForDetails(p)}
+                                      className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-slate-700 ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : isFrozen ? "bg-amber-50/20" : ""
+                                        }`}
+                                    >
+                                      <td className="py-3 px-4 text-center text-xs font-bold text-slate-400 font-mono">
+                                        {itemNumber}
+                                      </td>
+
+                                      <td className="py-3 px-2 text-center" onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleFavorite(p.id);
+                                      }}>
+                                        <button
+                                          type="button"
+                                          className="p-1 hover:scale-125 active:scale-75 transition-all duration-200 text-slate-300 hover:text-amber-500 cursor-pointer"
+                                          title={p.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
+                                        >
+                                          <Star className={`w-4 h-4 transition-all duration-200 ${p.isFavorite
                                             ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
                                             : 'text-slate-300'
                                             }`} />
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-semibold text-slate-500 font-mono whitespace-nowrap">
-                                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                                        </td>
-                                        <td className="py-4 px-5 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
-                                          <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                            <span className="truncate max-w-[130px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
+                                        </button>
+                                      </td>
+
+                                      <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
+                                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
+                                      </td>
+
+                                      <td className="py-3 px-4 text-slate-700 text-xs font-bold font-sans whitespace-nowrap uppercase">
+                                        <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
+                                          <span className="truncate max-w-[130px] uppercase font-sans">{p.penginput?.name || "Petugas Input"}</span>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
+
+                                      <td className="py-3 px-4 whitespace-nowrap font-sans">
+                                        {p.tanggalPenyelesaian ? (
+                                          <div className="flex items-center gap-1">
+                                            {isOverdue(p.tanggalPenyelesaian, p.status) && (
+                                              <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                            )}
+                                            <span className={`text-xs font-sans font-bold uppercase ${isOverdue(p.tanggalPenyelesaian, p.status)
+                                              ? 'text-rose-600 font-bold'
+                                              : 'text-slate-600'
+                                              }`}>
+                                              {penyelesaianDate.toUpperCase()}
+                                            </span>
                                           </div>
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                                          {tglNopelText}
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                                          {tglSelesaiText}
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-mono font-bold text-slate-800 whitespace-nowrap">
-                                          {p.nomorPelayanan || '—'}
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-mono font-semibold text-slate-600 whitespace-nowrap">
-                                          {formatNop(p.nop)}
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-bold text-slate-800 uppercase whitespace-nowrap">
-                                          {p.namaWajibPajak?.toUpperCase() || '—'}
-                                        </td>
-                                        <td className="py-4 px-5 whitespace-nowrap">
-                                          <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-extrabold border leading-none uppercase bg-slate-100 text-slate-600 border-slate-200">
-                                            {getAbbreviatedJenis(p.jenisPermohonan || selectedBundleInManifest.jenisPermohonan)}
+                                        ) : "—"}
+                                      </td>
+
+                                      <td className="py-3 px-4 min-w-[150px] group/cell relative font-sans">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs font-bold text-slate-700 font-sans tracking-tight uppercase">
+                                            {p.nomorPelayanan || p.nomorPermohonan}
                                           </span>
-                                        </td>
-                                        <td className="py-4 px-5 text-center whitespace-nowrap">
+                                          {isFrozen && (
+                                            <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
+                                              <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
+                                              Frozen
+                                            </span>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleCopy(e, p.nomorPelayanan || p.nomorPermohonan)}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin Nomor"
+                                          >
+                                            {copiedText === (p.nomorPelayanan || p.nomorPermohonan) ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+                                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                          <span className="text-xs font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
+                                            {formatNop(p.nop)}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleCopy(e, p.nop)}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin NOP"
+                                          >
+                                            {copiedText === p.nop ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3 px-4 group/cell relative font-sans">
+                                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                          <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
+                                            {(p.displayNamaWajibPajak || p.namaWajibPajak).toUpperCase()}
+                                          </span>
+                                          {p.isPecahanRow && (
+                                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                              #{p.pecahanIndex}/{p.totalPecahan}
+                                            </span>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleCopy(e, p.displayNamaWajibPajak || p.namaWajibPajak)}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin Nama Pemohon"
+                                          >
+                                            {copiedText === (p.displayNamaWajibPajak || p.namaWajibPajak) ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3 px-4 font-sans">
+                                        <span
+                                          className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide select-none"
+                                          title={p.jenisPermohonan?.replace(/_/g, " ")}
+                                        >
+                                          {getAbbreviatedJenis(p.jenisPermohonan || selectedBundleInManifest.jenisPermohonan)}
+                                        </span>
+                                      </td>
+
+                                      <td className="py-3 px-4 text-center font-sans">
+                                        <div className="flex items-center justify-center">
                                           {isFrozen ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200 select-none">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 select-none">
                                               <Clock className="w-2.5 h-2.5 text-amber-600 animate-spin" />
                                               Frozen
                                             </span>
                                           ) : (
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold capitalize select-none ${p.status === "ARCHIVED" ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-sky-100 text-sky-800 border border-sky-200"
-                                              }`}>
+                                            <span className={`inline-flex text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase font-sans ${p.status === "ARCHIVED" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-sky-100 text-sky-800 border-sky-200"}`}>
                                               {getStatusLabel(p.status)}
                                             </span>
                                           )}
-                                        </td>
-                                        <td className="py-4 px-5 text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                          <div className="flex items-center justify-end gap-2">
-                                            {!isFrozen && p.status === "ARCHIVED" && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openCorrectionModal(p);
-                                                }}
-                                                className="py-1 px-2.5 text-[9.5px] font-bold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 rounded-md transition-all cursor-pointer shadow-3xs"
-                                                title="Kembalikan ke Pengarsip untuk upload ulang scan digital"
-                                              >
-                                                <CircleArrowLeft className="w-3.5 h-3.5" />
-                                              </button>
-                                            )}
+                                        </div>
+                                      </td>
 
-                                            {selectedManifest.status === "SENT" && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleReportBundleLost(selectedBundleInManifest.id, selectedBundleInManifest.nomorBundle);
-                                                }}
-                                                disabled={loading}
-                                                className="py-1 px-2 text-[9.5px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-3xs"
-                                                title="Laporkan hilang"
-                                              >
-                                                <AlertTriangle className="w-3 h-3" />
-                                                <span>Hilang</span>
-                                              </button>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
-                                )}
-                              </tbody>
-                            </table>
+                                      <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-center justify-center gap-1.5">
+                                          {!isFrozen && p.status === "ARCHIVED" && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openCorrectionModal(p);
+                                              }}
+                                              className="p-1.5 text-slate-500 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 rounded-md transition-all cursor-pointer shadow-3xs"
+                                              title="Kembalikan ke Pengarsip untuk upload ulang scan digital"
+                                            >
+                                              <CircleArrowLeft className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+
+                                          {selectedManifest.status === "SENT" && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleReportBundleLost(selectedBundleInManifest.id, selectedBundleInManifest.nomorBundle);
+                                              }}
+                                              disabled={loading}
+                                              className="px-2 py-1 text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-3xs"
+                                              title="Laporkan hilang"
+                                            >
+                                              <AlertTriangle className="w-3 h-3" />
+                                              <span>Hilang</span>
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* TABLE FOOTER PAGINATION */}
+                        <div className="border-t border-slate-200/90 bg-slate-50/80 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-slate-600 select-none">
+                          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                            <span className="text-slate-500">
+                              Menampilkan {filteredBundlePermohonanList.length > 0 ? (activeBundlePermohonanPage - 1) * itemsPerBundlePermohonanPage + 1 : 0} - {Math.min(activeBundlePermohonanPage * itemsPerBundlePermohonanPage, filteredBundlePermohonanList.length)} dari {filteredBundlePermohonanList.length} permohonan
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {[10, 20, 50].map((size) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  onClick={() => setItemsPerBundlePermohonanPage(size)}
+                                  className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all cursor-pointer ${itemsPerBundlePermohonanPage === size
+                                    ? 'bg-[#00a389] text-white'
+                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                              <span className="text-[11px] text-slate-400 font-bold ml-0.5">/hal</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setCurrentBundlePermohonanPage((prev) => Math.max(prev - 1, 1))}
+                              disabled={activeBundlePermohonanPage === 1}
+                              className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-bold"
+                            >
+                              Sebelumnya
+                            </button>
+                            <span className="px-2 text-slate-600 font-bold text-xs">
+                              {activeBundlePermohonanPage} / {totalBundlePermohonanPages}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setCurrentBundlePermohonanPage((prev) => Math.min(prev + 1, totalBundlePermohonanPages))}
+                              disabled={activeBundlePermohonanPage === totalBundlePermohonanPages}
+                              className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-bold"
+                            >
+                              Selanjutnya
+                            </button>
                           </div>
                         </div>
                       </div>

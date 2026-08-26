@@ -26,11 +26,12 @@ import {
   LucideIcon,
   Folder,
   Layers,
-  X,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-import { getLatestPermohonans, getPermohonanStats, getGlobalBerandaStats } from '@/app/actions/penginput';
+import { getGlobalBerandaStats } from '@/app/actions/beranda';
+import { getPermohonanStats } from '@/app/actions/penginput';
 
 // ==========================================
 // 2. TYPE DEFINITIONS & INTERFACES
@@ -128,10 +129,10 @@ export default function Sidebar() {
         if (globalRes.success && globalRes.recentList) {
           setPermohonanList(globalRes.recentList);
         }
-        if (statsRes.success && statsRes.stats) {
+        if (statsRes.success || globalRes.success) {
           setStats({
-            total: globalRes.totalPemohon || statsRes.stats.total || 0,
-            scanned: (statsRes.stats.completed || 0) + (statsRes.stats.archived || 0)
+            total: globalRes.totalPemohon || statsRes.stats?.total || 0,
+            scanned: globalRes.totalScannedPemohon ?? ((statsRes.stats?.completed || 0) + (statsRes.stats?.archived || 0))
           });
         }
       } catch (e) {

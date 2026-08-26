@@ -1320,9 +1320,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       type="button"
                       onClick={handleAddOwner}
                       disabled={loading}
-                      className="px-2.5 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-indigo-200/60"
+                      className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Tambah Pemilik Baru
+                      <Plus className="w-4 h-4 stroke-[3]" /> Tambah Pemilik Baru
                     </button>
                   </div>
                 )}
@@ -1338,7 +1338,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     >
                       {dataBaru.length > 1 && (
                         <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
-                          <span className="text-xs font-bold text-indigo-600 tracking-wide">Pemilik Baru #{idx + 1}</span>
+                          <span className="text-xs font-extrabold text-[#008f78] tracking-wide">Pemilik Baru #{idx + 1}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveOwner(idx)}

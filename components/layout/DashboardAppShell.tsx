@@ -27,7 +27,7 @@ import ProjectDetailsDrawer from '@/components/workspaces/shared/ProjectDetailsD
 import { useSession, signOut } from 'next-auth/react';
 import { ROLE_COOKIE_NAME } from '@/lib/constants';
 import {
-  SkeletonBox, SkeletonCircle, SkeletonText, RecentTasksCardSkeleton
+  SkeletonBox, SkeletonCircle, SkeletonText
 } from '@/components/skeletons/SkeletonBase';
 
 const GlobalBerandaDashboard = dynamic(() => import('@/components/widgets/GlobalBerandaDashboard'), {
@@ -35,10 +35,7 @@ const GlobalBerandaDashboard = dynamic(() => import('@/components/widgets/Global
   loading: () => <MascotLoadingSpinner />
 });
 
-const PenginputRecentTasksCard = dynamic(() => import('@/components/workspaces/penginput/PenginputRecentTasksCard'), {
-  ssr: false,
-  loading: () => <RecentTasksCardSkeleton />
-});
+
 
 
 
@@ -573,35 +570,7 @@ const PersonalProfileDrawer = React.memo(function PersonalProfileDrawer({
   );
 });
 
-// --- 8. AddProjectModal ---
-interface AddProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
-const AddProjectModal = React.memo(function AddProjectModal({
-  isOpen,
-  onClose,
-}: AddProjectModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div id="add-project-backdrop" className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl p-5 border border-slate-100 flex flex-col gap-4 animate-scaleUp" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h3 className="text-md font-bold text-gray-800 flex items-center gap-1.5">
-            <Briefcase className="w-4.5 h-4.5 text-[#f06e5b]" /> Design Board Project
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full cursor-pointer">
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
-
-        <PenginputRecentTasksCard />
-      </div>
-    </div>
-  );
-});
 
 // ==================== MAIN COMPONENT ====================
 
@@ -640,8 +609,6 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
 
     showAddTeamModal,
     setShowAddTeamModal,
-    showAddProjectModal,
-    setShowAddProjectModal,
 
     handleCreateTeam,
     getTasksForProject,
@@ -661,10 +628,6 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
   const handleCloseProfile = useCallback(() => {
     setIsPersonalProfileDrawerOpen(false);
   }, [setIsPersonalProfileDrawerOpen]);
-
-  const handleCloseAddProject = useCallback(() => {
-    setShowAddProjectModal(false);
-  }, [setShowAddProjectModal]);
 
   return (
     <div id="app-root" className="flex bg-white min-h-screen text-slate-800 font-sans relative overflow-x-hidden antialiased">
@@ -743,11 +706,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
         resetDatabase={resetDatabase}
       />
 
-      {/* ==================== 4. ADD DIRECT PROJECT POPUP MODAL (Triggered via sidebar context) ==================== */}
-      <AddProjectModal
-        isOpen={showAddProjectModal}
-        onClose={handleCloseAddProject}
-      />
+
 
       {/* ==================== 5. GLOBAL REQUEST DETAILS MODAL ==================== */}
       {globalSelectedRequest && (

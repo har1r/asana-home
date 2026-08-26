@@ -265,6 +265,26 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
     const notifPesan = `Permintaan koreksi Anda untuk Permohonan ${result.nomorPelayanan} (${result.jenisKoreksi.replace(/_/g, ' ')}) telah DISETUJUI oleh Supervisor.${catatan ? ` Catatan: "${catatan}"` : ''}`;
     await createInAppNotification(result.pengajuId, 'Koreksi Disetujui', notifPesan, { koreksiId });
 
+    // If KEMBALIKAN_KE_PENGARSIP, notify all PENGARSIP users so they know re-scan is requested
+    if (result.jenisKoreksi === 'KEMBALIKAN_KE_PENGARSIP') {
+      try {
+        const pengarsipUsers = await prisma.user.findMany({
+          where: { role: 'PENGARSIP' },
+          select: { id: true }
+        });
+        for (const u of pengarsipUsers) {
+          await createInAppNotification(
+            u.id,
+            'Permohonan Dikembalikan untuk Re-upload',
+            `Permohonan No. Pelayanan ${result.nomorPelayanan} dikembalikan oleh Pengirim untuk di-upload ulang scan PDF-nya.${catatan ? ` Catatan: "${catatan}"` : ''}`,
+            { koreksiId }
+          );
+        }
+      } catch (err) {
+        console.error('[NOTIF-PENGARSIP-ERR]', err);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {

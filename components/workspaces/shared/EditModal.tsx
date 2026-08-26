@@ -1224,9 +1224,9 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         type="button"
                         onClick={handleAddOwner}
                         disabled={loading}
-                        className="px-2.5 py-1 text-xs font-bold text-[#00a389] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-emerald-200/60"
+                        className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Tambah Pemilik Baru
+                        <Plus className="w-4 h-4 stroke-[3]" /> Tambah Pemilik Baru
                       </button>
                     </div>
                   )}

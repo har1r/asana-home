@@ -1592,33 +1592,33 @@ export default function PenelitiWorkspace() {
                                   }`} />
                               </button>
                             </td>
-                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
-                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
                             </td>
                             <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
                               <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
                                 <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
                               </div>
                             </td>
-                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">{nopolDate}</td>
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
                             <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                               {item.tanggalPenyelesaian ? (
                                 <div className="flex items-center gap-1">
                                   {isOverdue(item.tanggalPenyelesaian, item.status) && (
                                     <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                   )}
-                                  <span className={`text-[11px] font-sans font-bold capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                  <span className={`text-[11px] font-sans font-bold uppercase ${isOverdue(item.tanggalPenyelesaian, item.status)
                                     ? 'text-rose-600 font-bold'
                                     : 'text-slate-600'
                                     }`}>
-                                    {penyelesaianDate}
+                                    {penyelesaianDate.toUpperCase()}
                                   </span>
                                 </div>
                               ) : "—"}
                             </td>
                             <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight">
+                                <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
                                   {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchSubmittedQuery)}
                                 </span>
                                 <button
@@ -1636,7 +1636,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap">
+                                <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
                                   {highlightText(formatNop(item.nop), searchSubmittedQuery)}
                                 </span>
                                 <button
@@ -1677,7 +1677,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 font-sans">
                               <span
-                                className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide"
+                                className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
                                 title={item.jenisPermohonan.replace(/_/g, ' ')}
                               >
                                 {getAbbreviatedJenis(item.jenisPermohonan)}
@@ -1685,7 +1685,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 text-center font-sans">
                               <div className="flex items-center justify-center gap-1">
-                                <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
                                   {getStatusLabel(item.status)}
                                 </span>
                               </div>
@@ -2276,33 +2276,33 @@ export default function PenelitiWorkspace() {
                                             }`} />
                                         </button>
                                       </td>
-                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
-                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
+                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
                                       </td>
                                       <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
                                         <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
                                           <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
                                         </div>
                                       </td>
-                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">{nopolDate}</td>
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
                                       <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                                         {item.tanggalPenyelesaian ? (
                                           <div className="flex items-center gap-1">
                                             {isOverdue(item.tanggalPenyelesaian, item.status) && (
                                               <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                             )}
-                                            <span className={`text-[11px] font-sans font-bold capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                            <span className={`text-[11px] font-sans font-bold uppercase ${isOverdue(item.tanggalPenyelesaian, item.status)
                                               ? 'text-rose-600 font-bold'
                                               : 'text-slate-600'
                                               }`}>
-                                              {penyelesaianDate}
+                                              {penyelesaianDate.toUpperCase()}
                                             </span>
                                           </div>
                                         ) : "—"}
                                       </td>
                                       <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight">
+                                          <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
                                             {item.nomorPelayanan || item.nomorPermohonan}
                                           </span>
                                           <button
@@ -2320,7 +2320,7 @@ export default function PenelitiWorkspace() {
                                             )}
                                           </button>
                                           {isFrozen && (
-                                            <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none animate-fadeIn">
+                                            <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none animate-fadeIn">
                                               <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                                               Frozen
                                             </span>
@@ -2329,7 +2329,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap">
+                                          <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
                                             {formatNop(item.nop)}
                                           </span>
                                           <button
@@ -2376,7 +2376,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 font-sans">
                                         <span
-                                          className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide"
+                                          className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
                                           title={item.jenisPermohonan.replace(/_/g, ' ')}
                                         >
                                           {getAbbreviatedJenis(item.jenisPermohonan)}
@@ -2384,7 +2384,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 text-center font-sans">
                                         <div className="flex items-center justify-center gap-1">
-                                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
                                             {getStatusLabel(item.status)}
                                           </span>
                                         </div>

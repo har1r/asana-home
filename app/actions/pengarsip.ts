@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
+import { uploadToGoogleDrive } from "@/lib/googleDrive";
 
 /**
  * Action: Get all bundles that Pengarsip can work on.
@@ -48,9 +49,8 @@ export async function getDigitizationBundles() {
     const allPermohonan = await prisma.permohonan.findMany({
       include: {
         dataBaru: true,
-        arsipDigital: {
-          where: { status: "ACTIVE" }
-        }
+        arsipDigital: true,
+        permintaanKoreksi: true
       }
     });
 
@@ -161,19 +161,35 @@ export async function uploadArsipDigital(formData: FormData) {
   }
 
   try {
-    // Ensure directory exists — disk check outside of transaction
+    // 1. Try uploading to Google Drive if credentials exist
+    const suffix = dataBaruId ? `_db_${dataBaruId}` : "";
+    const fileName = `arsip_${permohonanId}${suffix}_v${Date.now()}.pdf`;
+    let urlBlob = `/uploads/${fileName}`;
+
+    try {
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        console.log('[GOOGLE-DRIVE-UPLOAD] Mengunggah file ke Google Drive...', fileName);
+        const driveResult = await uploadToGoogleDrive({
+          buffer,
+          fileName,
+          mimeType: file.type || "application/pdf",
+        });
+        if (driveResult.webViewLink) {
+          urlBlob = driveResult.webViewLink;
+          console.log('[GOOGLE-DRIVE-SUCCESS] Berhasil diunggah ke Google Drive:', urlBlob);
+        }
+      }
+    } catch (gDriveErr: any) {
+      console.warn('[GOOGLE-DRIVE-FALLBACK] Gagal mengunggah ke Google Drive, menggunakan penyimpanan lokal disk:', gDriveErr?.message || gDriveErr);
+    }
+
+    // 2. Write file locally as backup / local storage
     const uploadsDir = path.join(process.cwd(), "public", "uploads");
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-
-    // Write file locally — disk write outside of transaction
-    const suffix = dataBaruId ? `_db_${dataBaruId}` : "";
-    const fileName = `arsip_${permohonanId}${suffix}_v${Date.now()}.pdf`;
     const filePath = path.join(uploadsDir, fileName);
     await fs.promises.writeFile(filePath, buffer);
-    
-    const urlBlob = `/uploads/${fileName}`;
 
     const result = await prisma.$transaction(async (tx) => {
       // Fetch the permohonan and its bundle

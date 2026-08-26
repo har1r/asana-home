@@ -51,6 +51,21 @@ import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
 
 type ViewMode = "bundle" | "arsip";
 
+const getShortBundleNum = (bundleNum: string) => {
+  if (!bundleNum) return '—';
+  const parts = bundleNum.split('/');
+  return parts.length >= 2 ? parts[1] : bundleNum;
+};
+
+const cleanPecahanSuffix = (name?: string | null): string => {
+  if (!name) return '';
+  return name
+    .replace(/\s*\([^)]*pecahan[^)]*\)/gi, '')
+    .replace(/\s*\(Pecahan\s*\d+\)/gi, '')
+    .replace(/\s*Pecahan\s*\d+/gi, '')
+    .trim();
+};
+
 /** Skeleton komponen dasar KPI Strip & Tabs untuk PengarsipWorkspace */
 function PengarsipBaseHeaderSkeleton() {
   return (
@@ -361,6 +376,9 @@ export default function PengarsipWorkspace() {
 
   const [searchArsipQuery, setSearchArsipQuery] = useState<string>("");
   const [isArsipSearchFocused, setIsArsipSearchFocused] = useState<boolean>(false);
+  const [arsipDisplayMode, setArsipDisplayMode] = useState<'berkas' | 'pemohon'>('berkas');
+  const [filterArsipJenisLayanan, setFilterArsipJenisLayanan] = useState<string>("ALL");
+  const searchArsipInputRef = useRef<HTMLInputElement | null>(null);
 
   // Pagination State
   const [currentBundlePage, setCurrentBundlePage] = useState<number>(1);
@@ -396,6 +414,17 @@ export default function PengarsipWorkspace() {
     return () => setMounted(false);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (viewMode === 'arsip' && e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchArsipInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode]);
+
   const handleCopy = useCallback((e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
@@ -403,8 +432,8 @@ export default function PengarsipWorkspace() {
     setTimeout(() => setCopiedText(null), 1000);
   }, []);
 
-  // Fetch semua bundle digitalisasi
-  const fetchBundles = useCallback(async (isManualRefresh = false) => {
+  // Fetch semua data bundle & detail bundle aktif jika ada
+  const fetchData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
     else setListLoading(true);
     setError("");
@@ -419,17 +448,29 @@ export default function PengarsipWorkspace() {
       } else {
         setError('error' in res && res.error ? res.error : "Gagal memuat daftar bundle.");
       }
+
+      if (selectedBundle?.id) {
+        const detailRes = await getBundleDetails(selectedBundle.id);
+        if (detailRes.success && 'bundle' in detailRes && detailRes.bundle) {
+          setSelectedBundle(detailRes.bundle);
+          setPermohonanList(detailRes.bundle.permohonan || []);
+        }
+      }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan saat memuat data.");
     } finally {
       setListLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [selectedBundle?.id]);
+
+  const fetchBundles = useCallback(async (isManualRefresh = false) => {
+    await fetchData(isManualRefresh);
+  }, [fetchData]);
 
   useEffect(() => {
-    fetchBundles();
-  }, [fetchBundles]);
+    fetchData();
+  }, []);
 
   // Fetch rincian bundle ketika selectedBundle berubah
   const fetchBundleDetail = useCallback(async (bundleId: string) => {
@@ -583,11 +624,51 @@ export default function PengarsipWorkspace() {
     return counts;
   }, [bundlesList]);
 
+  // Count total Pemohon in the currently selected bundle
+  const bundlePemohonCount = useMemo(() => {
+    if (!selectedBundle?.permohonan) return 0;
+    let count = 0;
+    selectedBundle.permohonan.forEach((p: any) => {
+      if (p.jenisPermohonan === 'MUTASI_SEBAGIAN' && p.dataBaru && p.dataBaru.length > 0) {
+        count += p.dataBaru.length;
+      } else {
+        count += 1;
+      }
+    });
+    return count;
+  }, [selectedBundle]);
+
+  // Helper to check if a permohonan needs re-upload after being returned by Pengirim
+  const checkPermohonanNeedsReupload = useCallback((p: any, targetDataBaruId?: string | null) => {
+    if (p.status !== "BUNDLED") return false;
+    const archives = p.arsipDigital || [];
+    const koreksis = p.permintaanKoreksi || [];
+
+    const hasApprovedKoreksi = koreksis.some(
+      (pk: any) => pk.jenisKoreksi === "KEMBALIKAN_KE_PENGARSIP" && pk.status === "APPROVED"
+    );
+
+    if (targetDataBaruId) {
+      const fractionArchives = archives.filter((ad: any) => ad.dataBaruId === targetDataBaruId);
+      const hasInactive = fractionArchives.some((ad: any) => ad.status === "SUPERSEDED" || ad.status === "INVALIDATED");
+      return hasInactive || (hasApprovedKoreksi && fractionArchives.length > 0);
+    }
+
+    const hasInactive = archives.some((ad: any) => ad.status === "SUPERSEDED" || ad.status === "INVALIDATED");
+    return hasInactive || (hasApprovedKoreksi && archives.length > 0);
+  }, []);
+
+  // Helper to check if a bundle contains any returned permohonans needing re-upload
+  const bundleHasReupload = useCallback((b: any) => {
+    return (b.permohonan || []).some((p: any) => checkPermohonanNeedsReupload(p));
+  }, [checkPermohonanNeedsReupload]);
+
   // Counts for Pemohon KPI Cards (System-wide, accurately counting Mutasi Sebagian fractions)
   const kpiCounts = useMemo(() => {
     let totalPemohon = 0;
     let sudahTerupload = 0;
     let belumDiupload = 0;
+    let perluReupload = 0;
 
     // Use allPermohonanList for system-wide KPI, or fallback to bundlesList permohonan
     const targetList = allPermohonanList.length > 0
@@ -595,9 +676,15 @@ export default function PengarsipWorkspace() {
       : bundlesList.flatMap(b => b.permohonan || []);
 
     targetList.forEach((p: any) => {
+      const isReupload = checkPermohonanNeedsReupload(p);
+
       if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
         p.dataBaru.forEach((db: any) => {
           totalPemohon++;
+          const fractionReupload = checkPermohonanNeedsReupload(p, db.id);
+          if (fractionReupload || isReupload) {
+            perluReupload++;
+          }
           const isUploaded = p.arsipDigital?.some((ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE");
           if (isUploaded) {
             sudahTerupload++;
@@ -607,6 +694,9 @@ export default function PengarsipWorkspace() {
         });
       } else {
         totalPemohon++;
+        if (isReupload) {
+          perluReupload++;
+        }
         const isUploaded = p.status === "ARCHIVED" || p.arsipDigital?.some((ad: any) => ad.status === "ACTIVE" && ad.dataBaruId === null);
         if (isUploaded) {
           sudahTerupload++;
@@ -616,8 +706,8 @@ export default function PengarsipWorkspace() {
       }
     });
 
-    return { totalPemohon, sudahTerupload, belumDiupload };
-  }, [allPermohonanList, bundlesList]);
+    return { totalPemohon, sudahTerupload, belumDiupload, perluReupload };
+  }, [allPermohonanList, bundlesList, checkPermohonanNeedsReupload]);
 
   // Filter Bundles List
   const filteredBundlesList = useMemo(() => {
@@ -631,26 +721,90 @@ export default function PengarsipWorkspace() {
         filterBundleJenisLayanan === "ALL" || b.jenisPermohonan === filterBundleJenisLayanan;
 
       const matchStatus =
-        filterBundleStatus === "ALL" || b.status === filterBundleStatus;
+        filterBundleStatus === "ALL"
+          ? true
+          : filterBundleStatus === "REUPLOAD"
+            ? bundleHasReupload(b)
+            : b.status === filterBundleStatus;
 
       return matchSearch && matchJenis && matchStatus;
     });
-  }, [bundlesList, searchBundleQuery, filterBundleJenisLayanan, filterBundleStatus]);
+  }, [bundlesList, searchBundleQuery, filterBundleJenisLayanan, filterBundleStatus, bundleHasReupload]);
+
+  // Process Arsip List according to Display Mode (berkas vs pemohon)
+  const processedArsipList = useMemo(() => {
+    if (arsipDisplayMode === 'pemohon') {
+      const result: any[] = [];
+      permohonanList.forEach((p) => {
+        if (p.jenisPermohonan === 'MUTASI_SEBAGIAN' && p.dataBaru && p.dataBaru.length > 0) {
+          p.dataBaru.forEach((db: any, idx: number) => {
+            result.push({
+              ...p,
+              isPecahanRow: true,
+              pecahanIndex: idx + 1,
+              totalPecahan: p.dataBaru.length,
+              displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || p.namaWajibPajak),
+              targetDataBaruId: db.id,
+              uniqueRowKey: `${p.id}-db-${idx}`
+            });
+          });
+        } else {
+          result.push({
+            ...p,
+            isPecahanRow: false,
+            displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+            uniqueRowKey: p.id
+          });
+        }
+      });
+      return result;
+    }
+
+    return permohonanList.map((p) => ({
+      ...p,
+      isPecahanRow: false,
+      displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+      uniqueRowKey: p.id
+    }));
+  }, [permohonanList, arsipDisplayMode]);
+
+  // Counts for Arsip Jenis Layanan Quick Filter Pills
+  const arsipJenisCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: processedArsipList.length,
+      MUTASI_SEBAGIAN: 0,
+      MUTASI_HABIS_UPDATE: 0,
+      MUTASI_HABIS_REGULER: 0,
+      OBJEK_PAJAK_BARU: 0,
+      PEMBETULAN: 0,
+      PENGAKTIFAN: 0,
+    };
+    processedArsipList.forEach(p => {
+      if (p.jenisPermohonan && counts[p.jenisPermohonan] !== undefined) {
+        counts[p.jenisPermohonan]++;
+      }
+    });
+    return counts;
+  }, [processedArsipList]);
 
   // Filter Permohonan Arsip List
   const filteredArsipList = useMemo(() => {
-    return permohonanList.filter((p) => {
+    return processedArsipList.filter((p) => {
       const q = searchArsipQuery.toLowerCase();
       const matchSearch =
         searchArsipQuery === "" ||
         (p.nomorPelayanan && p.nomorPelayanan.toLowerCase().includes(q)) ||
         (p.nomorPermohonan && p.nomorPermohonan.toLowerCase().includes(q)) ||
         (p.nop && p.nop.includes(q)) ||
-        (p.namaWajibPajak && p.namaWajibPajak.toLowerCase().includes(q));
+        (p.displayNamaWajibPajak && p.displayNamaWajibPajak.toLowerCase().includes(q)) ||
+        (p.penginput?.name && p.penginput.name.toLowerCase().includes(q));
 
-      return matchSearch;
+      const matchJenis =
+        filterArsipJenisLayanan === "ALL" || p.jenisPermohonan === filterArsipJenisLayanan;
+
+      return matchSearch && matchJenis;
     });
-  }, [permohonanList, searchArsipQuery]);
+  }, [processedArsipList, searchArsipQuery, filterArsipJenisLayanan]);
 
   // Pagination for Bundles
   const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
@@ -682,9 +836,37 @@ export default function PengarsipWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
 
+        {/* TOP-LEVEL ALERT BANNER FOR RETURNED PERMOHONAN */}
+        {kpiCounts.perluReupload > 0 && (
+          <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-3xs animate-fadeIn select-none">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500 text-white rounded-md shrink-0 shadow-2xs">
+                <RotateCcw className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-wider uppercase text-amber-900 flex items-center gap-1.5">
+                  <span>Perhatian: {kpiCounts.perluReupload} Pemohon Dikembalikan Pengirim</span>
+                  <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-amber-200 text-amber-900 rounded-md">Action Required</span>
+                </p>
+                <p className="text-[11px] text-amber-800 font-semibold leading-relaxed">
+                  Pengirim mengajukan pengembalian berkas untuk di-upload ulang scan PDF barunya setelah disetujui Supervisor.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setFilterBundleStatus('REUPLOAD'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
+              className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-md transition-all shadow-3xs cursor-pointer shrink-0 flex items-center gap-1.5 self-start sm:self-center"
+            >
+              <span>Filter Berkas Re-upload ({kpiCounts.perluReupload})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling) */}
         <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Metric 1: Total Pemohon */}
             <div
               onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
@@ -708,9 +890,9 @@ export default function PengarsipWorkspace() {
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-bold text-slate-500 capitalize">Sudah Terupload</span>
-                <span className="text-xl font-black font-mono text-[#008f78]">{kpiCounts.sudahTerupload}</span>
+                <span className="text-xl font-black font-mono text-slate-900">{kpiCounts.sudahTerupload}</span>
               </div>
-              <span className="text-xs font-black font-mono px-2 py-0.5 rounded-md border bg-emerald-50 text-[#008f78] border-emerald-200">
+              <span className="text-xs font-black font-mono px-2 py-0.5 rounded-md border bg-slate-100 text-slate-500 border-slate-200/80">
                 {kpiCounts.totalPemohon > 0 ? `${((kpiCounts.sudahTerupload / kpiCounts.totalPemohon) * 100).toFixed(0)}%` : '0%'}
               </span>
             </div>
@@ -718,14 +900,47 @@ export default function PengarsipWorkspace() {
             {/* Metric 3: Belum Diupload */}
             <div
               onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md hover:bg-slate-50 text-slate-600`}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-bold text-slate-500 capitalize">Belum Diupload</span>
-                <span className="text-xl font-black font-mono text-amber-600">{kpiCounts.belumDiupload}</span>
+                <span className="text-xl font-black font-mono text-slate-900">{kpiCounts.belumDiupload}</span>
               </div>
-              <span className="text-xs font-black font-mono px-2 py-0.5 rounded-md border bg-amber-50 text-amber-700 border-amber-200">
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
                 {kpiCounts.totalPemohon > 0 ? `${((kpiCounts.belumDiupload / kpiCounts.totalPemohon) * 100).toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+
+            {/* Metric 4: Dikembalikan / Re-upload */}
+            <div
+              onClick={() => { setFilterBundleStatus('REUPLOAD'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'REUPLOAD'
+                ? 'bg-amber-100/90 text-amber-900 font-bold'
+                : kpiCounts.perluReupload > 0
+                  ? 'bg-amber-50/70 hover:bg-amber-100/80 text-amber-800'
+                  : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize flex items-center gap-1">
+                  <span>Re-upload</span>
+                  {kpiCounts.perluReupload > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                  )}
+                </span>
+                <span className={`text-xl font-black font-mono ${kpiCounts.perluReupload > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                  {kpiCounts.perluReupload}
+                </span>
+              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'REUPLOAD'
+                ? 'bg-amber-500 text-white border-amber-500'
+                : kpiCounts.perluReupload > 0
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {kpiCounts.perluReupload > 0 ? `${kpiCounts.perluReupload} Berkas` : '0'}
               </span>
             </div>
           </div>
@@ -741,7 +956,7 @@ export default function PengarsipWorkspace() {
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
-            Daftar Bundle Digitalisasi
+            Pilih Bundle
           </button>
           <button
             type="button"
@@ -751,7 +966,7 @@ export default function PengarsipWorkspace() {
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
-            Daftar Berkas Arsip
+            Upload Arsip
           </button>
         </div>
 
@@ -864,12 +1079,35 @@ export default function PengarsipWorkspace() {
               ) : (
                 paginatedBundlesList.map((b) => {
                   const isSelected = selectedBundle?.id === b.id;
-                  const totalCount = (b.permohonan || []).reduce((acc: number, p: any) => {
-                    if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
-                      return acc + (p.dataBaru?.length || 0);
-                    }
-                    return acc + 1;
-                  }, 0);
+                  const { totalCount, uploadedCount } = (b.permohonan || []).reduce(
+                    (acc: { totalCount: number; uploadedCount: number }, p: any) => {
+                      const activeArchives = (p.arsipDigital || []).filter((ad: any) => ad.status === "ACTIVE");
+
+                      if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
+                        const totalPecahan = p.dataBaru.length;
+                        let uploadedPecahan = 0;
+                        if (p.status === "ARCHIVED") {
+                          uploadedPecahan = totalPecahan;
+                        } else {
+                          p.dataBaru.forEach((db: any) => {
+                            const hasUpload = activeArchives.some((ad: any) => ad.dataBaruId === db.id);
+                            if (hasUpload) uploadedPecahan++;
+                          });
+                        }
+                        return {
+                          totalCount: acc.totalCount + totalPecahan,
+                          uploadedCount: acc.uploadedCount + uploadedPecahan,
+                        };
+                      } else {
+                        const isUploaded = p.status === "ARCHIVED" || activeArchives.length > 0;
+                        return {
+                          totalCount: acc.totalCount + 1,
+                          uploadedCount: acc.uploadedCount + (isUploaded ? 1 : 0),
+                        };
+                      }
+                    },
+                    { totalCount: 0, uploadedCount: 0 }
+                  );
                   const isAllUploaded = b.permohonan?.length > 0 && b.permohonan.every((p: any) => p.status === "ARCHIVED");
 
                   const pengarsipName = (() => {
@@ -906,11 +1144,15 @@ export default function PengarsipWorkspace() {
                     return <Unlock className={iconClass} />;
                   };
 
+                  const hasReupload = bundleHasReupload(b);
+
                   return (
                     <div
                       key={b.id}
                       onClick={() => handleSelectBundle(b)}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[130px] ${isSelected
+                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[130px] ${hasReupload
+                        ? "bg-amber-50/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md"
+                        : isSelected
                           ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                           : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
                         }`}
@@ -920,9 +1162,19 @@ export default function PengarsipWorkspace() {
                         <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
                           {b.nomorBundle}
                         </span>
+
+                        {hasReupload && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8.5px] font-black uppercase bg-amber-500 text-white shadow-3xs select-none shrink-0"
+                            title="Terdapat permohonan dikembalikan yang perlu di-upload ulang"
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" />
+                            Re-upload
+                          </span>
+                        )}
                       </div>
 
-                      {/* Middle Row: Service Type Tag | Count Badge Centered Horizontally */}
+                      {/* Middle Row: Service Type Tag | Dynamic Count Badge Centered Horizontally */}
                       <div className="flex items-center justify-center gap-2.5 w-full py-1">
                         <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, " ") : "Umum"}>
                           {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : "—"}
@@ -931,9 +1183,17 @@ export default function PengarsipWorkspace() {
                         {/* Thin Vertical Line Separator */}
                         <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
 
-                        {/* Count Badge */}
-                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs" title={`${totalCount} Berkas`}>
-                          {totalCount} Pemohon
+                        {/* Dynamic Count Badge */}
+                        <span
+                          className={`flex items-center justify-center text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs transition-all ${uploadedCount === totalCount && totalCount > 0
+                            ? "bg-[#00a389]"
+                            : uploadedCount > 0
+                              ? "bg-amber-500"
+                              : "bg-[#f25c54]"
+                            }`}
+                          title={`${uploadedCount} dari ${totalCount} Pemohon Terupload`}
+                        >
+                          {uploadedCount}/{totalCount} Pemohon
                         </span>
                       </div>
 
@@ -952,10 +1212,10 @@ export default function PengarsipWorkspace() {
                         </div>
 
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
-                            ? 'bg-slate-900 text-slate-100 border-slate-800'
-                            : b.status === 'IN_MANIFEST'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          ? 'bg-slate-900 text-slate-100 border-slate-800'
+                          : b.status === 'IN_MANIFEST'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           }`}>
                           {renderStatusIcon()}
                           <span>{getStatusLabel(b.status)}</span>
@@ -1032,59 +1292,98 @@ export default function PengarsipWorkspace() {
 
         {/* ==================== VIEW MODE: DAFTAR ARSIP ==================== */}
         {viewMode === "arsip" && (
-          <div className="bg-white border border-slate-200/90 rounded-md shadow-3xs flex flex-col overflow-hidden min-h-[400px]">
+          <div className="flex flex-col gap-2.5">
             {selectedBundle ? (
-              <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
+              <div className="flex flex-col gap-2.5 animate-fadeIn">
 
-                {/* Bundle Header Bar */}
-                <div className="px-5 py-3.5 border-b border-slate-200/80 bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 select-none">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchTab("bundle")}
-                      className="h-10 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-[#008f78] hover:bg-emerald-100 font-bold text-xs transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
-                    >
-                      <span className="font-mono font-black">{selectedBundle.nomorBundle}</span>
-                      <span className="text-[10px] font-black bg-white px-1.5 py-0.2 rounded border border-emerald-200">
-                        {(selectedBundle.permohonan || []).length} Berkas
-                      </span>
-                    </button>
-                  </div>
+                {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS CARD */}
+                <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
 
-                  <div className="flex items-center gap-2">
-                    {/* Search Input for Arsip */}
-                    <div className="relative w-full md:w-[320px]">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                    {/* Left Side: Search Bar (Compact Width) */}
+                    <div className="relative w-full md:w-96">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                       <input
+                        ref={searchArsipInputRef}
                         type="text"
                         value={searchArsipQuery}
-                        onChange={(e) => setSearchArsipQuery(e.target.value)}
+                        onChange={(e) => { setSearchArsipQuery(e.target.value); setCurrentArsipPage(1); }}
                         onFocus={() => setIsArsipSearchFocused(true)}
                         onBlur={() => setIsArsipSearchFocused(false)}
-                        className="w-full h-10 pl-9 pr-8 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
-                        placeholder="Cari No. Pelayanan, NOP, Nama..."
+                        className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
+                        placeholder="Cari No. Pelayanan, NOP, Nama Pemohon..."
                       />
-                      {searchArsipQuery && (
-                        <button onClick={() => setSearchArsipQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100">
+                      {searchArsipQuery ? (
+                        <button
+                          type="button"
+                          onClick={() => { setSearchArsipQuery(''); setCurrentArsipPage(1); }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="Hapus Pencarian"
+                        >
                           <X className="w-3.5 h-3.5" />
                         </button>
+                      ) : (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 pointer-events-none">
+                          <kbd className="px-1.5 py-0.5 text-[9px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 rounded font-sans">
+                            /
+                          </kbd>
+                        </div>
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => fetchBundleDetail(selectedBundle.id)}
-                      disabled={loading}
-                      className="p-2.5 h-10 w-10 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
-                      title="Refresh Rincian Bundle"
-                    >
-                      <RefreshCw className={`w-4 h-4 transition-all duration-300 ${loading ? 'animate-spin text-[#00a389]' : ''}`} />
-                    </button>
+                    {/* Right Side: Active Short Bundle Badge + Mode Switcher ('Nopel' vs 'Pemohon') + Refresh */}
+                    <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                      {/* Short Bundle Badge Box (matching Peneliti Workspace) */}
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchTab("bundle")}
+                        className="h-10 px-3 rounded-md border border-emerald-200 bg-emerald-50 text-[#008f78] hover:bg-emerald-100 font-bold text-xs transition-all cursor-pointer shadow-3xs flex items-center justify-center shrink-0 font-mono"
+                        title={`Bundle Aktif: ${selectedBundle?.nomorBundle || '—'}. Klik untuk berpindah bundle.`}
+                      >
+                        <span className="font-mono font-black">{selectedBundle ? getShortBundleNum(selectedBundle.nomorBundle) : '—'}</span>
+                      </button>
+
+                      {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
+                      <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
+                        <button
+                          type="button"
+                          onClick={() => { setArsipDisplayMode('berkas'); setCurrentArsipPage(1); }}
+                          className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'berkas'
+                            ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
+                        >
+                          <span>Nopel</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setArsipDisplayMode('pemohon'); setCurrentArsipPage(1); }}
+                          className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'pemohon'
+                            ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                        >
+                          <span>Pemohon</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => fetchData(true)}
+                        disabled={isRefreshing || listLoading}
+                        className="h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
+                        title="Refresh Data"
+                      >
+                        <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Table Canvas */}
-                <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                {/* TIER 3: DATA CANVAS & ENTERPRISE TABLE CARD */}
+                <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[400px]">
                   <div className="overflow-x-auto scrollbar-thin flex-1">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -1107,16 +1406,20 @@ export default function PengarsipWorkspace() {
                       <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700 bg-white">
                         {paginatedArsipList.length === 0 ? (
                           <tr>
-                            <td colSpan={13} className="py-14 text-center text-slate-400 italic">
+                            <td colSpan={13} className="py-14 text-center text-slate-400 font-bold italic">
                               Bundle tidak memiliki permohonan yang cocok.
                             </td>
                           </tr>
                         ) : (
                           paginatedArsipList.map((p: any, index: number) => {
                             const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
-                            const needsReUpload = p.status === "BUNDLED" && p.arsipDigital?.some((ad: any) => ad.status === "SUPERSEDED" && ad.dataBaruId === null);
+                            const activeArchives = (p.arsipDigital || []).filter((ad: any) => ad.status === "ACTIVE");
+                            const activeArchive = p.targetDataBaruId
+                              ? activeArchives.find((ad: any) => ad.dataBaruId === p.targetDataBaruId)
+                              : (activeArchives.find((ad: any) => ad.dataBaruId === null) || activeArchives[activeArchives.length - 1] || activeArchives[0]);
+
+                            const needsReUpload = checkPermohonanNeedsReupload(p, p.targetDataBaruId);
                             const isArchived = p.status === "ARCHIVED";
-                            const activeArchive = p.arsipDigital?.find((ad: any) => ad.status === "ACTIVE" && ad.dataBaruId === null);
                             const itemNumber = (activeArsipPage - 1) * itemsPerArsipPage + index + 1;
 
                             const nopolDate = p.tanggalNoPelayanan
@@ -1128,9 +1431,9 @@ export default function PengarsipWorkspace() {
 
                             return (
                               <tr
-                                key={p.id}
+                                key={p.uniqueRowKey || p.id}
                                 onClick={() => setGlobalSelectedRequest(p)}
-                                className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-slate-700 ${isFrozen ? "bg-amber-50/20" : ""
+                                className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-slate-700 ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : needsReUpload ? "bg-amber-50/50 border-l-4 border-l-amber-500" : isFrozen ? "bg-amber-50/20" : ""
                                   }`}
                               >
                                 <td className="py-3 px-4 text-center text-xs font-bold text-slate-400 font-mono">
@@ -1147,52 +1450,53 @@ export default function PengarsipWorkspace() {
                                     title={p.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
                                   >
                                     <Star className={`w-4 h-4 transition-all duration-200 ${p.isFavorite
-                                        ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
-                                        : 'text-slate-300'
+                                      ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
+                                      : 'text-slate-300'
                                       }`} />
                                   </button>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-semibold text-slate-500 font-mono whitespace-nowrap">
-                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
+                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
                                 </td>
-                                <td className="py-3 px-4 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
+                                <td className="py-3 px-4 text-slate-700 text-xs font-bold font-sans whitespace-nowrap uppercase">
                                   <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                    <span className="truncate max-w-[130px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
+                                    <span className="truncate max-w-[130px] uppercase font-sans">{p.penginput?.name || "Petugas Input"}</span>
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-semibold text-slate-500 whitespace-nowrap">{nopolDate}</td>
+                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
 
-                                <td className="py-3 px-4 whitespace-nowrap">
+                                <td className="py-3 px-4 whitespace-nowrap font-sans">
                                   {p.tanggalPenyelesaian ? (
                                     <div className="flex items-center gap-1">
                                       {isOverdue(p.tanggalPenyelesaian, p.status) && (
                                         <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                       )}
-                                      <span className={`text-xs font-semibold ${isOverdue(p.tanggalPenyelesaian, p.status)
-                                          ? 'text-rose-600 font-bold'
-                                          : 'text-slate-500'
+                                      <span className={`text-xs font-sans font-bold uppercase ${isOverdue(p.tanggalPenyelesaian, p.status)
+                                        ? 'text-rose-600 font-bold'
+                                        : 'text-slate-600'
                                         }`}>
-                                        {penyelesaianDate}
+                                        {penyelesaianDate.toUpperCase()}
                                       </span>
                                     </div>
                                   ) : "—"}
                                 </td>
 
-                                <td className="py-3 px-4 min-w-[150px] group/cell relative">
+                                <td className="py-3 px-4 min-w-[150px] group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs font-bold text-slate-800 font-mono tracking-tight">
+                                    <span className="text-xs font-bold text-slate-700 font-sans tracking-tight uppercase">
                                       {p.nomorPelayanan || p.nomorPermohonan}
                                     </span>
                                     {isFrozen && (
-                                      <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
+                                      <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
                                         <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                                         Frozen
                                       </span>
                                     )}
-                                    {p.jenisPermohonan !== "MUTASI_SEBAGIAN" && needsReUpload && !isFrozen && (
-                                      <span className="text-[8px] font-extrabold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md select-none">
+                                    {needsReUpload && !isFrozen && (
+                                      <span className="text-[8.5px] font-black uppercase bg-amber-500 text-white px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-3xs select-none">
+                                        <RotateCcw className="w-2.5 h-2.5 shrink-0" />
                                         Re-upload
                                       </span>
                                     )}
@@ -1210,9 +1514,9 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative">
+                                <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-xs font-semibold text-slate-600 font-mono whitespace-nowrap">
+                                    <span className="text-xs font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
                                       {formatNop(p.nop)}
                                     </span>
                                     <button
@@ -1229,17 +1533,22 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 group/cell relative">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-slate-800 whitespace-nowrap uppercase">
-                                      {p.namaWajibPajak.toUpperCase()}
+                                <td className="py-3 px-4 group/cell relative font-sans">
+                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
+                                      {(p.displayNamaWajibPajak || p.namaWajibPajak).toUpperCase()}
                                     </span>
+                                    {p.isPecahanRow && (
+                                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                        #{p.pecahanIndex}/{p.totalPecahan}
+                                      </span>
+                                    )}
                                     <button
-                                      onClick={(e) => handleCopy(e, p.namaWajibPajak)}
+                                      onClick={(e) => handleCopy(e, p.displayNamaWajibPajak || p.namaWajibPajak)}
                                       className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
                                       title="Salin Nama Pemohon"
                                     >
-                                      {copiedText === p.namaWajibPajak ? (
+                                      {copiedText === (p.displayNamaWajibPajak || p.namaWajibPajak) ? (
                                         <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
                                       ) : (
                                         <Copy className="w-3 h-3" />
@@ -1248,30 +1557,30 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 font-sans">
                                   <span
-                                    className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded capitalize font-sans tracking-wide select-none"
+                                    className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide select-none"
                                     title={p.jenisPermohonan?.replace(/_/g, " ")}
                                   >
                                     {getAbbreviatedJenis(p.jenisPermohonan)}
                                   </span>
                                 </td>
 
-                                <td className="py-3 px-4 text-center">
+                                <td className="py-3 px-4 text-center font-sans">
                                   <div className="flex items-center justify-center">
-                                    <span className={`inline-block text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${getStatusBadgeClass(p.status)}`}>
+                                    <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase font-sans ${getStatusBadgeClass(p.status)}`}>
                                       {getStatusLabel(p.status)}
                                     </span>
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-semibold text-slate-500 font-mono whitespace-nowrap">
+                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
                                   {activeArchive?.createdAt
-                                    ? new Date(activeArchive.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    ? new Date(activeArchive.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
                                     : '—'}
                                 </td>
 
-                                <td className="py-3 px-4 text-center">
+                                <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-center gap-1.5">
                                     {isFrozen ? (
                                       <span className="text-[9px] font-extrabold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap select-none">
@@ -1279,16 +1588,17 @@ export default function PengarsipWorkspace() {
                                       </span>
                                     ) : (
                                       <>
-                                        {p.jenisPermohonan === "MUTASI_SEBAGIAN" ? (
+                                        {arsipDisplayMode === 'berkas' && p.jenisPermohonan === "MUTASI_SEBAGIAN" ? (
                                           <button
+                                            type="button"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setFractionTargetPermohonan(p);
                                               setShowFractionsModal(true);
                                             }}
                                             className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 border hover:scale-105 active:scale-95 ${isArchived
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                                : "bg-[#00a389]/10 text-[#008f78] border-[#00a389]/20 hover:bg-[#00a389]/20"
+                                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                              : "bg-[#00a389]/10 text-[#008f78] border-[#00a389]/20 hover:bg-[#00a389]/20"
                                               }`}
                                             title="Kelola berkas pecahan (Mutasi Sebagian)"
                                           >
@@ -1299,15 +1609,16 @@ export default function PengarsipWorkspace() {
                                             <input
                                               type="file"
                                               accept=".pdf"
-                                              ref={(el) => { fileInputRefs.current[p.id] = el; }}
-                                              onChange={(e) => handleUploadFile(p.id, e)}
+                                              ref={(el) => { fileInputRefs.current[p.uniqueRowKey || p.id] = el; }}
+                                              onChange={(e) => handleUploadFile(p.id, e, p.targetDataBaruId)}
                                               className="hidden"
                                               disabled={isFrozen || loading}
                                             />
 
                                             {p.status === "BUNDLED" && needsReUpload && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.id); }}
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.uniqueRowKey || p.id); }}
                                                 disabled={loading}
                                                 className="p-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-3xs transition-all cursor-pointer flex items-center justify-center shrink-0"
                                                 title="Re-upload arsip PDF baru"
@@ -1318,7 +1629,8 @@ export default function PengarsipWorkspace() {
 
                                             {p.status === "BUNDLED" && !needsReUpload && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.id); }}
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.uniqueRowKey || p.id); }}
                                                 disabled={loading}
                                                 className="p-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-3xs transition-all cursor-pointer flex items-center justify-center shrink-0"
                                                 title="Unggah arsip PDF"
@@ -1342,7 +1654,8 @@ export default function PengarsipWorkspace() {
 
                                             {isArchived && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.id); }}
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); triggerFileInput(p.uniqueRowKey || p.id); }}
                                                 disabled={loading}
                                                 className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
                                                 title="Ganti file arsip"
@@ -1354,6 +1667,7 @@ export default function PengarsipWorkspace() {
                                         )}
 
                                         <button
+                                          type="button"
                                           onClick={(e) => { e.stopPropagation(); openCorrectionModal(p); }}
                                           disabled={loading}
                                           className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
@@ -1374,12 +1688,32 @@ export default function PengarsipWorkspace() {
                   </div>
 
                   {/* Pagination Footer */}
-                  <div className="px-5 py-3 border-t border-slate-200/90 bg-slate-50 flex items-center justify-between mt-auto select-none">
-                    <span className="text-[11px] font-semibold text-slate-500 font-sans">
-                      {permohonanList.length > 0
-                        ? `Menampilkan ${((activeArsipPage - 1) * itemsPerArsipPage) + 1}–${Math.min(activeArsipPage * itemsPerArsipPage, permohonanList.length)} dari ${permohonanList.length} berkas`
-                        : "Tidak ada data"}
-                    </span>
+                  <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-semibold text-slate-500 font-sans">
+                        {filteredArsipList.length > 0
+                          ? `Menampilkan ${((activeArsipPage - 1) * itemsPerArsipPage) + 1}–${Math.min(activeArsipPage * itemsPerArsipPage, filteredArsipList.length)} dari ${filteredArsipList.length} ${arsipDisplayMode === 'pemohon' ? 'entri pemohon' : 'berkas'}`
+                          : "Tidak ada data"}
+                      </span>
+                      {/* Items per page switcher */}
+                      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shadow-3xs">
+                        {[10, 20, 50].map(n => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => { setItemsPerArsipPage(n); setCurrentArsipPage(1); }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerArsipPage === n
+                              ? "bg-[#00a389] text-white shadow-3xs font-extrabold"
+                              : "text-slate-500 hover:text-slate-700"
+                              }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                        <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
+                      </div>
+                    </div>
+
                     {totalArsipPages > 1 && (
                       <div className="flex items-center gap-1">
                         <button
@@ -1418,7 +1752,7 @@ export default function PengarsipWorkspace() {
               </div>
             ) : (
               /* Empty state — belum ada bundle dipilih */
-              <div className="flex-1 flex flex-col items-center justify-center py-28 px-8 text-center select-none">
+              <div className="bg-white border border-slate-200/90 rounded-md shadow-3xs flex flex-col items-center justify-center py-28 px-8 text-center select-none">
                 <div className="w-14 h-14 bg-[#00a389]/10 border border-[#00a389]/20 rounded-2xl flex items-center justify-center mb-4 shadow-3xs">
                   <Boxes className="w-7 h-7 text-[#00a389]" />
                 </div>
@@ -1598,10 +1932,10 @@ export default function PengarsipWorkspace() {
                             Pecahan #{idx + 1}
                           </span>
                           <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-full border leading-none ${hasDbArchive
-                              ? 'bg-emerald-50 text-[#008f78] border-emerald-200'
-                              : dbNeedsReUpload
-                                ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
-                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            ? 'bg-emerald-50 text-[#008f78] border-emerald-200'
+                            : dbNeedsReUpload
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
                             }`}>
                             {hasDbArchive ? 'Diarsipkan' : dbNeedsReUpload ? 'Re-upload' : 'Belum Unggah'}
                           </span>

@@ -38,7 +38,9 @@ import { useSession } from "next-auth/react";
 import {
   getMonitoringPermohonan,
   completePermohonan,
-  ajukanBatalSelesai
+  ajukanBatalSelesai,
+  toggleVerifyDataBaru,
+  verifyAllDataBaru
 } from "@/app/actions/pemantau";
 import { useDashboard } from "@/context/DashboardContext";
 import { SkeletonBox, SkeletonText, SkeletonBadge } from "@/components/skeletons/SkeletonBase";
@@ -232,16 +234,80 @@ export default function PemantauWorkspace() {
       setCheckedPecahanMap({});
       return;
     }
-    if (selectedPermohonan.status === "COMPLETED" && selectedPermohonan.dataBaru) {
+    if (selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0) {
       const initialMap: Record<string, boolean> = {};
       selectedPermohonan.dataBaru.forEach((db: any, idx: number) => {
-        initialMap[db.id || `pecahan_${idx}`] = true;
+        const itemKey = db.id || `pecahan_${idx}`;
+        initialMap[itemKey] = selectedPermohonan.status === "COMPLETED" || !!db.isVerified;
       });
       setCheckedPecahanMap(initialMap);
     } else {
       setCheckedPecahanMap({});
     }
-  }, [selectedPermohonan?.id, selectedPermohonan?.status]);
+  }, [selectedPermohonan?.id, selectedPermohonan?.status, selectedPermohonan?.dataBaru]);
+
+  // Handler: Toggle individual DataBaru verification (persisted to Database)
+  const handleTogglePecahanVerified = async (dbId: string | undefined, itemKey: string, isChecked: boolean) => {
+    setCheckedPecahanMap(prev => ({ ...prev, [itemKey]: isChecked }));
+
+    // Optimistically update permohonanList & selectedPermohonan state so card progress updates instantly
+    setPermohonanList(prevList => prevList.map(p => {
+      if (p.id === selectedPermohonan?.id && p.dataBaru) {
+        const updatedDataBaru = p.dataBaru.map((db: any, idx: number) => {
+          const key = db.id || `pecahan_${idx}`;
+          return (db.id === dbId || key === itemKey) ? { ...db, isVerified: isChecked } : db;
+        });
+        return { ...p, dataBaru: updatedDataBaru };
+      }
+      return p;
+    }));
+
+    if (selectedPermohonan && selectedPermohonan.dataBaru) {
+      setSelectedPermohonan((prev: any) => {
+        if (!prev) return prev;
+        const updatedDataBaru = prev.dataBaru.map((db: any, idx: number) => {
+          const key = db.id || `pecahan_${idx}`;
+          return (db.id === dbId || key === itemKey) ? { ...db, isVerified: isChecked } : db;
+        });
+        return { ...prev, dataBaru: updatedDataBaru };
+      });
+    }
+
+    const targetId = dbId || itemKey;
+    if (targetId && !targetId.startsWith("pecahan_")) {
+      const res = await toggleVerifyDataBaru(targetId, isChecked);
+      if (!res.success) {
+        console.error("[TOGGLE-VERIFY-FAIL]", res.error);
+      }
+    }
+  };
+
+  // Handler: Verify all DataBaru entries (persisted to Database)
+  const handleVerifyAllPecahan = async () => {
+    if (!selectedPermohonan || !selectedPermohonan.dataBaru) return;
+
+    const allMap: Record<string, boolean> = {};
+    selectedPermohonan.dataBaru.forEach((db: any, idx: number) => {
+      allMap[db.id || `pecahan_${idx}`] = true;
+    });
+    setCheckedPecahanMap(allMap);
+
+    setPermohonanList(prevList => prevList.map(p => {
+      if (p.id === selectedPermohonan.id && p.dataBaru) {
+        const updatedDataBaru = p.dataBaru.map((db: any) => ({ ...db, isVerified: true }));
+        return { ...p, dataBaru: updatedDataBaru };
+      }
+      return p;
+    }));
+
+    setSelectedPermohonan((prev: any) => {
+      if (!prev) return prev;
+      const updatedDataBaru = (prev.dataBaru || []).map((db: any) => ({ ...db, isVerified: true }));
+      return { ...prev, dataBaru: updatedDataBaru };
+    });
+
+    await verifyAllDataBaru(selectedPermohonan.id);
+  };
 
   // Pagination states
   const [currentBundlePage, setCurrentBundlePage] = useState(1);
@@ -413,6 +479,25 @@ export default function PemantauWorkspace() {
     return counts;
   }, [uniqueBundlesList]);
 
+  // Counts for Pemantau Bundle Jenis Layanan Quick Filter Pills
+  const bundleJenisCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: uniqueBundlesList.length,
+      MUTASI_SEBAGIAN: 0,
+      MUTASI_HABIS_UPDATE: 0,
+      MUTASI_HABIS_REGULER: 0,
+      OBJEK_PAJAK_BARU: 0,
+      PEMBETULAN: 0,
+      PENGAKTIFAN: 0
+    };
+    uniqueBundlesList.forEach(b => {
+      if (b.jenisPermohonan && counts[b.jenisPermohonan] !== undefined) {
+        counts[b.jenisPermohonan]++;
+      }
+    });
+    return counts;
+  }, [uniqueBundlesList]);
+
   // Paginated lists
   const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
   const activeBundlePage = currentBundlePage > totalBundlePages ? 1 : currentBundlePage;
@@ -558,10 +643,10 @@ export default function PemantauWorkspace() {
         {/* ==================== TAB: DAFTAR BUNDLE ==================== */}
         {workspaceTab === "daftar-bundle" && (
           <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
-            {/* Header row */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
+            {/* Header Toolbar */}
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 select-none">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                {/* Search */}
+                {/* Search input for Bundles */}
                 <div className="relative w-full md:w-[403px] max-w-full">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                   <input
@@ -589,72 +674,51 @@ export default function PemantauWorkspace() {
                   )}
                 </div>
 
-                {/* Filter & Refresh controls */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="relative">
+                {/* Refresh button */}
+                <button
+                  onClick={() => fetchData(true)}
+                  disabled={isRefreshing}
+                  className="p-2.5 h-10 w-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                </button>
+              </div>
+
+              {/* Quick Filter Chips (Pilih Jenis Layanan Praktis dengan Angka Count) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 select-none">
+                {[
+                  { val: 'ALL', label: 'Semua' },
+                  { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                  { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                  { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                  { val: 'OBJEK_PAJAK_BARU', label: 'OP Baru' },
+                  { val: 'PEMBETULAN', label: 'Pembetulan' },
+                  { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+                ].map((item) => {
+                  const isActive = filterJenisLayanan === item.val;
+                  const count = bundleJenisCounts[item.val] ?? 0;
+                  return (
                     <button
+                      key={item.val}
                       type="button"
-                      onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                      className={`p-2.5 h-10 rounded-md border transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold ${filterJenisLayanan !== 'ALL'
-                        ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs'
+                      onClick={() => {
+                        setFilterJenisLayanan(item.val);
+                        setCurrentBundlePage(1);
+                      }}
+                      className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
+                        ? "bg-[#00a389] text-white border-[#00a389] shadow-3xs"
+                        : "bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90"
                         }`}
-                      title="Filter Jenis Layanan"
                     >
-                      <ListFilter className="w-4 h-4" />
-                      <span>Filter</span>
+                      <span>{item.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        }`}>
+                        {count}
+                      </span>
                     </button>
-
-                    {isFilterDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsFilterDropdownOpen(false)}
-                        />
-                        <div className="absolute right-0 mt-2 w-60 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50 animate-fadeIn text-xs text-slate-700 font-semibold flex flex-col gap-0.5">
-                          <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 capitalize tracking-wider border-b border-slate-100 mb-1 select-none">
-                            Pilih Jenis Layanan
-                          </div>
-                          {[
-                            { val: 'ALL', label: 'Semua Layanan' },
-                            { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
-                            { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
-                            { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
-                            { val: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
-                            { val: 'PEMBETULAN', label: 'Pembetulan' },
-                            { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
-                          ].map((item) => {
-                            const isSelected = filterJenisLayanan === item.val;
-                            return (
-                              <button
-                                key={item.val}
-                                type="button"
-                                onClick={() => {
-                                  setFilterJenisLayanan(item.val);
-                                  setCurrentBundlePage(1);
-                                  setIsFilterDropdownOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'text-[#008f78] bg-emerald-50/50 font-bold' : ''}`}
-                              >
-                                <span>{item.label}</span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-[#00a389]" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => fetchData(true)}
-                    disabled={isRefreshing}
-                    className="p-2.5 h-10 w-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
-                    title="Refresh Data"
-                  >
-                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
-                  </button>
-                </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -670,16 +734,28 @@ export default function PemantauWorkspace() {
                 paginatedBundles.map((b) => {
                   const isSelected = selectedBundle?.id === b.id;
 
-                  const totalPecahan = (b.permohonan || []).reduce((acc: number, p: any) => {
-                    if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
-                      return acc + (p.dataBaru?.length || 0);
-                    }
-                    return acc + 1;
-                  }, 0);
+                  let totalPemohon = 0;
+                  let completedPemohon = 0;
 
-                  const completedCount = (b.permohonan || []).filter((p: any) => p.status === "COMPLETED").length;
-                  const totalCount = (b.permohonan || []).length;
-                  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                  (b.permohonan || []).forEach((p: any) => {
+                    if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
+                      totalPemohon += p.dataBaru.length;
+                      if (p.status === "COMPLETED") {
+                        completedPemohon += p.dataBaru.length;
+                      } else {
+                        p.dataBaru.forEach((db: any) => {
+                          if (db.isVerified) completedPemohon++;
+                        });
+                      }
+                    } else {
+                      totalPemohon += 1;
+                      if (p.status === "COMPLETED") {
+                        completedPemohon += 1;
+                      }
+                    }
+                  });
+
+                  const progressPct = totalPemohon > 0 ? Math.round((completedPemohon / totalPemohon) * 100) : 0;
 
                   const pembuatName = b.peneliti?.name || "—";
                   const pembuatInitials = pembuatName !== "—"
@@ -696,19 +772,18 @@ export default function PemantauWorkspace() {
                         setSelectedBundle(b);
                         setSelectedPermohonan(null);
                       }}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none ${
-                        isSelected
+                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none ${isSelected
                           ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                           : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
-                      }`}
+                        }`}
                     >
                       {/* Top Row: Number & Count Badge */}
                       <div className="flex items-center justify-between gap-3 w-full">
                         <span className="text-xs font-bold text-slate-800 font-mono tracking-tight truncate block max-w-[170px]" title={b.nomorBundle}>
                           {b.nomorBundle}
                         </span>
-                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${totalPecahan} Berkas`}>
-                          {totalPecahan}
+                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${totalPemohon} Pemohon`}>
+                          {totalPemohon}
                         </span>
                       </div>
 
@@ -718,7 +793,7 @@ export default function PemantauWorkspace() {
                           <div className="flex items-center justify-between text-[9px] font-bold">
                             <span className="text-slate-400">Progres</span>
                             <span className={`${progressPct === 100 ? "text-[#008f78]" : "text-slate-500"}`}>
-                              {completedCount}/{totalCount} selesai
+                              {completedPemohon}/{totalPemohon} selesai
                             </span>
                           </div>
                           <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -738,8 +813,8 @@ export default function PemantauWorkspace() {
                           <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 select-none uppercase tracking-wide">
                             {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : 'Umum'}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[8px] font-extrabold border bg-emerald-50 text-emerald-800 border-emerald-200 uppercase tracking-wider select-none shrink-0">
-                            SENT
+                          <span className="px-2 py-0.5 rounded-full text-[8px] font-extrabold border bg-emerald-50 text-[#008f78] border-emerald-200 uppercase tracking-wider select-none shrink-0">
+                            TERKIRIM
                           </span>
                         </div>
                       </div>
@@ -900,11 +975,11 @@ export default function PemantauWorkspace() {
                   </div>
                 </div>
 
-                {/* 2-PANEL LAYOUT: PANEL KIRI (Daftar) & PANEL KANAN (Detail Permohonan) */}
-                <div className="flex flex-col lg:flex-row items-stretch gap-4 w-full min-h-[900px]">
+                {/* 2-PANEL LAYOUT: PANEL KIRI (Daftar Sticky) & PANEL KANAN (Detail Permohonan Alami) */}
+                <div className="flex flex-col lg:flex-row items-start gap-5 w-full">
 
-                  {/* PANEL KIRI: 1-Column List of Permohonan */}
-                  <div className="w-full lg:w-96 shrink-0 bg-white border border-slate-200/90 rounded-md p-4 shadow-3xs flex flex-col gap-3 min-h-[900px] max-h-[calc(100vh-220px)] overflow-hidden">
+                  {/* PANEL KIRI: 1-Column List of Permohonan (Sticky on Desktop) */}
+                  <div className="w-full lg:w-96 shrink-0 bg-white border border-slate-200/90 rounded-md p-4 shadow-3xs flex flex-col gap-3 lg:sticky lg:top-20">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                       <h4 className="text-xs font-black text-slate-700 capitalize tracking-wider select-none flex items-center gap-2">
                         <span>📋 Permohonan</span>
@@ -938,7 +1013,7 @@ export default function PemantauWorkspace() {
                       )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5 scrollbar-thin">
+                    <div className="flex-1 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 flex flex-col gap-1.5 scrollbar-thin">
                       {paginatedPantau.length === 0 ? (
                         <div className="py-8 text-center text-xs text-slate-400 font-medium italic select-none bg-slate-50 rounded-md border border-dashed border-slate-200">
                           Tidak ada berkas permohonan yang sesuai kriteria.
@@ -956,6 +1031,14 @@ export default function PemantauWorkspace() {
                             : p.status === 'COMPLETED'
                               ? { label: 'Selesai', bg: 'bg-emerald-500', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-800', badgeBorder: 'border-emerald-200', pulse: false }
                               : { label: 'Terarsip', bg: 'bg-sky-500', badgeBg: 'bg-sky-100', badgeText: 'text-sky-850', badgeBorder: 'border-sky-200', pulse: false };
+
+                          const pTotalPecahan = p.dataBaru?.length || 1;
+                          let pVerifiedPecahan = 0;
+                          if (p.status === 'COMPLETED') {
+                            pVerifiedPecahan = pTotalPecahan;
+                          } else if (p.dataBaru && p.dataBaru.length > 0) {
+                            pVerifiedPecahan = p.dataBaru.filter((db: any) => db.isVerified).length;
+                          }
 
                           return (
                             <div
@@ -981,14 +1064,23 @@ export default function PemantauWorkspace() {
                               </div>
 
                               <div className="flex items-center justify-between gap-2 pl-1 text-[10px]">
-                                <span className="font-semibold text-slate-600 capitalize truncate max-w-[140px]" title={p.namaWajibPajak}>
+                                <span className="font-semibold text-slate-600 capitalize truncate max-w-[130px]" title={p.namaWajibPajak}>
                                   {p.namaWajibPajak?.toLowerCase()}
                                 </span>
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                  {p.jenisPermohonan === 'MUTASI_SEBAGIAN' && (
+                                    <span className={`inline-flex px-1.5 py-0.2 rounded-md text-[8px] font-extrabold border leading-none uppercase ${pVerifiedPecahan === pTotalPecahan
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : pVerifiedPecahan > 0
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                      }`}>
+                                      {pVerifiedPecahan}/{pTotalPecahan} Verified
+                                    </span>
+                                  )}
                                   <span className="inline-flex px-1.5 py-0.2 rounded-md text-[8px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 uppercase">
                                     {getAbbreviatedJenis(p.jenisPermohonan || selectedBundle.jenisPermohonan)}
                                   </span>
-                                  <span className="text-slate-400 font-medium text-[9px]">{nopolDate}</span>
                                 </div>
                               </div>
                             </div>
@@ -998,8 +1090,8 @@ export default function PemantauWorkspace() {
                     </div>
                   </div>
 
-                  {/* PANEL KANAN: Detail Permohonan */}
-                  <div className="flex-1 min-w-0 w-full bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-5 min-h-[900px] max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
+                  {/* PANEL KANAN: Detail Permohonan (Dynamic Natural Flow) */}
+                  <div className="flex-1 min-w-0 w-full bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-5 relative">
                     {selectedPermohonan ? (
                       <div className="flex flex-col gap-5 animate-fadeIn">
 
@@ -1286,13 +1378,7 @@ export default function PemantauWorkspace() {
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const allMap: Record<string, boolean> = {};
-                                    selectedPermohonan.dataBaru.forEach((db: any, idx: number) => {
-                                      allMap[db.id || `pecahan_${idx}`] = true;
-                                    });
-                                    setCheckedPecahanMap(allMap);
-                                  }}
+                                  onClick={handleVerifyAllPecahan}
                                   className="text-[9px] font-extrabold text-white bg-[#00a389] hover:bg-[#008f78] px-2 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-3xs"
                                 >
                                   ✓ Verifikasi Semua
@@ -1345,7 +1431,7 @@ export default function PemantauWorkspace() {
                                   <span>✨ Data Objek Baru {selectedPermohonan.dataBaru.length > 1 ? `(${selectedPermohonan.dataBaru.length} Pecahan)` : ''}</span>
                                 </span>
 
-                                <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                                <div className="flex flex-col gap-2.5">
                                   {selectedPermohonan.dataBaru.map((db: any, idx: number) => {
                                     const itemKey = db.id || `pecahan_${idx}`;
                                     const isChecked = selectedPermohonan.status === "COMPLETED" || !!checkedPecahanMap[itemKey];
@@ -1371,12 +1457,7 @@ export default function PemantauWorkspace() {
                                               <input
                                                 type="checkbox"
                                                 checked={!!checkedPecahanMap[itemKey]}
-                                                onChange={(e) => {
-                                                  setCheckedPecahanMap((prev) => ({
-                                                    ...prev,
-                                                    [itemKey]: e.target.checked,
-                                                  }));
-                                                }}
+                                                onChange={(e) => handleTogglePecahanVerified(db.id, itemKey, e.target.checked)}
                                                 className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                               />
                                               <span className={`text-[9px] font-extrabold ${checkedPecahanMap[itemKey] ? "text-emerald-700" : "text-slate-500"}`}>
@@ -1463,20 +1544,20 @@ export default function PemantauWorkspace() {
                           </div>
                         )}
 
-                        {/* Active Actions Footer */}
+                        {/* Floating Sticky Action Footer */}
                         {(() => {
                           const totalPecahanCount = selectedPermohonan.dataBaru?.length || 0;
                           const verifiedCount = Object.values(checkedPecahanMap).filter(Boolean).length;
                           const isAllPecahanVerified = totalPecahanCount <= 1 || verifiedCount >= totalPecahanCount;
 
                           return (
-                            <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
-                              <div className="text-[10px] text-slate-400 font-semibold">
+                            <div className="sticky bottom-4 z-30 bg-white/95 backdrop-blur-md p-4 rounded-md border border-slate-200/90 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none mt-4 animate-slideUp">
+                              <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5">
                                 {selectedPermohonan.status === "ARCHIVED" && (
                                   <span>
                                     {!isAllPecahanVerified
-                                      ? `* Verifikasi seluruh pecahan (${verifiedCount}/${totalPecahanCount}) untuk mengaktifkan tombol penyelesaian.`
-                                      : "* Klik tombol untuk menandai bahwa layanan PBB telah selesai."}
+                                      ? `⚠️ Harap verifikasi seluruh pecahan (${verifiedCount}/${totalPecahanCount}) untuk mengaktifkan tombol penyelesaian.`
+                                      : "✓ Seluruh pecahan terverifikasi! Klik tombol untuk menandai layanan PBB selesai."}
                                   </span>
                                 )}
                                 {selectedPermohonan.status === "COMPLETED" && (
@@ -1489,7 +1570,7 @@ export default function PemantauWorkspace() {
                                   <button
                                     onClick={() => handleComplete(selectedPermohonan.id, selectedPermohonan.nomorPermohonan)}
                                     disabled={loading || selectedPermohonan.permintaanKoreksi?.length > 0 || !isAllPecahanVerified}
-                                    className="flex items-center gap-1.5 py-2 px-4 text-xs font-black text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md shadow-3xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-1.5 py-2.5 px-4 text-xs font-black text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     title={!isAllPecahanVerified ? `Harap verifikasi seluruh (${totalPecahanCount}) pecahan objek di Data Baru terlebih dahulu` : ""}
                                   >
                                     <CheckCircle2 className="w-4 h-4" />

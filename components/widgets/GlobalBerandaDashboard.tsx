@@ -23,7 +23,7 @@ import {
   Lock,
   FileSpreadsheet
 } from 'lucide-react';
-import { getGlobalBerandaStats } from '@/app/actions/penginput';
+import { getGlobalBerandaStats } from '@/app/actions/beranda';
 import { useDashboard } from '@/context/DashboardContext';
 
 interface GlobalBerandaDashboardProps {
