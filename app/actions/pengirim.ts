@@ -27,6 +27,7 @@ export async function getEligibleBundles() {
         permohonan: {
           include: {
             dataBaru: true,
+            penginput: { select: { id: true, name: true, email: true } },
             arsipDigital: {
               orderBy: { versi: "desc" }
             }
@@ -70,7 +71,11 @@ export async function getManifests() {
       include: {
         bundle: {
           include: {
-            permohonan: true
+            permohonan: {
+              include: {
+                penginput: { select: { id: true, name: true, email: true } }
+              }
+            }
           }
         },
         pengirim: { select: { name: true } }
@@ -103,6 +108,7 @@ export async function getManifestDetails(manifestId: string) {
             permohonan: {
               include: {
                 dataBaru: true,
+                penginput: { select: { id: true, name: true, email: true } },
                 arsipDigital: {
                   orderBy: { versi: "desc" }
                 },

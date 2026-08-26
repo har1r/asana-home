@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Phone, Calendar, Copy, Check } from 'lucide-react';
+import { X, FileText, Phone, Copy, Check } from 'lucide-react';
 
 interface DetailsModalProps {
   isOpen: boolean;
@@ -49,92 +49,92 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn"
+      className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/20 animate-scaleUp"
+        className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Gradient Header */}
-        <div className="relative bg-gradient-to-br from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] px-6 pt-5 pb-6 select-none overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="relative flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="bg-white/25 rounded-lg p-1.5 shrink-0">
-                <FileText className="w-3.5 h-3.5 text-[#2c333f]" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[9px] font-extrabold text-[#2c333f]/60 tracking-widest capitalize leading-none mb-1">Detail Permohonan</span>
-                <span className="text-sm font-extrabold text-[#2c333f] font-mono tracking-tight truncate leading-none">
-                  {selectedRequest.nomorPelayanan || selectedRequest.nomorPermohonan}
-                </span>
-              </div>
+        {/* Header - Aligned with Sidebar & Header clean UI design system */}
+        <div className="bg-white px-5 py-4 flex items-center justify-between gap-4 select-none border-b border-slate-200/80">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-[#00a389]/10 border border-[#00a389]/20 p-2 rounded-lg shrink-0 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-[#00a389]" />
             </div>
-            <button
-              onClick={onClose}
-              className="bg-white/25 hover:bg-white/40 text-[#2c333f] p-1.5 rounded-xl transition-all cursor-pointer shrink-0"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                Detail Permohonan
+              </span>
+              <span className="text-sm font-black text-slate-900 font-mono tracking-tight truncate leading-none">
+                {selectedRequest.nomorPelayanan || selectedRequest.nomorPermohonan}
+              </span>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0"
+            title="Tutup Modal"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-5 flex flex-col gap-4 bg-[#f3f6f9]">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-5 flex flex-col gap-4 bg-slate-50">
 
           {/* Section 1: Data Utama */}
-          <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1 select-none">
-              <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest">1. Data Utama</h4>
+          <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200/90 shadow-3xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2 select-none">
+              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">1. Data Utama</h4>
               <div className="flex items-center gap-1.5">
                 {(() => {
                   const s = selectedRequest.status;
-                  const cfg: Record<string, { bg: string; text: string; dot: string }> = {
-                    SUBMITTED: { bg: 'bg-sky-100', text: 'text-sky-700', dot: 'bg-sky-500' },
-                    REVISION: { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-                    BUNDLED: { bg: 'bg-violet-100', text: 'text-violet-700', dot: 'bg-violet-500' },
-                    ARCHIVED: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
-                    COMPLETED: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-                    REJECTED: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
+                  const cfg: Record<string, { bg: string; text: string; border: string; label: string }> = {
+                    SUBMITTED: { label: 'Diajukan', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
+                    REVISION: { label: 'Revisi', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                    BUNDLED: { label: 'Terbundel', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+                    LOCKED: { label: 'Terkunci', bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-300' },
+                    ARCHIVED: { label: 'Diarsipkan', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+                    COMPLETED: { label: 'Selesai', bg: 'bg-emerald-50', text: 'text-[#008f78]', border: 'border-emerald-200' },
+                    REJECTED: { label: 'Ditolak', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
                   };
-                  const c = cfg[s] ?? cfg.SUBMITTED;
+                  const c = cfg[s] ?? { label: s, bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' };
                   return (
-                    <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full capitalize ${c.bg} ${c.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{s.toLowerCase()}
+                    <span className={`inline-flex items-center text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
+                      {c.label}
                     </span>
                   );
                 })()}
-                <span className="inline-flex items-center text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 capitalize">
+                <span className="inline-flex items-center text-[9px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 uppercase">
                   {selectedRequest.jenisPermohonan?.replace(/_/g, ' ').toLowerCase()}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Jenis Layanan Permohonan</label>
+              <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Jenis Layanan Permohonan</label>
               <input
                 type="text"
                 value={(selectedRequest.jenisPermohonan?.replace(/_/g, ' ') || '').toUpperCase()}
                 readOnly
-                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-855 shadow-3xs cursor-default outline-none uppercase"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs font-bold text-slate-800 shadow-3xs cursor-default outline-none uppercase"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">No. Pelayanan</label>
+              <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">No. Pelayanan</label>
               <div className="relative">
                 <input
                   type="text"
                   value={selectedRequest.nomorPelayanan || ''}
                   readOnly
-                  className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 pr-10 py-2.5 text-gray-805 shadow-3xs cursor-default outline-none font-mono"
+                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none font-mono"
                 />
                 {selectedRequest.nomorPelayanan && (
                   <button
                     onClick={(e) => handleCopy(e, selectedRequest.nomorPelayanan)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-650 transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200/60 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
                     title="Salin No. Pelayanan"
                   >
                     {copiedText === selectedRequest.nomorPelayanan ? (
@@ -149,40 +149,40 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Tanggal Nopel</label>
+                <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Tanggal Nopel</label>
                 <input
                   type="text"
                   value={selectedRequest.tanggalNoPelayanan ? new Date(selectedRequest.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : '—'}
                   readOnly
-                  className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-805 shadow-3xs cursor-default outline-none"
+                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Tanggal Selesai</label>
+                <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Tanggal Selesai</label>
                 <input
                   type="text"
                   value={selectedRequest.tanggalPenyelesaian ? new Date(selectedRequest.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : '—'}
                   readOnly
-                  className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-805 shadow-3xs cursor-default outline-none"
+                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nomor Objek Pajak (NOP)</label>
+                <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Nomor Objek Pajak (NOP)</label>
                 <div className="relative font-mono">
                   <input
                     type="text"
                     value={formatNop(selectedRequest.nop || '')}
                     readOnly
-                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 pr-10 py-2.5 text-indigo-700 shadow-3xs cursor-default outline-none"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 pr-10 py-2 text-[#008f78] shadow-3xs cursor-default outline-none"
                   />
                   {selectedRequest.nop && (
                     <button
                       onClick={(e) => handleCopy(e, formatNop(selectedRequest.nop))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-650 transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200/60 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
                       title="Salin NOP Objek Pajak"
                     >
                       {copiedText === formatNop(selectedRequest.nop) ? (
@@ -196,20 +196,20 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nomor WhatsApp WP</label>
+                <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Nomor WhatsApp WP</label>
                 <div className="relative font-mono">
-                  <Phone className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={selectedRequest.noWhatsapp || ''}
                     readOnly
-                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl pl-9 pr-20 py-2.5 text-indigo-650 shadow-3xs cursor-default outline-none"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-20 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                   />
                   {selectedRequest.noWhatsapp && (
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 select-none">
                       <button
                         onClick={(e) => handleCopy(e, selectedRequest.noWhatsapp)}
-                        className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-650 transition-all cursor-pointer flex items-center justify-center w-6 h-6"
+                        className="p-1 rounded hover:bg-slate-200/60 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-6 h-6"
                         title="Salin Nomor WhatsApp"
                       >
                         {copiedText === selectedRequest.noWhatsapp ? (
@@ -222,7 +222,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                         href={`https://wa.me/${selectedRequest.noWhatsapp}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2 py-0.5 text-[9px] font-extrabold text-[#075e54] bg-[#dcf8c6] hover:bg-[#128c7e] hover:text-white rounded-md transition-all flex items-center gap-0.5 cursor-pointer"
+                        className="px-2 py-0.5 text-[9px] font-extrabold text-emerald-800 bg-emerald-100 hover:bg-emerald-600 hover:text-white rounded-md transition-all flex items-center gap-0.5 cursor-pointer"
                         title="Buka Chat WhatsApp"
                       >
                         Chat WA
@@ -236,23 +236,23 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
           {/* Section 2: Data Lama */}
           {selectedRequest.namaPemilikLama && (
-            <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs">
-              <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest border-b border-slate-100 pb-1.5 mb-1 select-none">
+            <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200/90 shadow-3xs">
+              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 select-none">
                 2. Data Lama (Asal)
               </h4>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nama Pemilik</label>
+                  <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Nama Pemilik</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={toTitleCase(selectedRequest.namaPemilikLama || '')}
                       readOnly
-                      className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                     />
                     <button
                       onClick={(e) => handleCopy(e, toTitleCase(selectedRequest.namaPemilikLama))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-650 transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200/60 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
                       title="Salin Nama Pemilik Lama"
                     >
                       {copiedText === toTitleCase(selectedRequest.namaPemilikLama) ? (
@@ -265,78 +265,78 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Pemilik</label>
+                  <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Alamat Pemilik</label>
                   <input
                     type="text"
                     value={toTitleCase(selectedRequest.alamatPemilikLama || '')}
                     readOnly
-                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-805 shadow-3xs cursor-default outline-none"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Pemilik</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Kecamatan Pemilik</label>
                     <input
                       type="text"
                       value={toTitleCase(selectedRequest.kecamatanPemilikLama || '')}
                       readOnly
-                      className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Pemilik</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Desa Pemilik</label>
                     <input
                       type="text"
                       value={toTitleCase(selectedRequest.desaPemilikLama || '')}
                       readOnly
-                      className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Objek</label>
+                  <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Alamat Objek</label>
                   <input
                     type="text"
                     value={toTitleCase(selectedRequest.alamatObjekLama || '')}
                     readOnly
-                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Objek</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Kecamatan Objek</label>
                     <input
                       type="text"
                       value={toTitleCase(selectedRequest.kecamatanObjekLama || '')}
                       readOnly
-                      className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Objek</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Desa Objek</label>
                     <input
                       type="text"
                       value={toTitleCase(selectedRequest.desaObjekLama || '')}
                       readOnly
-                      className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Tanah</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Luas Tanah</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={selectedRequest.luasTanahLama !== null && selectedRequest.luasTanahLama !== undefined ? String(selectedRequest.luasTanahLama) : ''}
                         readOnly
-                        className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg pl-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                       />
                       <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                         m²
@@ -345,13 +345,13 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Bangunan</label>
+                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Luas Bangunan</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={selectedRequest.luasBangunanLama !== null && selectedRequest.luasBangunanLama !== undefined ? String(selectedRequest.luasBangunanLama) : ''}
                         readOnly
-                        className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                        className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg pl-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                       />
                       <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                         m²
@@ -361,12 +361,12 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">No/Jenis Sertifikat</label>
+                  <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">No/Jenis Sertifikat</label>
                   <input
                     type="text"
                     value={(selectedRequest.sertifikatLama || '').toUpperCase()}
                     readOnly
-                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-805 shadow-3xs cursor-default outline-none"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                   />
                 </div>
               </div>
@@ -375,8 +375,8 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
           {/* Section 3: Data Baru */}
           {selectedRequest.dataBaru && selectedRequest.dataBaru.length > 0 && (
-            <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs">
-              <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest border-b border-slate-100 pb-1.5 mb-1 select-none">
+            <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200/90 shadow-3xs">
+              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 select-none">
                 3. Data Baru
               </h4>
               <div className="flex flex-col gap-6">
@@ -384,30 +384,30 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                   <div
                     key={db.id || index}
                     className={`flex flex-col gap-4 relative ${selectedRequest.dataBaru.length > 1
-                      ? 'p-5 border border-slate-200 rounded-2xl shadow-3xs bg-transparent'
+                      ? 'p-4 border border-slate-200 rounded-lg bg-slate-50/50 shadow-3xs'
                       : ''
                       }`}
                   >
                     {selectedRequest.jenisPermohonan === 'MUTASI_SEBAGIAN' && (
-                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 select-none">
-                        <span className="text-[10px] font-extrabold text-indigo-650 capitalize tracking-wider">Pemilik Baru #{index + 1}</span>
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 select-none">
+                        <span className="text-[10px] font-extrabold text-[#008f78] uppercase tracking-wider">Pemilik Baru #{index + 1}</span>
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-4 mt-2">
+                    <div className="flex flex-col gap-4">
                       {/* 1. Nama Pemilik */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nama Pemilik</label>
+                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Nama Pemilik</label>
                         <div className="relative">
                           <input
                             type="text"
                             value={toTitleCase(db.namaPemilikBaru || '')}
                             readOnly
-                            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                           />
                           <button
                             onClick={(e) => handleCopy(e, toTitleCase(db.namaPemilikBaru || ''))}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200/60 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-6 h-6 select-none"
                             title="Salin Nama Pemilik"
                           >
                             {copiedText === toTitleCase(db.namaPemilikBaru || '') ? (
@@ -421,68 +421,68 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
                       {/* 2. Alamat Pemilik */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Pemilik</label>
+                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Alamat Pemilik</label>
                         <input
                           type="text"
                           value={toTitleCase(db.alamatPemilikBaru || '')}
                           readOnly
-                          className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                          className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                         />
                       </div>
 
                       {/* 3. Kecamatan & Desa Pemilik */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Pemilik</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Kecamatan Pemilik</label>
                           <input
                             type="text"
                             value={toTitleCase(db.kecamatanPemilikBaru || '')}
                             readOnly
-                            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                           />
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Pemilik</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Desa Pemilik</label>
                           <input
                             type="text"
                             value={toTitleCase(db.desaPemilikBaru || '')}
                             readOnly
-                            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                           />
                         </div>
                       </div>
 
                       {/* 4. Alamat Objek */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Objek</label>
+                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Alamat Objek</label>
                         <input
                           type="text"
                           value={toTitleCase(db.alamatObjekBaru || '')}
                           readOnly
-                          className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                          className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                         />
                       </div>
 
                       {/* 5. Kecamatan & Desa Objek */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Objek</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Kecamatan Objek</label>
                           <input
                             type="text"
                             value={toTitleCase(db.kecamatanObjekBaru || '')}
                             readOnly
-                            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                           />
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Objek</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Desa Objek</label>
                           <input
                             type="text"
                             value={toTitleCase(db.desaObjekBaru || '')}
                             readOnly
-                            className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                           />
                         </div>
                       </div>
@@ -490,13 +490,13 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                       {/* 6. Luas Tanah & Luas Bangunan */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Tanah</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Luas Tanah</label>
                           <div className="relative">
                             <input
                               type="text"
                               value={db.luasTanahBaru !== null && db.luasTanahBaru !== undefined ? String(db.luasTanahBaru) : ''}
                               readOnly
-                              className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                              className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg pl-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                             />
                             <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                               m²
@@ -505,13 +505,13 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Bangunan</label>
+                          <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">Luas Bangunan</label>
                           <div className="relative">
                             <input
                               type="text"
                               value={db.luasBangunanBaru !== null && db.luasBangunanBaru !== undefined ? String(db.luasBangunanBaru) : ''}
                               readOnly
-                              className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                              className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg pl-3.5 pr-10 py-2 text-slate-800 shadow-3xs cursor-default outline-none"
                             />
                             <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                               m²
@@ -522,12 +522,12 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 
                       {/* 7. Nomor/Jenis Sertifikat */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">No/Jenis Sertifikat</label>
+                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider pl-0.5">No/Jenis Sertifikat</label>
                         <input
                           type="text"
                           value={(db.sertifikatBaru || '').toUpperCase()}
                           readOnly
-                          className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-gray-855 shadow-3xs cursor-default outline-none"
+                          className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none uppercase"
                         />
                       </div>
                     </div>
@@ -540,10 +540,10 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 bg-white flex items-center justify-end gap-3 select-none">
+        <div className="px-5 py-3 border-t border-slate-200 bg-white flex items-center justify-end gap-3 select-none">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-gradient-to-br from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] hover:opacity-90 text-[#2c333f] font-bold text-xs rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-lg shadow-3xs transition-all cursor-pointer"
           >
             Tutup
           </button>
@@ -555,4 +555,3 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
 });
 
 DetailsModal.displayName = 'DetailsModal';
-

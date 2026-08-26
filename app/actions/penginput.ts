@@ -436,15 +436,33 @@ export async function resubmitPermohonan(id: string) {
 export async function getPenginputPermohonan() {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'PENGINPUT') {
+  if (!session || !session.user) {
     throw new Error('Unauthorized.');
   }
 
   try {
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email || '' }
+    });
+
+    const targetUserId = currentUser ? currentUser.id : session.user.id;
+
     const list = await prisma.permohonan.findMany({
-      where: { penginputId: session.user.id },
+      where: {
+        OR: [
+          { penginputId: targetUserId },
+          { penginputId: session.user.id }
+        ]
+      },
       include: {
         dataBaru: true,
+        penginput: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         permintaanKoreksi: {
           orderBy: { createdAt: 'desc' },
           take: 1
@@ -574,18 +592,17 @@ export async function getPermohonanStats() {
 
   try {
     const total = await prisma.permohonan.count();
+    const submitted = await prisma.permohonan.count({
+      where: { status: 'SUBMITTED' }
+    });
     const revision = await prisma.permohonan.count({
       where: { status: 'REVISION' }
     });
-    const sent = await prisma.permohonan.count({
-      where: {
-        status: 'ARCHIVED',
-        bundle: {
-          manifest: {
-            status: 'SENT'
-          }
-        }
-      }
+    const bundled = await prisma.permohonan.count({
+      where: { status: 'BUNDLED' }
+    });
+    const archived = await prisma.permohonan.count({
+      where: { status: 'ARCHIVED' }
     });
     const completed = await prisma.permohonan.count({
       where: { status: 'COMPLETED' }
@@ -598,8 +615,10 @@ export async function getPermohonanStats() {
       success: true,
       stats: {
         total,
+        submitted,
         revision,
-        sent,
+        bundled,
+        archived,
         completed,
         rejected
       }
@@ -681,6 +700,7 @@ export async function getGlobalBerandaStats() {
       prosesCount: number;
       selesaiCount: number;
       revisiCount: number;
+      dikirimCount: number;
     }> = {};
 
     serviceTypes.forEach(st => {
@@ -690,6 +710,7 @@ export async function getGlobalBerandaStats() {
         prosesCount: 0,
         selesaiCount: 0,
         revisiCount: 0,
+        dikirimCount: 0,
       };
     });
 
@@ -714,6 +735,7 @@ export async function getGlobalBerandaStats() {
           prosesCount: 0,
           selesaiCount: 0,
           revisiCount: 0,
+          dikirimCount: 0,
         };
       }
 
@@ -726,18 +748,17 @@ export async function getGlobalBerandaStats() {
 
       const statusStr = String(item.status);
       if (statusStr === 'COMPLETED') {
-        breakdownByService[stKey].selesaiCount += 1;
-        globalSelesai += 1;
+        breakdownByService[stKey].selesaiCount += pemohonCountInItem;
+        globalSelesai += pemohonCountInItem;
       } else if (statusStr === 'MANIFESTED' || statusStr === 'ARCHIVED') {
-        globalDikirim += 1;
-        breakdownByService[stKey].selesaiCount += 1;
-        globalSelesai += 1;
+        globalDikirim += pemohonCountInItem;
+        breakdownByService[stKey].dikirimCount += pemohonCountInItem;
       } else if (statusStr === 'REVISION' || statusStr === 'REJECTED' || statusStr === 'VOID') {
-        breakdownByService[stKey].revisiCount += 1;
-        globalRevisi += 1;
+        breakdownByService[stKey].revisiCount += pemohonCountInItem;
+        globalRevisi += pemohonCountInItem;
       } else {
-        breakdownByService[stKey].prosesCount += 1;
-        globalProses += 1;
+        breakdownByService[stKey].prosesCount += pemohonCountInItem;
+        globalProses += pemohonCountInItem;
       }
 
       // Aggregation Wilayah (Kecamatan & Desa)
@@ -789,6 +810,56 @@ export async function getGlobalBerandaStats() {
       }
     });
 
+    const bundles = await prisma.bundle.findMany({
+      include: { manifest: true }
+    });
+
+    let totalRekomDibuat = 0;
+    let totalRekomDikirim = 0;
+    let totalRekomVoid = 0;
+
+    const rekomBreakdownByService: Record<string, {
+      totalDibuat: number;
+      totalDikirim: number;
+      totalVoid: number;
+    }> = {};
+
+    serviceTypes.forEach(st => {
+      rekomBreakdownByService[st] = {
+        totalDibuat: 0,
+        totalDikirim: 0,
+        totalVoid: 0,
+      };
+    });
+
+    bundles.forEach((b: any) => {
+      const stKey = b.jenisPermohonan || 'MUTASI_SEBAGIAN';
+      if (!rekomBreakdownByService[stKey]) {
+        rekomBreakdownByService[stKey] = {
+          totalDibuat: 0,
+          totalDikirim: 0,
+          totalVoid: 0,
+        };
+      }
+
+      const isDibuat = b.status === 'LOCKED' || b.status === 'IN_MANIFEST';
+      const isDikirim = b.manifest?.status === 'SENT';
+      const isVoid = b.status === 'VOID';
+
+      if (isDibuat) {
+        totalRekomDibuat += 1;
+        rekomBreakdownByService[stKey].totalDibuat += 1;
+      }
+      if (isDikirim) {
+        totalRekomDikirim += 1;
+        rekomBreakdownByService[stKey].totalDikirim += 1;
+      }
+      if (isVoid) {
+        totalRekomVoid += 1;
+        rekomBreakdownByService[stKey].totalVoid += 1;
+      }
+    });
+
     const byKecamatan = Object.values(kecamatanMap).sort((a, b) => b.totalPemohon - a.totalPemohon);
     const byDesa = Object.values(desaMap).sort((a, b) => b.totalPemohon - a.totalPemohon);
 
@@ -804,7 +875,13 @@ export async function getGlobalBerandaStats() {
       breakdownByService,
       byKecamatan,
       byDesa,
-      recentList: list.slice(0, 15)
+      recentList: list.slice(0, 15),
+      rekomStats: {
+        totalDibuat: totalRekomDibuat,
+        totalDikirim: totalRekomDikirim,
+        totalVoid: totalRekomVoid,
+        breakdownByService: rekomBreakdownByService
+      }
     };
   } catch (error: any) {
     console.error('[ACTION-GET-GLOBAL-BERANDA-STATS-ERR]', error);
@@ -820,7 +897,13 @@ export async function getGlobalBerandaStats() {
       breakdownByService: {},
       byKecamatan: [],
       byDesa: [],
-      recentList: []
+      recentList: [],
+      rekomStats: {
+        totalDibuat: 0,
+        totalDikirim: 0,
+        totalVoid: 0,
+        breakdownByService: {}
+      }
     };
   }
 }

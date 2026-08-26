@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Boxes, FileText, Lock, Printer,
   ArrowRight, FolderMinus, Plus, Search, AlertCircle,
   CheckCircle, Clock, X, AlertTriangle, Star,
-  FileSpreadsheet, Filter, Check, ChevronLeft, ChevronRight,
+  FileSpreadsheet, Filter, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   User, Hash, ListFilter, RefreshCw, Copy,
-  Folder, FolderLock, Unlock, Send, Slash
+  Folder, FolderLock, Unlock, Send, Slash, FolderOpen, Users
 } from 'lucide-react';
 import {
   getSubmittedPermohonan,
@@ -26,73 +28,233 @@ import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from '@/components/skeletons/SkeletonBase';
 
-/** Skeleton untuk PenelitiWorkspace — premium card grid layout */
-export function PenelitiSkeleton() {
+/** Skeleton komponen dasar KPI Strip & Tabs untuk PenelitiWorkspace */
+function PenelitiBaseHeaderSkeleton() {
   return (
-    <div className="w-full font-sans select-none flex flex-col gap-6 animate-fadeIn">
-      {/* Header card skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#dde3ea] p-5 rounded-2xl shadow-sm">
-        <SkeletonBox width="w-56" height="h-5" rounded="rounded-full" />
-        <div className="flex items-center gap-2">
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
-            <SkeletonBox width="w-28" height="h-7" rounded="rounded-lg" />
-            <SkeletonBox width="w-24" height="h-7" rounded="rounded-lg" />
-            <SkeletonBox width="w-28" height="h-7" rounded="rounded-lg" />
-          </div>
+    <>
+      {/* TIER 1: KPI STATS STRIP (5 Cards) */}
+      <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-3 px-3.5 flex items-center justify-between gap-2 rounded-md">
+              <div className="flex flex-col gap-1.5 w-full">
+                <SkeletonBox width="w-20" height="h-3" rounded="rounded-sm" />
+                <SkeletonBox width="w-12" height="h-5" rounded="rounded-sm" />
+              </div>
+              <SkeletonBox width="w-8" height="h-4" rounded="rounded-sm" />
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Content card skeleton (grid of cards) */}
-      <div className="bg-[#dde3ea] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[300px]">
-        {/* Action row skeleton */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <SkeletonBox width="w-40" height="h-4.5" rounded="rounded-full" />
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <SkeletonBox width="w-full sm:w-72" height="h-8" rounded="rounded-lg" />
-            <SkeletonBox width="w-16" height="h-8" rounded="rounded-lg" />
+      {/* TIER 2: VIEW MODE SWITCHER TABS (3 Equal Tabs) */}
+      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-3 gap-1 shadow-3xs select-none">
+        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
+        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
+        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
+      </div>
+    </>
+  );
+}
+
+/** Skeleton presisi untuk Tab 1: Pilih / Buat Bundle */
+export function PenelitiBundleSkeleton() {
+  return (
+    <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
+      <PenelitiBaseHeaderSkeleton />
+
+      {/* CARD CONTENT: BUNDLE GRID VIEW */}
+      <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
+        {/* Action toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <SkeletonBox width="w-full md:w-[403px]" height="h-10" rounded="rounded-lg" />
+          <div className="flex items-center gap-2">
+            <SkeletonBox width="w-24" height="h-10" rounded="rounded-lg" />
+            <SkeletonBox width="w-10" height="h-10" rounded="rounded-lg" />
           </div>
         </div>
 
-        {/* Status Pills skeleton */}
+        {/* Jenis Layanan filter pills */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonBox key={i} width="w-20" height="h-6" rounded="rounded-full" />
+          {Array.from({ length: 7 }).map((_, i) => (
+            <SkeletonBox key={i} width={i === 0 ? "w-16" : "w-32"} height="h-7" rounded="rounded-full" />
           ))}
         </div>
 
-        {/* Grid of bundle cards skeleton */}
+        {/* Grid of bundle cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="p-4 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between gap-3.5 min-h-[110px]"
-            >
-              {/* Top Row: Title & Count Badge */}
-              <div className="flex items-center justify-between gap-3 w-full">
-                <SkeletonBox width="w-32" height="h-3" rounded="rounded-sm" />
-                <SkeletonBox width="w-6" height="h-4.5" rounded="rounded-md" />
+            <div key={i} className="p-4 rounded-2xl border border-slate-200/90 bg-white flex flex-col justify-between gap-3.5 min-h-[110px]">
+              <div className="flex items-center justify-between gap-3">
+                <SkeletonBox width="w-28" height="h-3.5" rounded="rounded-sm" />
+                <SkeletonBox width="w-6" height="h-5" rounded="rounded-full" />
               </div>
-
-              {/* Bottom Row */}
-              <div className="flex flex-col gap-2 pt-2.5 border-t border-slate-100/80">
-                <div className="flex items-center justify-between gap-2.5">
-                  <SkeletonBox width="w-12" height="h-4" rounded="rounded-full" />
-                  <SkeletonBox width="w-16" height="h-4" rounded="rounded-full" />
-                </div>
+              <div className="flex items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100">
+                <SkeletonBox width="w-16" height="h-4" rounded="rounded-md" />
+                <SkeletonBox width="w-16" height="h-4" rounded="rounded-full" />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Pagination Footer skeleton */}
-        <div className="px-5 py-3.5 border border-slate-200 bg-slate-50 flex items-center justify-between mt-auto rounded-xl shadow-3xs">
-          <SkeletonBox width="w-48" height="h-3" rounded="rounded-full" />
+        {/* Pagination Footer */}
+        <div className="px-5 py-3.5 border border-slate-200/80 bg-slate-50 flex items-center justify-between mt-auto rounded-xl">
+          <SkeletonText width="w-36" height="h-3" />
           <SkeletonBox width="w-32" height="h-7" rounded="rounded-lg" />
         </div>
       </div>
     </div>
   );
 }
+
+/** Skeleton presisi untuk Tab 2: Isi Antrean Permohonan */
+export function PenelitiListSkeleton() {
+  return (
+    <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
+      <PenelitiBaseHeaderSkeleton />
+
+      {/* CARD CONTENT: LIST TABLE VIEW */}
+      <div className="bg-white border border-slate-200/90 rounded-md shadow-3xs flex flex-col overflow-hidden min-h-[400px]">
+        {/* Action Toolbar */}
+        <div className="p-3 border-b border-slate-200/80 bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-3xs">
+          <SkeletonBox width="w-full md:w-[403px]" height="h-10" rounded="rounded-lg" />
+          <div className="flex items-center gap-2">
+            <SkeletonBox width="w-24" height="h-10" rounded="rounded-lg" />
+            <SkeletonBox width="w-28" height="h-10" rounded="rounded-lg" />
+            <SkeletonBox width="w-10" height="h-10" rounded="rounded-lg" />
+          </div>
+        </div>
+
+        {/* Jenis Layanan Filter Pills */}
+        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2 overflow-x-auto bg-white">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <SkeletonBox key={i} width={i === 0 ? "w-16" : "w-32"} height="h-7" rounded="rounded-full" />
+          ))}
+        </div>
+
+        {/* Table Canvas */}
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/90 border-b border-slate-200">
+                <th className="py-3 px-4 w-12"><SkeletonText width="w-5" height="h-2.5" /></th>
+                <th className="py-3 px-2 text-center w-10"><SkeletonText width="w-4" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[100px]"><SkeletonText width="w-16" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[100px]"><SkeletonText width="w-16" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[150px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[210px]"><SkeletonText width="w-28" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[170px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[120px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 text-center min-w-[100px]"><SkeletonText width="w-12" height="h-2.5" /></th>
+                <th className="py-3 px-4 text-center w-28"><SkeletonText width="w-10" height="h-2.5" /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="py-3 px-4 text-center"><SkeletonText width="w-4" height="h-3" /></td>
+                  <td className="py-3 px-2 text-center"><SkeletonBox width="w-4" height="h-4" rounded="rounded-full" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-20" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-20" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-28" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-36" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width={i % 2 === 0 ? "w-28" : "w-32"} height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonBadge width="w-20" /></td>
+                  <td className="py-3 px-4 text-center"><SkeletonBadge width="w-16" /></td>
+                  <td className="py-3 px-4 text-center"><SkeletonBox width="w-20" height="h-8" rounded="rounded-lg" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-5 py-3 border-t border-slate-200/90 bg-slate-50 flex items-center justify-between mt-auto">
+          <SkeletonText width="w-36" height="h-3" />
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonBox key={i} width="w-7" height="h-7" rounded="rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Skeleton presisi untuk Tab 3: Kunci & Cetak Berkas */
+export function PenelitiPrintSkeleton() {
+  return (
+    <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
+      <PenelitiBaseHeaderSkeleton />
+
+      {/* CARD CONTENT: PRINT TABLE VIEW */}
+      <div className="bg-white border border-slate-200/90 rounded-md shadow-3xs flex flex-col overflow-hidden min-h-[400px]">
+        {/* Top Control Bar */}
+        <div className="p-4 border-b border-slate-200/80 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <SkeletonBox width="w-64" height="h-10" rounded="rounded-lg" />
+          <div className="flex items-center gap-2">
+            <SkeletonBox width="w-28" height="h-9" rounded="rounded-lg" />
+            <SkeletonBox width="w-40" height="h-9" rounded="rounded-lg" />
+          </div>
+        </div>
+
+        {/* Table Canvas */}
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/90 border-b border-slate-200">
+                <th className="py-3 px-4 w-12"><SkeletonText width="w-5" height="h-2.5" /></th>
+                <th className="py-3 px-2 text-center w-10"><SkeletonText width="w-4" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[100px]"><SkeletonText width="w-16" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[100px]"><SkeletonText width="w-16" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[150px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[210px]"><SkeletonText width="w-28" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[170px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 min-w-[120px]"><SkeletonText width="w-20" height="h-2.5" /></th>
+                <th className="py-3 px-4 text-center min-w-[100px]"><SkeletonText width="w-12" height="h-2.5" /></th>
+                <th className="py-3 px-4 text-center w-24"><SkeletonText width="w-10" height="h-2.5" /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="py-3 px-4 text-center"><SkeletonText width="w-4" height="h-3" /></td>
+                  <td className="py-3 px-2 text-center"><SkeletonBox width="w-4" height="h-4" rounded="rounded-full" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-20" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-20" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-28" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width="w-36" height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonText width={i % 2 === 0 ? "w-28" : "w-32"} height="h-3" /></td>
+                  <td className="py-3 px-4"><SkeletonBadge width="w-20" /></td>
+                  <td className="py-3 px-4 text-center"><SkeletonBadge width="w-16" /></td>
+                  <td className="py-3 px-4 text-center"><SkeletonBox width="w-8" height="h-8" rounded="rounded-lg" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-5 py-3 border-t border-slate-200/90 bg-slate-50 flex items-center justify-between mt-auto">
+          <SkeletonText width="w-36" height="h-3" />
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonBox key={i} width="w-7" height="h-7" rounded="rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const getInitials = (name?: string | null): string => {
+  if (!name) return 'P';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
 
 const formatNop = (nop: string) => {
   if (!nop) return '';
@@ -137,11 +299,11 @@ const BUNDLE_TYPE_STYLES: Record<string, { bg: string; text: string; border: str
 
 const BUNDLE_STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string; shadow: string }> = {
   DRAFT: {
-    bg: 'bg-indigo-50/70',
-    text: 'text-indigo-700',
-    border: 'border-indigo-100',
-    dot: 'bg-indigo-500',
-    shadow: 'hover:shadow-indigo-150/40'
+    bg: 'bg-emerald-50/70',
+    text: 'text-[#008f78]',
+    border: 'border-emerald-200',
+    dot: 'bg-[#00a389]',
+    shadow: 'hover:shadow-emerald-150/40'
   },
   LOCKED: {
     bg: 'bg-slate-900',
@@ -311,6 +473,11 @@ const highlightText = (text: string, search: string) => {
   );
 };
 
+const cleanPecahanSuffix = (name: string) => {
+  if (!name) return '';
+  return name.replace(/\s*\([^)]*pecahan[^)]*\)/gi, '').trim();
+};
+
 const isOverdue = (dateStr: string | null | undefined, status: string): boolean => {
   if (!dateStr) return false;
   if (status === 'COMPLETED' || status === 'REJECTED' || status === 'ARCHIVED') return false;
@@ -323,6 +490,22 @@ const toTitleCase = (str: string) =>
     .toLowerCase()
     .replace(/\b\w/g, c => c.toUpperCase());
 
+const STATUS_LABEL_MAP: Record<string, string> = {
+  SUBMITTED: 'Diajukan',
+  REVISION: 'Revisi',
+  BUNDLED: 'Terbundel',
+  LOCKED: 'Terkunci',
+  IN_MANIFEST: 'Dimanifest',
+  ARCHIVED: 'Diarsipkan',
+  COMPLETED: 'Selesai',
+  REJECTED: 'Ditolak',
+  DRAFT: 'Draf',
+  VOID: 'Dibatalkan',
+  SENT: 'Dikirim',
+};
+
+const getStatusLabel = (status: string) => STATUS_LABEL_MAP[status] || status;
+
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'SUBMITTED':
@@ -331,6 +514,10 @@ const getStatusBadgeClass = (status: string) => {
       return 'bg-amber-100 text-amber-800 border-amber-200/50 animate-pulse';
     case 'BUNDLED':
       return 'bg-blue-100 text-blue-800 border-blue-200/50';
+    case 'LOCKED':
+      return 'bg-slate-800 text-slate-100 border-slate-700';
+    case 'IN_MANIFEST':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200/50';
     case 'ARCHIVED':
       return 'bg-indigo-100 text-indigo-800 border-indigo-200/50';
     case 'COMPLETED':
@@ -352,11 +539,41 @@ const getShortBundleNum = (bundleNum: string) => {
 
 export default function PenelitiWorkspace() {
   const { showConfirm } = useDashboard();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Read URL query parameter ?tab=peneliti&view=bundle|queue|print
+  const viewParam = searchParams.get('view');
+
+  // View mode state ('bundle' | 'list' | 'print') initialized from URL param
+  const [viewMode, setViewMode] = useState<'bundle' | 'list' | 'print'>(() => {
+    if (viewParam === 'queue' || viewParam === 'list') return 'list';
+    if (viewParam === 'print') return 'print';
+    return 'bundle';
+  });
+
+  // Sync viewMode when URL query params change (e.g. Browser Back/Forward buttons)
+  useEffect(() => {
+    if (viewParam === 'queue' || viewParam === 'list') {
+      setViewMode('list');
+    } else if (viewParam === 'print') {
+      setViewMode('print');
+    } else {
+      setViewMode('bundle');
+    }
+  }, [viewParam]);
+
+  // Helper to switch view/step and update URL query param
+  const handleSwitchStep = useCallback((mode: 'bundle' | 'list' | 'print') => {
+    setViewMode(mode);
+    const viewQuery = mode === 'list' ? 'queue' : mode;
+    router.push(`/?tab=peneliti&view=${viewQuery}`, { scroll: false });
+  }, [router]);
+
   // Lists
   const [submittedList, setSubmittedList] = useState<any[]>([]);
   const [bundlesList, setBundlesList] = useState<any[]>([]);
   const [selectedBundle, setSelectedBundle] = useState<any | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'bundle' | 'print'>('bundle');
 
   // Loaders & Message States
   const [loading, setLoading] = useState(false);
@@ -391,6 +608,11 @@ export default function PenelitiWorkspace() {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   // Modals / Dialogs
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [revisionTarget, setRevisionTarget] = useState<any | null>(null);
   const [revisionNotes, setRevisionNotes] = useState('');
   const [extractionTarget, setExtractionTarget] = useState<any | null>(null);
@@ -479,6 +701,25 @@ export default function PenelitiWorkspace() {
     bundlesList.forEach(b => {
       if (counts[b.status] !== undefined) {
         counts[b.status]++;
+      }
+    });
+    return counts;
+  }, [bundlesList]);
+
+  // Bundle jenis permohonan counts memoization
+  const bundleJenisCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: bundlesList.length,
+      MUTASI_SEBAGIAN: 0,
+      MUTASI_HABIS_UPDATE: 0,
+      MUTASI_HABIS_REGULER: 0,
+      OBJEK_PAJAK_BARU: 0,
+      PEMBETULAN: 0,
+      PENGAKTIFAN: 0
+    };
+    bundlesList.forEach(b => {
+      if (b.jenisPermohonan && counts[b.jenisPermohonan] !== undefined) {
+        counts[b.jenisPermohonan]++;
       }
     });
     return counts;
@@ -627,8 +868,12 @@ export default function PenelitiWorkspace() {
 
   // Remove Permohonan from Bundle (Draft or Locked)
   const handleRemoveFromBundle = async (targetOverride?: any) => {
-    const target = targetOverride || extractionTarget;
-    if (!selectedBundle || !target) return;
+    // Ensure target is a valid permohonan object with a string .id, not a React SyntheticEvent
+    const target = (targetOverride && typeof targetOverride === 'object' && typeof targetOverride.id === 'string' && !('nativeEvent' in targetOverride))
+      ? targetOverride
+      : extractionTarget;
+
+    if (!selectedBundle || !target || !target.id) return;
 
     setStatusModalTitle('Mengeluarkan Berkas');
     setStatusModalMessage('Sedang mengeluarkan berkas dari bundle...');
@@ -769,25 +1014,197 @@ export default function PenelitiWorkspace() {
     }
   };
 
+  // Display Mode Switcher State ('berkas' | 'pemohon')
+  const [displayMode, setDisplayMode] = useState<'berkas' | 'pemohon'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('architax_table_display_mode');
+      if (saved === 'berkas' || saved === 'pemohon') return saved;
+    }
+    return 'berkas';
+  });
+
+  const handleSwitchDisplayMode = (mode: 'berkas' | 'pemohon') => {
+    setDisplayMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('architax_table_display_mode', mode);
+    }
+  };
+
+  // Submitted mode base list for accurate counting across displayModes
+  const submittedModeBaseList = useMemo(() => {
+    if (displayMode === 'berkas') return submittedList;
+
+    return submittedList.flatMap((item) => {
+      if (item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+        return item.dataBaru.map((db: any) => ({
+          ...item,
+          displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || item.namaWajibPajak),
+          isPecahanRow: true,
+        }));
+      }
+      return [item];
+    });
+  }, [submittedList, displayMode]);
+
+  // Submitted queue jenis permohonan counts memoization
+  const submittedJenisCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: submittedModeBaseList.length,
+      MUTASI_SEBAGIAN: 0,
+      MUTASI_HABIS_UPDATE: 0,
+      MUTASI_HABIS_REGULER: 0,
+      OBJEK_PAJAK_BARU: 0,
+      PEMBETULAN: 0,
+      PENGAKTIFAN: 0
+    };
+    submittedModeBaseList.forEach(i => {
+      if (i.jenisPermohonan && counts[i.jenisPermohonan] !== undefined) {
+        counts[i.jenisPermohonan]++;
+      }
+    });
+    return counts;
+  }, [submittedModeBaseList]);
+
   // Filter Submitted Queue Client-side
   const filteredSubmittedList = submittedList.filter((item) => {
+    const q = searchSubmittedQuery.toLowerCase().trim();
     const matchesSearch =
-      item.namaWajibPajak.toLowerCase().includes(searchSubmittedQuery.toLowerCase()) ||
-      item.nop.includes(searchSubmittedQuery) ||
-      (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(searchSubmittedQuery.toLowerCase()));
+      !q ||
+      item.namaWajibPajak.toLowerCase().includes(q) ||
+      item.nop.includes(q) ||
+      (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(q)) ||
+      (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)));
 
     const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
 
     return matchesSearch && matchesJenis;
   });
 
+  // Expandable rows state for Mode Nopel inline expansion
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const toggleRowExpanded = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Transform submitted list according to displayMode ('berkas' vs 'pemohon')
+  const displaySubmittedList = useMemo(() => {
+    if (displayMode === 'berkas') {
+      return filteredSubmittedList.flatMap(item => {
+        const baseRow = {
+          ...item,
+          uniqueRowKey: item.id,
+          displayNamaWajibPajak: cleanPecahanSuffix(item.namaWajibPajak),
+          displayLuasTanahBaru: item.luasTanahBaru,
+          displayLuasBangunanBaru: item.luasBangunanBaru,
+          isPecahanRow: false,
+          hasPecahan: item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0,
+        };
+
+        if (expandedRows[item.id] && item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+          const subRows = item.dataBaru.map((db: any, subIdx: number) => ({
+            ...item,
+            uniqueRowKey: `${item.id}_pecahan_${subIdx}`,
+            displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || item.namaWajibPajak),
+            displayLuasTanahBaru: db.luasTanahBaru ?? item.luasTanahBaru,
+            displayLuasBangunanBaru: db.luasBangunanBaru ?? item.luasBangunanBaru,
+            displaySertifikatBaru: db.sertifikatBaru ?? item.sertifikatBaru,
+            pecahanIndex: subIdx + 1,
+            totalPecahan: item.dataBaru.length,
+            isPecahanRow: true,
+          }));
+          return [baseRow, ...subRows];
+        }
+
+        return [baseRow];
+      });
+    }
+
+    // Mode 'pemohon': Automatically expand/open ALL fraction rows for MUTASI_SEBAGIAN permohonan items!
+    return filteredSubmittedList.flatMap((item) => {
+      if (item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+        return item.dataBaru.map((db: any, subIdx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}_pecahan_${subIdx}`,
+          displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || item.namaWajibPajak),
+          displayLuasTanahBaru: db.luasTanahBaru ?? item.luasTanahBaru,
+          displayLuasBangunanBaru: db.luasBangunanBaru ?? item.luasBangunanBaru,
+          displaySertifikatBaru: db.sertifikatBaru ?? item.sertifikatBaru,
+          pecahanIndex: subIdx + 1,
+          totalPecahan: item.dataBaru.length,
+          isPecahanRow: true,
+        }));
+      }
+
+      return [{
+        ...item,
+        uniqueRowKey: item.id,
+        displayNamaWajibPajak: cleanPecahanSuffix(item.namaWajibPajak),
+        displayLuasTanahBaru: item.luasTanahBaru,
+        displayLuasBangunanBaru: item.luasBangunanBaru,
+        isPecahanRow: false,
+      }];
+    });
+  }, [filteredSubmittedList, displayMode, expandedRows]);
+
   // Pagination computed variables
-  const totalSubmittedPages = Math.ceil(filteredSubmittedList.length / itemsPerSubmittedPage);
+  const totalSubmittedPages = Math.ceil(displaySubmittedList.length / itemsPerSubmittedPage);
   const activeSubmittedPage = currentSubmittedPage > totalSubmittedPages ? 1 : currentSubmittedPage;
-  const paginatedSubmittedList = filteredSubmittedList.slice(
+  const paginatedSubmittedList = displaySubmittedList.slice(
     (activeSubmittedPage - 1) * itemsPerSubmittedPage,
     activeSubmittedPage * itemsPerSubmittedPage
   );
+
+  // Transform selected bundle permohonan list according to displayMode ('berkas' vs 'pemohon')
+  const displayPrintList = useMemo(() => {
+    const rawList = selectedBundle?.permohonan || [];
+    if (displayMode === 'berkas') {
+      return rawList.flatMap((item: any) => {
+        const baseRow = {
+          ...item,
+          uniqueRowKey: item.id,
+          displayNamaWajibPajak: cleanPecahanSuffix(item.namaWajibPajak),
+          isPecahanRow: false,
+          hasPecahan: item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0,
+        };
+
+        if (expandedRows[`print_${item.id}`] && item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+          const subRows = item.dataBaru.map((db: any, subIdx: number) => ({
+            ...item,
+            uniqueRowKey: `${item.id}_pecahan_${subIdx}`,
+            displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || item.namaWajibPajak),
+            pecahanIndex: subIdx + 1,
+            totalPecahan: item.dataBaru.length,
+            isPecahanRow: true,
+          }));
+          return [baseRow, ...subRows];
+        }
+
+        return [baseRow];
+      });
+    }
+
+    // Mode 'pemohon': Automatically expand/open ALL fraction rows for MUTASI_SEBAGIAN permohonan items!
+    return rawList.flatMap((item: any) => {
+      if (item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+        return item.dataBaru.map((db: any, subIdx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}_pecahan_${subIdx}`,
+          displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || item.namaWajibPajak),
+          pecahanIndex: subIdx + 1,
+          totalPecahan: item.dataBaru.length,
+          isPecahanRow: true,
+        }));
+      }
+
+      return [{
+        ...item,
+        uniqueRowKey: item.id,
+        displayNamaWajibPajak: cleanPecahanSuffix(item.namaWajibPajak),
+        isPecahanRow: false,
+      }];
+    });
+  }, [selectedBundle?.permohonan, displayMode, expandedRows]);
 
   const currentActiveCount = useMemo(() => {
     if (viewMode === 'bundle') return filteredBundlesList.length;
@@ -798,100 +1215,156 @@ export default function PenelitiWorkspace() {
   return (
     <div id="peneliti-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-6">
 
-      {/* Show full skeleton during initial data load */}
-      {listLoading && <PenelitiSkeleton />}
+      {/* Show precision skeleton based on active viewMode tab when loading */}
+      {listLoading && viewMode === 'bundle' && <PenelitiBundleSkeleton />}
+      {listLoading && viewMode === 'list' && <PenelitiListSkeleton />}
+      {listLoading && viewMode === 'print' && <PenelitiPrintSkeleton />}
 
       {/* Hide real content while skeleton is visible */}
-      <div className={`flex flex-col gap-6 ${listLoading ? 'hidden' : ''}`}>
+      <div className={`flex flex-col gap-4 ${listLoading ? 'hidden' : ''}`}>
 
-        {/* Header with View switcher toggle — aligned with Penginput style */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] p-5 rounded-2xl shadow-md transition-all duration-300">
-          <div className="flex items-center justify-center sm:justify-start w-full sm:w-auto select-none">
-            <div className="flex items-center gap-1 sm:gap-1.5 bg-white/30 border border-white/40 p-0.5 sm:p-1 rounded-lg sm:rounded-xl shadow-xs">
-              {/* Root tag */}
-              <div
-                onClick={() => setViewMode('bundle')}
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg border border-slate-400/10 cursor-pointer transition-all duration-150 hover:bg-white/25 active:scale-95 text-slate-700/70"
-              >
-                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
-                <span className="text-[11px] sm:text-[12px] font-bold">Tugas Saya</span>
+        {/* TIER 1: UNIFIED KPI STATS STRIP (Focus Permanently on Bundle Status) */}
+        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            {/* Metric 1: Total Bundle */}
+            <div
+              onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize">Total Bundle</span>
+                <span className="text-xl font-black font-mono text-slate-900">{bundlesList.length}</span>
               </div>
-
-              {/* Slash Separator */}
-              <Slash className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-500/25 -rotate-[12deg]" />
-
-              {/* Active tag */}
-              <div className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg border border-violet-500/30 bg-white/70 cursor-default shadow-3xs">
-                <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full bg-violet-600 shadow-[0_0_5px_#7c3aed]" />
-                <span className="text-[11px] sm:text-[12px] text-violet-800 font-extrabold tracking-wide">
-                  {viewMode === 'bundle' ? 'Daftar Bundle' : viewMode === 'list' ? 'Daftar Antrean' : 'Kunci & Cetak'}
-                </span>
-                <div className="flex items-center justify-center bg-violet-100 rounded sm:rounded-md px-1 sm:px-1.5 py-0.5 ml-0.5 sm:ml-1 border border-violet-200">
-                  <span className="text-[9px] sm:text-[10px] text-violet-700 font-extrabold leading-none">{currentActiveCount}</span>
-                </div>
-              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                100%
+              </span>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <div className="bg-black/10 p-1 rounded-xl border border-black/5 flex items-center gap-1 shadow-3xs">
-              <button
-                onClick={() => setViewMode('bundle')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'bundle'
-                  ? 'bg-white text-[#2c333f] shadow-xs'
-                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
-                  }`}
-              >
-                <Boxes className="w-3.5 h-3.5" />
-                <span>Daftar Bundle</span>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'list'
-                  ? 'bg-white text-[#2c333f] shadow-xs'
-                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
-                  }`}
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Daftar Antrean</span>
-              </button>
-              <button
-                onClick={() => setViewMode('print')}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${viewMode === 'print'
-                  ? 'bg-white text-[#2c333f] shadow-xs'
-                  : 'text-[#2c333f]/75 hover:text-[#2c333f] hover:bg-white/10'
-                  }`}
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Kunci & Cetak</span>
-              </button>
+            {/* Metric 2: Draf */}
+            <div
+              onClick={() => { setFilterBundleStatus('DRAFT'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize">Draf (Aktif)</span>
+                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.DRAFT}</span>
+              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {bundlesList.length > 0 ? `${((bundleStatusCounts.DRAFT / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+
+            {/* Metric 3: Terkunci */}
+            <div
+              onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize">Terkunci</span>
+                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.LOCKED}</span>
+              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {bundlesList.length > 0 ? `${((bundleStatusCounts.LOCKED / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+
+            {/* Metric 4: Dimanifest */}
+            <div
+              onClick={() => { setFilterBundleStatus('IN_MANIFEST'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize">Dimanifest</span>
+                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.IN_MANIFEST}</span>
+              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {bundlesList.length > 0 ? `${((bundleStatusCounts.IN_MANIFEST / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+
+            {/* Metric 5: Dibatalkan / Void */}
+            <div
+              onClick={() => { setFilterBundleStatus('VOID'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-500 capitalize">Dibatalkan</span>
+                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.VOID}</span>
+              </div>
+              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {bundlesList.length > 0 ? `${((bundleStatusCounts.VOID / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Clean View Mode Switcher Tabs (Equal Width Layout, without count badges) */}
+        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-3 gap-1 shadow-3xs select-none">
+          <button
+            type="button"
+            onClick={() => handleSwitchStep('bundle')}
+            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'bundle'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+          >
+            Pilih Bundle
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchStep('list')}
+            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'list'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+          >
+            Isi Bundle
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchStep('print')}
+            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'print'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+          >
+            Kunci & Cetak
+          </button>
+        </div>
+
         {error && (
-          <div className="bg-red-50/80 border border-red-200 text-red-700 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0">
+          <div className="bg-red-50/80 border border-red-200 text-red-700 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
             <AlertTriangle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0">
+          <div className="bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
             <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
             <span>{success}</span>
           </div>
         )}
 
-        {/* ==================== VIEW MODE: LIST (Daftar Permohonan) ==================== */}
+        {/* ==================== VIEW MODE: LIST (Daftar Permohonan / Isi Antrean) ==================== */}
         {viewMode === 'list' && (
-          <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
-
-            {/* Action Row: Search & Filter — styled identical to Penginput */}
-            <div className="p-5 border-b border-gray-200/60 flex flex-col md:flex-row md:items-center justify-end gap-4">
-              <div className="flex flex-row items-center gap-2.5 w-full md:w-auto">
-                <div className={`relative flex-1 sm:flex-none sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+          <div className="flex flex-col gap-2.5">
+            {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS */}
+            <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Left Side: Search Bar */}
+                <div className="relative w-full md:w-96">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                   <input
                     ref={searchSubmittedInputRef}
                     type="text"
@@ -899,98 +1372,45 @@ export default function PenelitiWorkspace() {
                     onChange={(e) => setSearchSubmittedQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                    placeholder="Cari No. Pelayanan, NOP, Nama."
+                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
+                    placeholder="Cari No. Pelayanan, NOP, Nama Pemohon..."
                   />
-                  {!isSearchFocused && !searchSubmittedQuery && (
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
-                      Ctrl+K
-                    </span>
-                  )}
-                  {searchSubmittedQuery && (
-                    <button onClick={() => setSearchSubmittedQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10">
+                  {searchSubmittedQuery ? (
+                    <button
+                      onClick={() => setSearchSubmittedQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Hapus Pencarian"
+                    >
                       <X className="w-3.5 h-3.5" />
                     </button>
+                  ) : (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 pointer-events-none">
+                      <kbd className="px-1.5 py-0.5 text-[9px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 rounded font-sans">
+                        {'/'}
+                      </kbd>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {/* Filter Jenis Layanan (Popover Icon) — identical to Penginput */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                      className={`relative p-2 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer text-xs font-bold ${filterJenisLayanan !== 'ALL'
-                        ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent shadow-sm scale-105'
-                        : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs'
-                        }`}
-                      title="Filter Jenis Layanan"
-                    >
-                      <ListFilter className="w-4 h-4" />
-                      {filterJenisLayanan !== 'ALL' && (
-                        <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
-                      )}
-                    </button>
-
-                    {isFilterDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsFilterDropdownOpen(false)}
-                        />
-                        <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-60 bg-white border border-slate-100 rounded-xl shadow-lg py-2 z-50 animate-fadeIn text-xs text-slate-700 font-semibold flex flex-col gap-0.5">
-                          <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 capitalize tracking-wider border-b border-slate-50 mb-1 select-none">
-                            Pilih Jenis Layanan
-                          </div>
-                          {[
-                            { val: 'ALL', label: 'Semua Layanan' },
-                            { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
-                            { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
-                            { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
-                            { val: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
-                            { val: 'PEMBETULAN', label: 'Pembetulan' },
-                            { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
-                          ].map((item) => {
-                            const isSelected = filterJenisLayanan === item.val;
-                            return (
-                              <button
-                                key={item.val}
-                                type="button"
-                                onClick={() => {
-                                  setFilterJenisLayanan(item.val);
-                                  setCurrentSubmittedPage(1);
-                                  setIsFilterDropdownOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'text-indigo-650 bg-indigo-50/30 font-bold' : ''
-                                  }`}
-                              >
-                                <span>{item.label}</span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
+                {/* Right Side: Active Bundle Indicator + Mode Switcher + Refresh Button */}
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
                   {/* Indicator Active Bundle with Tooltip */}
                   <div className="relative group flex shrink-0">
                     <button
                       type="button"
                       onClick={() => setViewMode('bundle')}
-                      className={`w-9 h-9 rounded-xl border transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-black relative ${selectedBundle
-                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300'
-                        : 'bg-amber-50 border-amber-250 text-amber-600 hover:bg-amber-100 hover:border-amber-300'
+                      className={`h-10 px-3 rounded-md border transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 text-xs font-bold relative font-sans ${selectedBundle
+                        ? 'bg-emerald-50 border-emerald-200 text-[#008f78] hover:bg-emerald-100'
+                        : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
                         }`}
                     >
-                      {selectedBundle ? getShortBundleNum(selectedBundle.nomorBundle) : '—'}
+                      <span className="font-mono font-black">{selectedBundle ? getShortBundleNum(selectedBundle.nomorBundle) : '—'}</span>
                     </button>
 
                     {/* Popover Tooltip (Keterangan Bundle) */}
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-3.5 hidden group-hover:flex flex-col gap-2 z-50 pointer-events-none select-none animate-fadeIn">
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-3.5 hidden group-hover:flex flex-col gap-2 z-50 pointer-events-none select-none animate-fadeIn font-sans">
                       <div className="flex items-center gap-2 border-b border-slate-100 pb-1.5">
-                        <div className={`w-2 h-2 rounded-full ${selectedBundle ? 'bg-indigo-650 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
+                        <div className={`w-2 h-2 rounded-full ${selectedBundle ? 'bg-[#00a389] animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
                           Bundle Kerja Aktif
                         </span>
@@ -1002,300 +1422,380 @@ export default function PenelitiWorkspace() {
                         <p className="text-[10px] font-semibold text-slate-400 leading-relaxed">
                           {selectedBundle
                             ? selectedBundle.status === 'DRAFT'
-                              ? 'Siap menerima berkas. Klik tombol ➔ pada kolom Aksi tabel.'
-                              : `Status bundle ${selectedBundle.status} (tidak dapat menambah berkas).`
-                            : 'Pilih atau buat bundle baru terlebih dahulu di tab Daftar Bundle.'}
+                              ? 'Siap menerima berkas. Klik tombol "+ Bundle" pada kolom Aksi tabel.'
+                              : `Status bundle ${getStatusLabel(selectedBundle.status)} (tidak dapat menambah berkas).`
+                            : 'Pilih atau buat bundle baru terlebih dahulu di tab Pilih Bundle.'}
                         </p>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
+                  <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchDisplayMode('berkas')}
+                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+                        ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
+                    >
+                      <span>Nopel</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchDisplayMode('pemohon')}
+                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
+                        ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                    >
+                      <span>Pemohon</span>
+                    </button>
                   </div>
 
                   {/* Tombol Refresh Manual */}
                   <button
                     onClick={() => fetchData(true)}
                     disabled={isRefreshing || listLoading}
-                    className="p-2 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40"
+                    className="h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
                     title="Refresh Data"
                   >
-                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
                   </button>
                 </div>
               </div>
+
+              {/* Quick Filter Chips (Pilih Jenis Layanan Praktis dengan Angka Count) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 select-none">
+                {[
+                  { val: 'ALL', label: 'Semua' },
+                  { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                  { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                  { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                  { val: 'OBJEK_PAJAK_BARU', label: 'OP Baru' },
+                  { val: 'PEMBETULAN', label: 'Pembetulan' },
+                  { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+                ].map((item) => {
+                  const isActive = filterJenisLayanan === item.val;
+                  const count = submittedJenisCounts[item.val] ?? 0;
+                  return (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => {
+                        setFilterJenisLayanan(item.val);
+                        setCurrentSubmittedPage(1);
+                      }}
+                      className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 font-sans ${isActive
+                        ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
+                        : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {/* Table wrapper with padding — identical to Penginput */}
-            <div className="px-5 pt-5 pb-5 bg-[#dde3ea] flex-1 flex flex-col gap-4">
-              <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-3xs flex flex-col">
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200 whitespace-nowrap">
-                        <th className="py-3 px-5 text-center w-12 min-w-[48px]">No</th>
-                        <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
-                        <th className="py-3 px-5 min-w-[110px]">Tgl. Nopel</th>
-                        <th className="py-3 px-5 min-w-[110px]">Tgl. Selesai</th>
-                        <th className="py-3 px-5 min-w-[160px]">No. Pelayanan</th>
-                        <th className="py-3 px-5 min-w-[180px]">Nomor Objek Pajak</th>
-                        <th className="py-3 px-5 min-w-[150px]">Nama Pemohon</th>
-                        <th className="py-3 px-5 min-w-[120px]">Jenis Layanan</th>
-                        <th className="py-3 px-5 text-center min-w-[100px]">Status</th>
-                        <th className="py-3 px-5 text-right pr-6 w-24 min-w-[96px]">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {filteredSubmittedList.length === 0 ? (
-                        <tr>
-                          <td colSpan={10} className="py-20 px-5 text-center bg-white">
-                            <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
-                              <FishingAnimation isSearch={!!(searchSubmittedQuery || filterJenisLayanan !== 'ALL')} />
-                              <div className="flex flex-col gap-1">
-                                <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider">
-                                  {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
-                                    ? 'Hasil Pencarian Tidak Ditemukan'
-                                    : 'Belum Ada Permohonan'}
-                                </h5>
-                                <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4">
-                                  {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
-                                    ? 'Kami tidak menemukan data yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.'
-                                    : 'Antrean permohonan masuk kosong. Saat ini tidak ada berkas yang perlu diverifikasi.'}
-                                </p>
-                              </div>
-                              {(searchSubmittedQuery || filterJenisLayanan !== 'ALL') && (
-                                <button
-                                  onClick={() => {
-                                    setSearchSubmittedQuery('');
-                                    setFilterJenisLayanan('ALL');
-                                  }}
-                                  className="mt-1 px-4.5 py-2 border border-slate-200/80 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-3xs"
-                                >
-                                  Reset Pencarian
-                                </button>
-                              )}
+
+            {/* TIER 3: DATA CANVAS & ENTERPRISE TABLE CARD */}
+            <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[500px]">
+
+              {/* Table Content */}
+              <div className="overflow-x-auto scrollbar-thin flex-1">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-400 capitalize tracking-wider text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                      <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
+                      <th className="py-3 px-2 text-center w-10 min-w-[40px]">⭐</th>
+                      <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
+                      <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
+                      <th className="py-3 px-4 min-w-[100px]">Tgl. Nopel</th>
+                      <th className="py-3 px-4 min-w-[100px]">Tgl. Selesai</th>
+                      <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
+                      <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
+                      <th className="py-3 px-4 min-w-[170px]">Nama Pemohon</th>
+                      <th className="py-3 px-4 min-w-[120px]">Jenis Layanan</th>
+                      <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
+                      <th className="py-3 px-4 text-center w-28 min-w-[110px]">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-[11px] font-bold font-sans bg-white">
+                    {filteredSubmittedList.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="py-16 px-5 text-center bg-white">
+                          <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
+                            <FishingAnimation isSearch={!!(searchSubmittedQuery || filterJenisLayanan !== 'ALL')} />
+                            <div className="flex flex-col gap-1">
+                              <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider">
+                                {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
+                                  ? 'Hasil Pencarian Tidak Ditemukan'
+                                  : 'Belum Ada Permohonan'}
+                              </h5>
+                              <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4">
+                                {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
+                                  ? 'Kami tidak menemukan data yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.'
+                                  : 'Antrean permohonan masuk kosong. Saat ini tidak ada berkas yang perlu diverifikasi.'}
+                              </p>
                             </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedSubmittedList.map((item, index) => {
-                          const itemNumber = (activeSubmittedPage - 1) * itemsPerSubmittedPage + index + 1;
-                          const nopolDate = item.tanggalNoPelayanan
-                            ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : '—';
-                          const penyelesaianDate = item.tanggalPenyelesaian
-                            ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : '—';
+                            {(searchSubmittedQuery || filterJenisLayanan !== 'ALL') && (
+                              <button
+                                onClick={() => {
+                                  setSearchSubmittedQuery('');
+                                  setFilterJenisLayanan('ALL');
+                                }}
+                                className="mt-1 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-lg transition-all cursor-pointer shadow-3xs"
+                              >
+                                Reset Pencarian
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedSubmittedList.map((item, index) => {
+                        const itemNumber = (activeSubmittedPage - 1) * itemsPerSubmittedPage + index + 1;
+                        const nopolDate = item.tanggalNoPelayanan
+                          ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—';
+                        const penyelesaianDate = item.tanggalPenyelesaian
+                          ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—';
 
-                          return (
-                            <tr
-                              key={item.id}
-                              onClick={() => setSelectedRequest(item)}
-                              className="hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-gray-700"
-                            >
-                              <td className="py-4 px-5 text-center text-xs font-bold text-slate-500 font-mono">{itemNumber}</td>
-                              <td className="py-4 px-2 text-center" onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleFavorite(item.id);
-                              }}>
-                                <button
-                                  type="button"
-                                  className="p-1 hover:scale-125 active:scale-75 transition-all duration-200 text-slate-300 hover:text-amber-500 cursor-pointer"
-                                  title={item.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
-                                >
-                                  <Star className={`w-4 h-4 transition-all duration-200 ${item.isFavorite
-                                    ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
-                                    : 'text-slate-300'
-                                    }`} />
-                                </button>
-                              </td>
-                              <td className="py-4 px-5 text-xs font-semibold text-slate-500 whitespace-nowrap">{nopolDate}</td>
-                              <td className="py-4 px-5 whitespace-nowrap">
-                                {item.tanggalPenyelesaian ? (
-                                  <div className="flex items-center gap-1">
-                                    {isOverdue(item.tanggalPenyelesaian, item.status) && (
-                                      <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
-                                    )}
-                                    <span className={`text-xs font-semibold ${isOverdue(item.tanggalPenyelesaian, item.status)
-                                      ? 'text-red-600 font-bold'
-                                      : 'text-slate-500'
-                                      }`}>
-                                      {penyelesaianDate}
-                                    </span>
-                                  </div>
-                                ) : "—"}
-                              </td>
-                              <td className="py-4 px-5 min-w-[140px] group/cell relative">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-slate-700 font-mono tracking-tight">
-                                    {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchSubmittedQuery)}
+                        return (
+                          <tr
+                            key={item.uniqueRowKey || item.id}
+                            onClick={() => setSelectedRequest(item)}
+                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[11px] font-bold font-sans text-slate-700 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
+                              }`}
+                          >
+                            <td className="py-2.5 px-4 text-center font-bold text-slate-400 font-sans text-[11px]">{itemNumber}</td>
+                            <td className="py-2.5 px-2 text-center" onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleFavorite(item.id);
+                            }}>
+                              <button
+                                type="button"
+                                className="p-1 hover:scale-125 active:scale-75 transition-all duration-200 text-slate-300 hover:text-amber-500 cursor-pointer"
+                                title={item.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
+                              >
+                                <Star className={`w-4 h-4 transition-all duration-200 ${item.isFavorite
+                                  ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
+                                  : 'text-slate-300'
+                                  }`} />
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
+                              <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
+                                <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">{nopolDate}</td>
+                            <td className="py-2.5 px-4 whitespace-nowrap font-sans">
+                              {item.tanggalPenyelesaian ? (
+                                <div className="flex items-center gap-1">
+                                  {isOverdue(item.tanggalPenyelesaian, item.status) && (
+                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  )}
+                                  <span className={`text-[11px] font-sans font-bold capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                    ? 'text-rose-600 font-bold'
+                                    : 'text-slate-600'
+                                    }`}>
+                                    {penyelesaianDate}
                                   </span>
-                                  <button
-                                    onClick={(e) => handleCopy(e, item.nomorPelayanan || item.nomorPermohonan)}
-                                    className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                    title="Salin Nomor"
-                                  >
-                                    {copiedText === (item.nomorPelayanan || item.nomorPermohonan) ? (
-                                      <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
                                 </div>
-                              </td>
-                              <td className="py-4 px-5 min-w-[140px] group/cell relative">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-semibold text-slate-500 font-mono">
-                                    {highlightText(formatNop(item.nop), searchSubmittedQuery)}
-                                  </span>
-                                  <button
-                                    onClick={(e) => handleCopy(e, item.nop)}
-                                    className="p-1.5 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                    title="Salin NOP"
-                                  >
-                                    {copiedText === item.nop ? (
-                                      <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-4 px-5 group/cell relative">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase">
-                                    {highlightText(item.namaWajibPajak.toUpperCase(), searchSubmittedQuery)}
-                                  </span>
-                                  <button
-                                    onClick={(e) => handleCopy(e, item.namaWajibPajak)}
-                                    className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                    title="Salin Nama Pemohon"
-                                  >
-                                    {copiedText === item.namaWajibPajak ? (
-                                      <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-4 px-5">
-                                <span
-                                  className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-205 px-2.5 py-0.5 rounded capitalize font-sans tracking-wide select-none"
-                                  title={item.jenisPermohonan.replace(/_/g, ' ')}
-                                >
-                                  {getAbbreviatedJenis(item.jenisPermohonan)}
+                              ) : "—"}
+                            </td>
+                            <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight">
+                                  {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchSubmittedQuery)}
                                 </span>
-                              </td>
-                              <td className="py-4 px-5 text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <span className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(item.status)}`}>
-                                    {toTitleCase(item.status).toUpperCase()}
+                                <button
+                                  onClick={(e) => handleCopy(e, item.nomorPelayanan || item.nomorPermohonan)}
+                                  className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                  title="Salin Nomor"
+                                >
+                                  {copiedText === (item.nomorPelayanan || item.nomorPermohonan) ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap">
+                                  {highlightText(formatNop(item.nop), searchSubmittedQuery)}
+                                </span>
+                                <button
+                                  onClick={(e) => handleCopy(e, item.nop)}
+                                  className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                  title="Salin NOP"
+                                >
+                                  {copiedText === item.nop ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 group/cell relative min-w-[170px] font-sans">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
+                                  {highlightText(item.displayNamaWajibPajak.toUpperCase(), searchSubmittedQuery)}
+                                </span>
+                                {item.isPecahanRow && (
+                                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                    #{item.pecahanIndex}/{item.totalPecahan}
                                   </span>
-                                </div>
-                              </td>
-                              <td className="py-4 px-5 text-right pr-6">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAddToBundle(item.id);
-                                    }}
-                                    disabled={loading || !selectedBundle || selectedBundle.status !== 'DRAFT'}
-                                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition-all cursor-pointer flex items-center justify-center shrink-0"
-                                    title="Masukkan ke bundle"
-                                  >
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRevisionTarget(item);
-                                    }}
-                                    disabled={loading}
-                                    className="p-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0"
-                                    title="Kembalikan untuk revisi"
-                                  >
-                                    <AlertTriangle className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                                )}
+                                <button
+                                  onClick={(e) => handleCopy(e, item.displayNamaWajibPajak)}
+                                  className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                  title="Salin Nama Pemohon"
+                                >
+                                  {copiedText === item.displayNamaWajibPajak ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 font-sans">
+                              <span
+                                className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide"
+                                title={item.jenisPermohonan.replace(/_/g, ' ')}
+                              >
+                                {getAbbreviatedJenis(item.jenisPermohonan)}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-sans">
+                              <div className="flex items-center justify-center gap-1">
+                                <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                  {getStatusLabel(item.status)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddToBundle(item.id);
+                                  }}
+                                  disabled={loading || !selectedBundle || selectedBundle.status !== 'DRAFT'}
+                                  className="h-8 px-2.5 bg-[#00a389] hover:bg-[#008f78] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-extrabold rounded-lg shadow-3xs transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                                  title="Masukkan ke bundle aktif"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Bundle</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRevisionTarget(item);
+                                  }}
+                                  disabled={loading}
+                                  className="h-8 w-8 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0"
+                                  title="Kembalikan untuk revisi"
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-                {/* Table Footer / Pagination — identical to Penginput */}
-                <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-semibold text-gray-500 font-sans">
-                      {filteredSubmittedList.length > 0
-                        ? `Menampilkan ${((activeSubmittedPage - 1) * itemsPerSubmittedPage) + 1}–${Math.min(activeSubmittedPage * itemsPerSubmittedPage, filteredSubmittedList.length)} dari ${filteredSubmittedList.length} permohonan`
-                        : 'Tidak ada data'}
-                    </span>
-                    {/* Items per page */}
-                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5">
-                      {[10, 20, 50].map(n => (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setItemsPerSubmittedPage(n)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerSubmittedPage === n
-                            ? 'bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] text-[#1e2022] shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
-                    </div>
+              {/* Table Footer / Pagination */}
+              <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-semibold text-slate-500 font-sans">
+                    {displaySubmittedList.length > 0
+                      ? `Menampilkan ${((activeSubmittedPage - 1) * itemsPerSubmittedPage) + 1}–${Math.min(activeSubmittedPage * itemsPerSubmittedPage, displaySubmittedList.length)} dari ${displaySubmittedList.length} ${displayMode === 'pemohon' ? 'entri pemohon' : 'permohonan'}`
+                      : 'Tidak ada data'}
+                  </span>
+                  {/* Items per page */}
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shadow-3xs">
+                    {[10, 20, 50].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setItemsPerSubmittedPage(n)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerSubmittedPage === n
+                          ? 'bg-[#00a389] text-white shadow-3xs font-extrabold'
+                          : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
                   </div>
-
-                  {totalSubmittedPages > 1 && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setCurrentSubmittedPage(prev => Math.max(prev - 1, 1))}
-                        disabled={activeSubmittedPage === 1}
-                        className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      {Array.from({ length: totalSubmittedPages }, (_, i) => i + 1)
-                        .filter(page => page === 1 || page === totalSubmittedPages || Math.abs(page - activeSubmittedPage) <= 1)
-                        .reduce((acc: (number | string)[], page, idx, arr) => {
-                          if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
-                          acc.push(page);
-                          return acc;
-                        }, [])
-                        .map((page, idx) =>
-                          page === '...' ? (
-                            <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
-                          ) : (
-                            <button
-                              key={page}
-                              type="button"
-                              onClick={() => setCurrentSubmittedPage(page as number)}
-                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeSubmittedPage === page
-                                ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
-                                : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
-                                }`}
-                            >
-                              {page}
-                            </button>
-                          )
-                        )}
-                      <button
-                        type="button"
-                        onClick={() => setCurrentSubmittedPage(prev => Math.min(prev + 1, totalSubmittedPages))}
-                        disabled={activeSubmittedPage === totalSubmittedPages}
-                        className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
                 </div>
+
+                {totalSubmittedPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentSubmittedPage(prev => Math.max(prev - 1, 1))}
+                      disabled={activeSubmittedPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    {Array.from({ length: totalSubmittedPages }, (_, i) => i + 1)
+                      .filter(page => page === 1 || page === totalSubmittedPages || Math.abs(page - activeSubmittedPage) <= 1)
+                      .reduce((acc: (number | string)[], page, idx, arr) => {
+                        if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                        acc.push(page);
+                        return acc;
+                      }, [])
+                      .map((page, idx) =>
+                        page === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
+                        ) : (
+                          <button
+                            key={page}
+                            type="button"
+                            onClick={() => setCurrentSubmittedPage(page as number)}
+                            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activeSubmittedPage === page
+                              ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105 z-10'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentSubmittedPage(prev => Math.min(prev + 1, totalSubmittedPages))}
+                      disabled={activeSubmittedPage === totalSubmittedPages}
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1303,138 +1803,81 @@ export default function PenelitiWorkspace() {
 
         {/* ==================== VIEW MODE: BUNDLE (Buat Bundle) ==================== */}
         {viewMode === 'bundle' && (
-          <div className="bg-[#dde3ea] border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-6 min-h-[300px]">
-            <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 border-b border-slate-200 pb-4 select-none">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-                <div className="flex flex-row items-center gap-2.5 flex-1 w-full sm:w-auto">
-                  {/* Search input for Bundles */}
-                  <div className={`relative flex-1 sm:flex-none sm:w-72 p-[1.5px] rounded-lg transition-all duration-300 ${isBundleSearchFocused ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs' : 'bg-slate-200/90'}`}>
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-                    <input
-                      type="text"
-                      value={searchBundleQuery}
-                      onChange={(e) => setSearchBundleQuery(e.target.value)}
-                      onFocus={() => setIsBundleSearchFocused(true)}
-                      onBlur={() => setIsBundleSearchFocused(false)}
-                      className="w-full pl-8.5 pr-16 py-1.5 bg-white border-transparent rounded-[7px] text-xs font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-                      placeholder="Cari No. Bundle, Jenis Pelayanan."
-                    />
-                    {!isBundleSearchFocused && !searchBundleQuery && (
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
-                        Ctrl+K
-                      </span>
-                    )}
-                    {searchBundleQuery && (
-                      <button onClick={() => setSearchBundleQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Filter Jenis Layanan (Popover Icon) — identical to Penginput */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setIsBundleFilterDropdownOpen(!isBundleFilterDropdownOpen)}
-                        className={`relative p-2 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer text-xs font-bold ${filterBundleJenisLayanan !== 'ALL'
-                          ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent shadow-sm scale-105'
-                          : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs'
-                          }`}
-                        title="Filter Jenis Layanan"
-                      >
-                        <ListFilter className="w-4 h-4" />
-                        {filterBundleJenisLayanan !== 'ALL' && (
-                          <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
-                        )}
-                      </button>
-
-                      {isBundleFilterDropdownOpen && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setIsBundleFilterDropdownOpen(false)}
-                          />
-                          <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-60 bg-white border border-slate-100 rounded-xl shadow-lg py-2 z-50 animate-fadeIn text-xs text-slate-700 font-semibold flex flex-col gap-0.5">
-                            <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 capitalize tracking-wider border-b border-slate-50 mb-1 select-none">
-                              Pilih Jenis Layanan
-                            </div>
-                            {[
-                              { val: 'ALL', label: 'Semua Layanan' },
-                              { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
-                              { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
-                              { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
-                              { val: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
-                              { val: 'PEMBETULAN', label: 'Pembetulan' },
-                              { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
-                            ].map((item) => {
-                              const isSelected = filterBundleJenisLayanan === item.val;
-                              return (
-                                <button
-                                  key={item.val}
-                                  type="button"
-                                  onClick={() => {
-                                    setFilterBundleJenisLayanan(item.val);
-                                    setCurrentBundlePage(1);
-                                    setIsBundleFilterDropdownOpen(false);
-                                  }}
-                                  className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${isSelected ? 'text-indigo-650 bg-indigo-50/30 font-bold' : ''
-                                    }`}
-                                >
-                                  <span>{item.label}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Tombol Refresh Manual */}
-                    <button
-                      onClick={() => fetchData(true)}
-                      disabled={isRefreshing || listLoading}
-                      className="p-2 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40"
-                      title="Refresh Data"
-                    >
-                      <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
+          <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+                {/* Search input for Bundles (Aligned width & style with Header search) */}
+                <div className="relative w-full md:w-[403px] max-w-full">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchBundleQuery}
+                    onChange={(e) => setSearchBundleQuery(e.target.value)}
+                    onFocus={() => setIsBundleSearchFocused(true)}
+                    onBlur={() => setIsBundleSearchFocused(false)}
+                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
+                    placeholder="Cari No. Bundle, Jenis Pelayanan."
+                  />
+                  {!isBundleSearchFocused && !searchBundleQuery && (
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
+                      Ctrl+K
+                    </span>
+                  )}
+                  {searchBundleQuery && (
+                    <button onClick={() => setSearchBundleQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors">
+                      <X className="w-3.5 h-3.5" />
                     </button>
-                  </div>
+                  )}
                 </div>
 
-                <button
-                  onClick={handleCreateBundle}
-                  disabled={loading}
-                  className="px-4 py-2 bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] hover:brightness-[1.03] active:scale-95 text-[#2c333f] font-bold text-xs rounded-xl border border-white/20 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 w-full sm:w-auto"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Buat</span>
-                </button>
+                {/* Right side controls: Buat Button + Refresh Button to its right */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleCreateBundle}
+                    disabled={loading}
+                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-lg shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Buat</span>
+                  </button>
+
+                  <button
+                    onClick={() => fetchData(true)}
+                    disabled={isRefreshing || listLoading}
+                    className="p-2.5 h-10 w-10 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                    title="Refresh Data"
+                  >
+                    <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Filter Status Pills for Bundles */}
+            {/* Filter Jenis Layanan Pills for Bundles (Replacing Status Pills) */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 select-none pb-1">
-              {['ALL', 'DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'].map((st) => {
-                const isActive = filterBundleStatus === st;
-                const count = bundleStatusCounts[st] ?? 0;
+              {[
+                { val: 'ALL', label: 'Semua' },
+                { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                { val: 'OBJEK_PAJAK_BARU', label: 'OP Baru' },
+                { val: 'PEMBETULAN', label: 'Pembetulan' },
+                { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+              ].map((item) => {
+                const isActive = filterBundleJenisLayanan === item.val;
+                const count = bundleJenisCounts[item.val] ?? 0;
                 return (
                   <button
-                    key={st}
+                    key={item.val}
                     type="button"
-                    onClick={() => setFilterBundleStatus(st)}
+                    onClick={() => setFilterBundleJenisLayanan(item.val)}
                     className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
-                      ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent shadow-sm'
+                      ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
                       : 'bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90'
                       }`}
                   >
-                    {st !== 'ALL' && (
-                      <span className={`w-1.5 h-1.5 rounded-full ${st === 'DRAFT' ? 'bg-[#9cb4fe]' : st === 'LOCKED' ? 'bg-slate-800' : st === 'VOID' ? 'bg-rose-500' : 'bg-emerald-500'
-                        }`} />
-                    )}
-                    <span>{st === 'ALL' ? 'Semua' : st === 'IN_MANIFEST' ? 'In Manifest' : st.charAt(0) + st.slice(1).toLowerCase()}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? 'bg-[#2c333f]/10 text-[#2c333f]' : 'bg-slate-100 text-slate-500'
+                    <span>{item.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                       }`}>
                       {count}
                     </span>
@@ -1447,6 +1890,12 @@ export default function PenelitiWorkspace() {
               {paginatedBundlesList.map((b) => {
                 const isSelected = selectedBundle?.id === b.id;
                 const berkasCount = b.permohonan?.length || 0;
+                const pemohonCount = (b.permohonan || []).reduce((acc: number, item: any) => {
+                  if (item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+                    return acc + item.dataBaru.length;
+                  }
+                  return acc + 1;
+                }, 0);
 
                 // Get config styling based on status (fallback to DRAFT)
                 const statusCfg = BUNDLE_STATUS_CONFIG[b.status] || BUNDLE_STATUS_CONFIG.DRAFT;
@@ -1459,7 +1908,7 @@ export default function PenelitiWorkspace() {
                 // Get appropriate Lucide Folder icon or count
                 const renderFolderIconOrCount = () => {
                   const iconClass = `w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSelected ? 'text-indigo-650 font-bold' : b.status === 'LOCKED' ? 'text-slate-400' : b.status === 'VOID' ? 'text-rose-500' : 'text-indigo-500'}`;
-                  if (berkasCount > 0) {
+                  if (pemohonCount > 0) {
                     return (
                       <span className={`w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-full leading-none transition-all duration-300 group-hover:scale-110 ${isSelected
                         ? 'bg-gradient-to-r from-sky-500 to-[#9cb4fe] text-white shadow-sm font-extrabold'
@@ -1467,7 +1916,7 @@ export default function PenelitiWorkspace() {
                           ? 'bg-slate-500 text-slate-50 font-bold'
                           : 'bg-[#9cb4fe] text-white shadow-2xs font-extrabold'
                         }`}>
-                        {berkasCount}
+                        {pemohonCount}
                       </span>
                     );
                   }
@@ -1489,63 +1938,78 @@ export default function PenelitiWorkspace() {
                   <div
                     key={b.id}
                     onClick={() => setSelectedBundle(b)}
-                    className={`p-4 rounded-2xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[110px] ${isSelected
-                      ? 'bg-gradient-to-br from-sky-50/50 via-[#9cb4fe]/5 to-white border-indigo-400 shadow-md ring-2 ring-indigo-400/20'
+                    className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[125px] ${isSelected
+                      ? 'bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20'
                       : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
                       }`}
                   >
-                    {/* Top Row: Number & Count Badge */}
+                    {/* Top Row: Number */}
                     <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center min-w-0 flex-1">
-                        <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
-                          {b.nomorBundle}
-                        </span>
-                      </div>
-
-                      {/* Count Badge (like homepage) */}
-                      <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md leading-none shrink-0" title={`${berkasCount} Berkas`}>
-                        {berkasCount}
+                      <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
+                        {b.nomorBundle}
                       </span>
                     </div>
 
-                    {/* Bottom: Service Type Badge & Status / Actions */}
-                    <div className="flex flex-col gap-2 pt-2.5 border-t border-slate-100/80">
-                      <div className="flex items-center justify-between gap-2.5">
-                        {/* Service Type Tag */}
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
-                          {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : '—'}
-                        </span>
+                    {/* Middle Row: Service Type Tag | Status | Count Badge Centered Horizontally */}
+                    <div className="flex items-center justify-center gap-2 w-full py-1 flex-wrap sm:flex-nowrap">
+                      {/* Service Type Tag */}
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
+                        {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : '—'}
+                      </span>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {/* Status Pill Badge (moved here) */}
-                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold border leading-none uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
-                            ? 'bg-slate-900 text-slate-100 border-slate-800'
-                            : b.status === 'IN_MANIFEST'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : b.status === 'VOID'
-                                ? 'bg-rose-50 text-rose-800 border-rose-250'
-                                : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                            }`}>
-                            {renderStatusIcon()}
-                            <span>{b.status.toLowerCase()}</span>
-                          </span>
+                      {/* Thin Vertical Line Separator 1 */}
+                      <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
 
-                          {/* Reset button inside card if empty draft bundle is locked */}
-                          {b.status === 'DRAFT' && berkasCount === 0 && b.jenisPermohonan && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleResetBundleType(b.id);
-                              }}
-                              disabled={loading}
-                              className="text-[10px] text-amber-600 hover:text-amber-800 hover:underline font-extrabold cursor-pointer shrink-0 animate-fadeIn"
-                              title="Reset jenis permohonan bundle yang terkunci"
-                            >
-                              Reset
-                            </button>
-                          )}
+                      {/* Status Pill Badge */}
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
+                        ? 'bg-slate-900 text-slate-100 border-slate-800'
+                        : b.status === 'IN_MANIFEST'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : b.status === 'VOID'
+                            ? 'bg-rose-50 text-rose-800 border-rose-250'
+                            : 'bg-emerald-50 text-[#008f78] border-emerald-200'
+                        }`}>
+                        {renderStatusIcon()}
+                        <span>{getStatusLabel(b.status)}</span>
+                      </span>
+
+                      {/* Reset button inside card if empty draft bundle is locked */}
+                      {b.status === 'DRAFT' && berkasCount === 0 && b.jenisPermohonan && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResetBundleType(b.id);
+                          }}
+                          disabled={loading}
+                          className="text-[9px] text-amber-600 hover:text-amber-800 hover:underline font-extrabold cursor-pointer shrink-0 animate-fadeIn"
+                          title="Reset jenis permohonan bundle yang terkunci"
+                        >
+                          Reset
+                        </button>
+                      )}
+
+                      {/* Thin Vertical Line Separator 2 */}
+                      <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
+
+                      {/* Count Badge */}
+                      <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs" title={`${berkasCount} Permohonan NOPEL (${pemohonCount} Pemohon)`}>
+                        {pemohonCount} Pemohon
+                      </span>
+                    </div>
+
+                    {/* Bottom Row: Peneliti Profile Initials Avatar & Creation Date */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/80 text-[10px] text-slate-400 font-semibold select-none mt-auto">
+                      {/* Peneliti Avatar Initials & Name */}
+                      <div className="flex items-center gap-1.5 min-w-0" title={`Pembuat Bundle: ${b.peneliti?.name || 'Peneliti'}`}>
+                        <div className="w-5 h-5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-black shrink-0 shadow-3xs">
+                          {getInitials(b.peneliti?.name || 'Peneliti')}
                         </div>
                       </div>
+
+                      {/* Creation Date */}
+                      <span className="font-mono text-[10px] text-slate-500 font-bold shrink-0">
+                        {b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -1598,7 +2062,7 @@ export default function PenelitiWorkspace() {
                       type="button"
                       onClick={() => setItemsPerBundlePage(n)}
                       className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerBundlePage === n
-                        ? 'bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] text-[#1e2022] shadow-sm font-extrabold'
+                        ? 'bg-[#00a389] text-white shadow-3xs font-extrabold'
                         : 'text-slate-500 hover:text-slate-700'
                         }`}
                     >
@@ -1615,7 +2079,7 @@ export default function PenelitiWorkspace() {
                     type="button"
                     onClick={() => setCurrentBundlePage(prev => Math.max(prev - 1, 1))}
                     disabled={activeBundlePage === 1}
-                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center"
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -1635,8 +2099,8 @@ export default function PenelitiWorkspace() {
                           key={page}
                           onClick={() => setCurrentBundlePage(page as number)}
                           className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activeBundlePage === page
-                            ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
-                            : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
+                            ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105 z-10'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
                             }`}
                         >
                           {page}
@@ -1647,7 +2111,7 @@ export default function PenelitiWorkspace() {
                     type="button"
                     onClick={() => setCurrentBundlePage(prev => Math.min(prev + 1, totalBundlePages))}
                     disabled={activeBundlePage === totalBundlePages}
-                    className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center"
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -1657,383 +2121,407 @@ export default function PenelitiWorkspace() {
           </div>
         )}
 
-        {/* ==================== VIEW MODE: PRINT (Cetak Surat Pengantar) ==================== */}
+        {/* ==================== VIEW MODE: PRINT (Kunci & Cetak Surat Pengantar) ==================== */}
         {viewMode === 'print' && (
-          <div className="bg-[#dde3ea] rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[300px]">
+          <div className="flex flex-col gap-2.5">
             {selectedBundle ? (
-              <div className="flex-1 flex flex-col overflow-hidden animate-fadeIn">
-                {/* Header Banner - containing bundle details and action buttons */}
-                <div className="px-5 py-4 border-b border-gray-200/60 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
-                  {/* Title / Number (No gray label) */}
-                  <div className="select-none">
-                    <h3 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-2">
-                      <span className="font-mono font-black text-slate-900">{selectedBundle.nomorBundle}</span>
-                      <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full select-none">
-                        {(selectedBundle.permohonan || []).length} Berkas
-                      </span>
-                    </h3>
+              <div className="flex flex-col gap-2.5 animate-fadeIn">
+                {/* TIER 2: UNIFIED COMMAND BAR CONTAINER (Separated above table card) */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
+                  {/* Left: Bundle Number & Status */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-xs text-slate-900 bg-white border border-slate-200/90 px-3 py-1.5 rounded-md shadow-3xs">
+                      {selectedBundle.nomorBundle}
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-md border uppercase font-sans ${selectedBundle.status === 'LOCKED'
+                      ? 'bg-emerald-50 text-[#008f78] border-emerald-200'
+                      : selectedBundle.status === 'DRAFT'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                      {selectedBundle.status}
+                    </span>
                   </div>
 
-                  {/* Actions Button Group */}
-                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0 select-none">
-                    {/* Print button (always visible) */}
-                    <a
-                      href={`/api/pdf/surat-pengantar-bundle/${selectedBundle.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs rounded-xl shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                      title="Unduh / Cetak Surat Pengantar PDF"
-                    >
-                      <Printer className="w-3.5 h-3.5 text-indigo-650" />
-                      <span>Cetak</span>
-                    </a>
+                  {/* Right: Mode Switcher + Action Buttons */}
+                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap font-sans">
+                    {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
+                    <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchDisplayMode('berkas')}
+                        className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+                          ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
+                      >
+                        <span>Nopel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchDisplayMode('pemohon')}
+                        className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
+                          ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                      >
+                        <span>Pemohon</span>
+                      </button>
+                    </div>
 
-                    {/* Reset Jenis button for empty draft bundles with a locked type */}
+                    {/* Reset Jenis button */}
                     {selectedBundle.status === 'DRAFT' && (selectedBundle.permohonan || []).length === 0 && selectedBundle.jenisPermohonan && (
                       <button
                         onClick={() => handleResetBundleType(selectedBundle.id)}
                         disabled={loading}
-                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shrink-0"
-                        title="Reset jenis permohonan bundle yang terkunci"
+                        className="h-10 px-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shrink-0 font-sans"
+                        title="Reset jenis permohonan bundle"
                       >
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className="w-4 h-4" />
                         <span>Reset Jenis</span>
                       </button>
                     )}
 
-                    {/* Bundle Lock button */}
+                    {/* Lock Bundle button */}
                     {selectedBundle.status === 'DRAFT' && (
                       <button
                         onClick={handleLockBundle}
                         disabled={loading || (selectedBundle.permohonan || []).length === 0}
-                        className="px-4 py-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-slate-950 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        className="h-10 px-4 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-md shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-sans"
                       >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Kunci</span>
+                        <Lock className="w-4 h-4" />
+                        <span>Kunci Bundle</span>
                       </button>
                     )}
+
+                    {/* Print PDF Button */}
+                    <a
+                      href={`/api/pdf/surat-pengantar-bundle/${selectedBundle.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 px-4 bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-700 font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-2 cursor-pointer shrink-0 font-sans"
+                      title="Unduh / Cetak Surat Pengantar PDF"
+                    >
+                      <Printer className="w-4 h-4 text-[#00a389]" />
+                      <span>Cetak</span>
+                    </a>
                   </div>
                 </div>
 
-                {/* Table — Columns matching Penginput */}
-                {(() => {
-                  const totalPrintPages = Math.ceil((selectedBundle.permohonan || []).length / itemsPerPrintPage);
-                  const activePrintPage = currentPrintPage > totalPrintPages ? 1 : currentPrintPage;
-                  const paginatedPrintList = (selectedBundle.permohonan || []).slice(
-                    (activePrintPage - 1) * itemsPerPrintPage,
-                    activePrintPage * itemsPerPrintPage
-                  );
+                {/* TIER 3: DATA CANVAS & ENTERPRISE TABLE CARD */}
+                <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[500px]">
+                  {(() => {
+                    const totalPrintPages = Math.ceil(displayPrintList.length / itemsPerPrintPage);
+                    const activePrintPage = currentPrintPage > totalPrintPages ? 1 : currentPrintPage;
+                    const paginatedPrintList = displayPrintList.slice(
+                      (activePrintPage - 1) * itemsPerPrintPage,
+                      activePrintPage * itemsPerPrintPage
+                    );
 
-                  return (
-                    <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                      <div className="px-5 pt-5 pb-5 bg-[#dde3ea] flex-1 flex flex-col gap-4 overflow-hidden">
-                        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-3xs flex flex-col justify-between flex-1">
-                          <div className="overflow-x-auto scrollbar-thin flex-1">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 capitalize tracking-wider text-left border-b border-slate-200 whitespace-nowrap">
-                                  <th className="py-3 px-5 text-center w-12 min-w-[48px]">No</th>
-                                  <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
-                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Nopel</th>
-                                  <th className="py-3 px-5 min-w-[110px]">Tgl. Selesai</th>
-                                  <th className="py-3 px-5 min-w-[160px]">No. Pelayanan</th>
-                                  <th className="py-3 px-5 min-w-[180px]">Nomor Objek Pajak</th>
-                                  <th className="py-3 px-5 min-w-[150px]">Nama Pemohon</th>
-                                  <th className="py-3 px-5 min-w-[120px]">Jenis Layanan</th>
-                                  <th className="py-3 px-5 text-center min-w-[100px]">Status</th>
-                                  <th className="py-3 px-5 text-right pr-6 w-24 min-w-[96px]">Aksi</th>
+                    return (
+                      <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                        <div className="overflow-x-auto scrollbar-thin flex-1">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-400 capitalize tracking-wider text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                                <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
+                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
+                                <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
+                                <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
+                                <th className="py-3 px-4 min-w-[100px]">Tgl. Nopel</th>
+                                <th className="py-3 px-4 min-w-[100px]">Tgl. Selesai</th>
+                                <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
+                                <th className="py-3 px-4 min-w-[170px]">Nomor Objek Pajak</th>
+                                <th className="py-3 px-4 min-w-[170px]">Nama Pemohon</th>
+                                <th className="py-3 px-4 min-w-[120px]">Jenis Layanan</th>
+                                <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
+                                <th className="py-3 px-4 text-center w-24 min-w-[96px]">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-[11px] font-bold font-sans bg-white">
+                              {paginatedPrintList.length === 0 ? (
+                                <tr>
+                                  <td colSpan={12} className="py-14 text-center text-slate-400 text-xs font-semibold">
+                                    Bundle masih kosong. Silakan masukkan berkas dari tab 'Isi Antrean'.
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100 text-xs font-semibold text-gray-700 bg-white">
-                                {paginatedPrintList.length === 0 ? (
-                                  <tr>
-                                    <td colSpan={10} className="py-14 text-center text-slate-400 italic">
-                                      Bundle masih kosong. Silakan masukkan berkas dari tab 'Daftar Antrean'.
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  paginatedPrintList.map((item: any, index: number) => {
-                                    const isMutasiSebagian = item.jenisPermohonan === 'MUTASI_SEBAGIAN';
-                                    const isFrozen = pendingKoreksiMap[item.id] === true;
-                                    const itemNumber = (activePrintPage - 1) * itemsPerPrintPage + index + 1;
-                                    const nopolDate = item.tanggalNoPelayanan
-                                      ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                                      : '—';
-                                    const penyelesaianDate = item.tanggalPenyelesaian
-                                      ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                                      : '—';
+                              ) : (
+                                paginatedPrintList.map((item: any, index: number) => {
+                                  const isFrozen = pendingKoreksiMap[item.id] === true;
+                                  const itemNumber = (activePrintPage - 1) * itemsPerPrintPage + index + 1;
+                                  const nopolDate = item.tanggalNoPelayanan
+                                    ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    : '—';
+                                  const penyelesaianDate = item.tanggalPenyelesaian
+                                    ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                                    : '—';
 
-                                    return (
-                                      <tr key={item.id} className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-gray-700 ${isFrozen ? 'bg-amber-50/30' : ''}`}>
-                                        <td className="py-4 px-5 text-center text-xs font-bold text-slate-500 font-mono">{itemNumber}</td>
-                                        <td className="py-4 px-2 text-center">
-                                          <button
-                                            type="button"
-                                            className="p-1 cursor-default text-slate-350"
-                                          >
-                                            <Star className={`w-4 h-4 transition-all duration-200 ${item.isFavorite
-                                              ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
-                                              : 'text-slate-300'
-                                              }`} />
-                                          </button>
-                                        </td>
-                                        <td className="py-4 px-5 text-xs font-semibold text-slate-500 whitespace-nowrap">{nopolDate}</td>
-                                        <td className="py-4 px-5 whitespace-nowrap">
-                                          {item.tanggalPenyelesaian ? (
-                                            <div className="flex items-center gap-1">
-                                              {isOverdue(item.tanggalPenyelesaian, item.status) && (
-                                                <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
-                                              )}
-                                              <span className={`text-xs font-semibold ${isOverdue(item.tanggalPenyelesaian, item.status)
-                                                ? 'text-red-600 font-bold'
-                                                : 'text-slate-500'
-                                                }`}>
-                                                {penyelesaianDate}
-                                              </span>
-                                            </div>
-                                          ) : "—"}
-                                        </td>
-                                        <td className="py-4 px-5 min-w-[140px] group/cell relative">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-bold text-slate-700 font-mono tracking-tight">
-                                              {item.nomorPelayanan || item.nomorPermohonan}
-                                            </span>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCopy(e, item.nomorPelayanan || item.nomorPermohonan);
-                                              }}
-                                              className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                              title="Salin Nomor"
-                                            >
-                                              {copiedText === (item.nomorPelayanan || item.nomorPermohonan) ? (
-                                                <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                              ) : (
-                                                <Copy className="w-3 h-3" />
-                                              )}
-                                            </button>
-                                            {isFrozen && (
-                                              <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none animate-fadeIn">
-                                                <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
-                                                Frozen
-                                              </span>
+                                  return (
+                                    <tr
+                                      key={item.uniqueRowKey || item.id}
+                                      onClick={() => setSelectedRequest(item)}
+                                      className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[11px] font-bold font-sans text-slate-700 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : isFrozen ? 'bg-amber-50/30' : ''}`}
+                                    >
+                                      <td className="py-2.5 px-4 text-center font-bold text-slate-400 font-sans text-[11px]">{itemNumber}</td>
+                                      <td className="py-2.5 px-2 text-center">
+                                        <button
+                                          type="button"
+                                          className="p-1 cursor-default text-slate-300"
+                                        >
+                                          <Star className={`w-4 h-4 transition-all duration-200 ${item.isFavorite
+                                            ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]'
+                                            : 'text-slate-300'
+                                            }`} />
+                                        </button>
+                                      </td>
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">
+                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                      </td>
+                                      <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
+                                        <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
+                                          <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap capitalize">{nopolDate}</td>
+                                      <td className="py-2.5 px-4 whitespace-nowrap font-sans">
+                                        {item.tanggalPenyelesaian ? (
+                                          <div className="flex items-center gap-1">
+                                            {isOverdue(item.tanggalPenyelesaian, item.status) && (
+                                              <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                             )}
-                                          </div>
-                                        </td>
-                                        <td className="py-4 px-5 min-w-[140px] group/cell relative">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-semibold text-slate-500 font-mono">
-                                              {formatNop(item.nop)}
+                                            <span className={`text-[11px] font-sans font-bold capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                              ? 'text-rose-600 font-bold'
+                                              : 'text-slate-600'
+                                              }`}>
+                                              {penyelesaianDate}
                                             </span>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCopy(e, item.nop);
-                                              }}
-                                              className="p-1.5 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                              title="Salin NOP"
-                                            >
-                                              {copiedText === item.nop ? (
-                                                <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                              ) : (
-                                                <Copy className="w-3 h-3" />
-                                              )}
-                                            </button>
                                           </div>
-                                        </td>
-                                        <td className="py-4 px-5 group/cell relative">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase">
-                                              {item.namaWajibPajak.toUpperCase()}
-                                            </span>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCopy(e, item.namaWajibPajak);
-                                              }}
-                                              className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-105 text-slate-400 hover:text-indigo-655 transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                              title="Salin Nama Pemohon"
-                                            >
-                                              {copiedText === item.namaWajibPajak ? (
-                                                <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                              ) : (
-                                                <Copy className="w-3 h-3" />
-                                              )}
-                                            </button>
-                                          </div>
-                                        </td>
-                                        <td className="py-4 px-5">
-                                          <span
-                                            className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-205 px-2.5 py-0.5 rounded capitalize font-sans tracking-wide select-none"
-                                            title={item.jenisPermohonan.replace(/_/g, ' ')}
-                                          >
-                                            {getAbbreviatedJenis(item.jenisPermohonan)}
+                                        ) : "—"}
+                                      </td>
+                                      <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight">
+                                            {item.nomorPelayanan || item.nomorPermohonan}
                                           </span>
-                                        </td>
-                                        <td className="py-4 px-5 text-center">
-                                          <div className="flex items-center justify-center gap-1">
-                                            <span className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(item.status)}`}>
-                                              {toTitleCase(item.status).toUpperCase()}
-                                            </span>
-                                          </div>
-                                        </td>
-                                        <td className="py-4 px-5 text-right pr-6">
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            {/* Kertas Kerja PDF link for Mutasi Sebagian */}
-                                            {isMutasiSebagian && (
-                                              <a
-                                                href={`/api/pdf/kertas-kerja/${item.id}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 transition-all flex items-center justify-center shrink-0"
-                                                title="Cetak Kertas Kerja Mutasi Sebagian"
-                                              >
-                                                <FileText className="w-3.5 h-3.5 text-indigo-650" />
-                                              </a>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCopy(e, item.nomorPelayanan || item.nomorPermohonan);
+                                            }}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin Nomor"
+                                          >
+                                            {copiedText === (item.nomorPelayanan || item.nomorPermohonan) ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
                                             )}
-
-                                            {/* Extraction Action */}
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (selectedBundle.status === 'LOCKED') {
-                                                  setExtractionTarget(item);
-                                                } else {
-                                                  showConfirm({
-                                                    title: 'Keluarkan dari Bundle',
-                                                    message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPermohonan} dari bundle draf ini?`,
-                                                    onConfirm: () => {
-                                                      handleRemoveFromBundle(item);
-                                                    }
-                                                  });
-                                                }
-                                              }}
-                                              disabled={loading || isFrozen}
-                                              className="p-1.5 bg-slate-50 border border-slate-200/60 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-                                              title={selectedBundle.status === 'LOCKED' ? "Ajukan keluarkan (acc supervisor)" : "Keluarkan"}
+                                          </button>
+                                          {isFrozen && (
+                                            <span className="text-[8px] font-extrabold capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none animate-fadeIn">
+                                              <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
+                                              Frozen
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+                                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                          <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap">
+                                            {formatNop(item.nop)}
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCopy(e, item.nop);
+                                            }}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin NOP"
+                                          >
+                                            {copiedText === item.nop ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-4 group/cell relative min-w-[170px] font-sans">
+                                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                          <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
+                                            {(item.displayNamaWajibPajak || item.namaWajibPajak).toUpperCase()}
+                                          </span>
+                                          {item.isPecahanRow && (
+                                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                              #{item.pecahanIndex}/{item.totalPecahan}
+                                            </span>
+                                          )}
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCopy(e, item.displayNamaWajibPajak || item.namaWajibPajak);
+                                            }}
+                                            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+                                            title="Salin Nama Pemohon"
+                                          >
+                                            {copiedText === (item.displayNamaWajibPajak || item.namaWajibPajak) ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+                                            ) : (
+                                              <Copy className="w-3 h-3" />
+                                            )}
+                                          </button>
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-4 font-sans">
+                                        <span
+                                          className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide"
+                                          title={item.jenisPermohonan.replace(/_/g, ' ')}
+                                        >
+                                          {getAbbreviatedJenis(item.jenisPermohonan)}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 px-4 text-center font-sans">
+                                        <div className="flex items-center justify-center gap-1">
+                                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                            {getStatusLabel(item.status)}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                          {/* Kertas Kerja PDF link for Mutasi Sebagian */}
+                                          {item.jenisPermohonan === 'MUTASI_SEBAGIAN' && (
+                                            <a
+                                              href={`/api/pdf/kertas-kerja/${item.id}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="h-8 w-8 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 transition-all flex items-center justify-center shrink-0"
+                                              title="Cetak Kertas Kerja Mutasi Sebagian"
                                             >
-                                              <FolderMinus className="w-3.5 h-3.5" />
-                                            </button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
+                                              <FileText className="w-3.5 h-3.5 text-[#00a389]" />
+                                            </a>
+                                          )}
 
-                          {/* Table Footer / Pagination for Print Table — identical to Antrean */}
-                          <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 rounded-b-xl">
-                            <div className="flex items-center gap-3">
-                              <span className="text-[11px] font-semibold text-gray-500 font-sans">
-                                {selectedBundle.permohonan && selectedBundle.permohonan.length > 0
-                                  ? `Menampilkan ${((activePrintPage - 1) * itemsPerPrintPage) + 1}–${Math.min(activePrintPage * itemsPerPrintPage, selectedBundle.permohonan.length)} dari ${selectedBundle.permohonan.length} permohonan`
-                                  : 'Tidak ada data'}
-                              </span>
-                              {/* Items per page */}
-                              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5">
-                                {[10, 20, 50].map(n => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    onClick={() => setItemsPerPrintPage(n)}
-                                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerPrintPage === n
-                                      ? 'bg-gradient-to-r from-[#7dd4fc] to-[#9cb4fe] text-[#1e2022] shadow-sm font-extrabold'
-                                      : 'text-slate-500 hover:text-slate-700'
-                                      }`}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                                <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
-                              </div>
+                                          {/* Extraction Action */}
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (selectedBundle.status === 'LOCKED') {
+                                                setExtractionTarget(item);
+                                              } else {
+                                                showConfirm({
+                                                  title: 'Keluarkan dari Bundle',
+                                                  message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPermohonan} dari bundle draf ini?`,
+                                                  onConfirm: () => {
+                                                    handleRemoveFromBundle(item);
+                                                  }
+                                                });
+                                              }
+                                            }}
+                                            disabled={loading || isFrozen}
+                                            className="h-8 w-8 bg-slate-50 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0 shadow-3xs"
+                                            title={selectedBundle.status === 'LOCKED' ? "Ajukan keluarkan (acc supervisor)" : "Keluarkan"}
+                                          >
+                                            <FolderMinus className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Table Footer / Pagination for Print Table */}
+                        <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[11px] font-semibold text-slate-500 font-sans">
+                              {displayPrintList.length > 0
+                                ? `Menampilkan ${((activePrintPage - 1) * itemsPerPrintPage) + 1}–${Math.min(activePrintPage * itemsPerPrintPage, displayPrintList.length)} dari ${displayPrintList.length} ${displayMode === 'pemohon' ? 'entri pemohon' : 'permohonan'}`
+                                : 'Tidak ada data'}
+                            </span>
+                            {/* Items per page */}
+                            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shadow-3xs">
+                              {[10, 20, 50].map(n => (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  onClick={() => setItemsPerPrintPage(n)}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerPrintPage === n
+                                    ? 'bg-[#00a389] text-white shadow-3xs font-extrabold'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                              <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
                             </div>
-                            {totalPrintPages > 1 && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setCurrentPrintPage(prev => Math.max(prev - 1, 1))}
-                                  disabled={activePrintPage === 1}
-                                  className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center"
-                                >
-                                  <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-                                {Array.from({ length: totalPrintPages }, (_, i) => i + 1)
-                                  .filter(page => page === 1 || page === totalPrintPages || Math.abs(page - activePrintPage) <= 1)
-                                  .reduce((acc: (number | string)[], page, idx, arr) => {
-                                    if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
-                                    acc.push(page);
-                                    return acc;
-                                  }, [])
-                                  .map((page, idx) =>
-                                    page === '...' ? (
-                                      <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
-                                    ) : (
-                                      <button
-                                        key={page}
-                                        type="button"
-                                        onClick={() => setCurrentPrintPage(page as number)}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activePrintPage === page
-                                          ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#1e2022] font-extrabold shadow-sm scale-105 z-10'
-                                          : 'border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9]'
-                                          }`}
-                                      >
-                                        {page}
-                                      </button>
-                                    )
-                                  )}
-                                <button
-                                  type="button"
-                                  onClick={() => setCurrentPrintPage(prev => Math.min(prev + 1, totalPrintPages))}
-                                  disabled={activePrintPage === totalPrintPages}
-                                  className="p-1.5 rounded-lg border-transparent bg-white text-gray-500 hover:bg-[#f1f5f9] disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center"
-                                >
-                                  <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
                           </div>
+                          {totalPrintPages > 1 && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPrintPage(prev => Math.max(prev - 1, 1))}
+                                disabled={activePrintPage === 1}
+                                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              {Array.from({ length: totalPrintPages }, (_, i) => i + 1)
+                                .filter(page => page === 1 || page === totalPrintPages || Math.abs(page - activePrintPage) <= 1)
+                                .reduce((acc: (number | string)[], page, idx, arr) => {
+                                  if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                                  acc.push(page);
+                                  return acc;
+                                }, [])
+                                .map((page, idx) =>
+                                  page === '...' ? (
+                                    <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
+                                  ) : (
+                                    <button
+                                      key={page}
+                                      type="button"
+                                      onClick={() => setCurrentPrintPage(page as number)}
+                                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${activePrintPage === page
+                                        ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105 z-10'
+                                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
+                                        }`}
+                                    >
+                                      {page}
+                                    </button>
+                                  )
+                                )}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPrintPage(prev => Math.min(prev + 1, totalPrintPages))}
+                                disabled={activePrintPage === totalPrintPages}
+                                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      {/* Footer Status Banner (Full-Width with Watermark-like Repeating Text) */}
-                      {(() => {
-                        const status = selectedBundle.status;
-                        const isLocked = status === 'LOCKED';
-                        const repeatedTexts = Array(45).fill(status);
-
-                        return (
-                          <div className={`w-full py-2 text-center text-[9px] font-bold tracking-widest uppercase select-none flex items-center justify-center gap-6 border-t overflow-hidden ${isLocked
-                            ? 'bg-slate-100/60 text-slate-500/70 border-slate-200/50'
-                            : 'bg-amber-50/60 text-amber-700/75 border-amber-100/50'
-                            }`}>
-                            <div className="flex items-center gap-6 whitespace-nowrap">
-                              {repeatedTexts.map((text, i) => (
-                                <React.Fragment key={i}>
-                                  <span>{text}</span>
-                                  {i < repeatedTexts.length - 1 && <span className="opacity-40 select-none">•</span>}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                </div>
               </div>
             ) : (
               /* Clean & Premium Empty Placeholder */
-              <div className="py-24 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border-t border-slate-200">
-                <div className="w-20 h-20 rounded-3xl bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-500 shadow-3xs animate-pulse">
-                  <Boxes className="w-10 h-10 stroke-[1.5]" />
+              <div className="py-20 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
+                <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#00a389] shadow-3xs">
+                  <Boxes className="w-8 h-8 stroke-[1.5]" />
                 </div>
-                <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-sm font-black text-gray-800 tracking-tight">Detail Bundle & Cetak</h3>
+                <div className="space-y-1 max-w-sm">
+                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Detail Bundle & Cetak</h3>
                   <p className="text-xs text-slate-400 font-semibold leading-relaxed">
-                    Silakan pilih salah satu bundle di tab <strong className="text-slate-500">Daftar bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
+                    Silakan pilih salah satu bundle di tab <strong className="text-slate-600 font-bold">Pilih Bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
                   </p>
                 </div>
               </div>
@@ -2043,126 +2531,232 @@ export default function PenelitiWorkspace() {
 
       </div>{/* end: hide-during-skeleton wrapper */}
 
-      {/* DIALOG: Minta Revisi Notes */}
-      {revisionTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-5 border border-slate-100 flex flex-col gap-4 animate-scaleUp">
+      {/* DIALOG: Minta Revisi Notes - Reconstructed Floating Modal Overlay via React Portal */}
+      {mounted && revisionTarget && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs animate-fadeIn select-none font-sans overflow-y-auto">
+          {/* Clickable Backdrop to Dismiss */}
+          <div
+            className="fixed inset-0 -z-10"
+            onClick={() => {
+              if (!loading) {
+                setRevisionTarget(null);
+                setRevisionNotes('');
+              }
+            }}
+          />
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 select-none">
-              <h3 className="text-md font-bold text-gray-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4.5 h-4.5 text-amber-500" /> Pengembalian Berkas Revisi
-              </h3>
+          <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200/90 overflow-hidden animate-scaleUp flex flex-col my-auto">
+            {/* Header Strip matching App Theme & Header Bar */}
+            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <h3 className="text-sm font-extrabold text-white tracking-wide uppercase font-sans">
+                    Pengembalian Berkas Revisi
+                  </h3>
+                  <p className="text-[11px] font-semibold text-slate-400 font-sans">
+                    Kembalikan permohonan ke Petugas Input untuk diperbaiki
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => { setRevisionTarget(null); setRevisionNotes(''); }}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full cursor-pointer"
+                disabled={loading}
+                className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
+                title="Tutup Modal"
               >
-                <X className="w-4.5 h-4.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 font-semibold select-none leading-relaxed">
-              Tulis catatan alasan pengembalian berkas permohonan <strong className="text-gray-800">{revisionTarget.nomorPermohonan}</strong>. Notifikasi akan dikirim langsung ke Penginput dan wajib pajak pemilik berkas.
-            </p>
+            {/* Modal Body Content */}
+            <form onSubmit={handleMintaRevisi} className="p-5 sm:p-6 flex flex-col gap-4">
+              {/* Target Details Card Header */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-lg p-3.5 flex flex-col gap-2 shadow-3xs">
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-semibold text-slate-500 font-sans">No. Pelayanan:</span>
+                  <span className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-3xs text-[11px]">
+                    {revisionTarget.nomorPelayanan || revisionTarget.nomorPermohonan}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-semibold text-slate-500 font-sans">Nama Pemohon:</span>
+                  <span className="font-bold text-slate-800 uppercase truncate text-[11px] font-sans">
+                    {revisionTarget.namaWajibPajak}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-semibold text-slate-500 font-sans">NOP:</span>
+                  <span className="font-mono font-bold text-slate-700 text-[11px]">
+                    {formatNop(revisionTarget.nop)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-semibold text-slate-500 font-sans">Jenis Layanan:</span>
+                  <span className="font-bold text-[#008f78] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 text-[11px] capitalize font-sans">
+                    {revisionTarget.jenisPermohonan.replace(/_/g, ' ')}
+                  </span>
+                </div>
+              </div>
 
-            <form onSubmit={handleMintaRevisi} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Catatan / alasan kelengkapan</label>
+              {/* Textarea Form Group */}
+              <div className="flex flex-col gap-2 font-sans">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>Catatan Alasan Revisi</span>
+                  <span className="text-[10px] text-slate-400 font-semibold normal-case">Wajib diisi</span>
+                </label>
                 <textarea
-                  placeholder="Contoh: Lampiran KTP buram, SPPT NOP tidak sesuai sertifikat..."
+                  placeholder="Tuliskan catatan detail alasan berkas dikembalikan (contoh: Lampiran KTP buram, SPPT NOP tidak sesuai sertifikat...)"
                   value={revisionNotes}
                   onChange={(e) => setRevisionNotes(e.target.value)}
                   disabled={loading}
                   rows={4}
-                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white rounded-xl px-4 py-3 transition-all text-gray-800 resize-none"
+                  className="w-full text-xs font-semibold bg-white border border-slate-200 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 rounded-lg p-3 transition-all text-slate-800 resize-none shadow-3xs"
                   required
                 />
+
+                {/* Quick Preset Buttons */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    'Lampiran KTP buram / tidak jelas',
+                    'SPPT NOP tidak sesuai sertifikat',
+                    'Format Surat Kuasa tidak valid',
+                    'Bukti bayar PBB belum dilampirkan',
+                    'Rincian pecahan luas tidak cocok'
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setRevisionNotes(prev => prev ? `${prev}; ${preset}` : preset);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 border border-slate-200/80 text-slate-600 rounded-md transition-all cursor-pointer text-left shrink-0 font-sans"
+                    >
+                      + {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 select-none">
+              {/* Action Buttons Strip */}
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 select-none font-sans">
                 <button
                   type="button"
                   onClick={() => { setRevisionTarget(null); setRevisionNotes(''); }}
                   disabled={loading}
-                  className="px-3.5 py-2 text-slate-500 hover:text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                  className="h-10 px-4 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs transition-all cursor-pointer disabled:opacity-40"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !revisionNotes.trim()}
-                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center"
+                  className="h-10 px-4 rounded-md bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:scale-100"
                 >
                   {loading ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
                   ) : (
-                    'Kirim pengajuan revisi'
+                    <>
+                      <Send className="w-4 h-4 stroke-[2.5]" />
+                      <span>Kirim Revisi Ke Penginput</span>
+                    </>
                   )}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* DIALOG: Extraction from locked bundle (Requires Supervisor validation) */}
-      {extractionTarget && selectedBundle?.status === 'LOCKED' && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-5 border border-slate-100 flex flex-col gap-4 animate-scaleUp">
+      {mounted && extractionTarget && selectedBundle?.status === 'LOCKED' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs animate-fadeIn select-none font-sans overflow-y-auto">
+          {/* Clickable Backdrop to Dismiss */}
+          <div
+            className="fixed inset-0 -z-10"
+            onClick={() => {
+              if (!loading) {
+                setExtractionTarget(null);
+                setExtractionNotes('');
+              }
+            }}
+          />
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 select-none">
-              <h3 className="text-md font-bold text-gray-900 flex items-center gap-1.5">
-                <Lock className="w-4.5 h-4.5 text-indigo-600" /> Koreksi Korektif Bundle Terkunci
-              </h3>
+          <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200/90 overflow-hidden animate-scaleUp flex flex-col my-auto">
+            {/* Header Strip matching App Theme & Header Bar */}
+            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#00a389]/20 border border-[#00a389]/30 flex items-center justify-center text-[#00a389] shrink-0">
+                  <Lock className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <h3 className="text-sm font-extrabold text-white tracking-wide uppercase font-sans">
+                    Koreksi Bundle Terkunci
+                  </h3>
+                  <p className="text-[11px] font-semibold text-slate-400 font-sans">
+                    Pengeluaran berkas dari bundle locked membutuhkan persetujuan Supervisor
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => { setExtractionTarget(null); setExtractionNotes(''); }}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full cursor-pointer"
+                disabled={loading}
+                className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
+                title="Tutup Modal"
               >
-                <X className="w-4.5 h-4.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 font-semibold select-none leading-relaxed">
-              Karena Bundle <strong className="text-gray-800">{selectedBundle.nomorBundle}</strong> sudah berstatus <strong>LOCKED</strong>, pengeluaran berkas <strong className="text-gray-800">{extractionTarget.nomorPermohonan}</strong> membutuhkan otorisasi persetujuan dari **Supervisor**.
-            </p>
+            {/* Body */}
+            <div className="p-5 sm:p-6 flex flex-col gap-4 font-sans">
+              <p className="text-xs text-slate-500 font-semibold select-none leading-relaxed">
+                Karena Bundle <strong className="text-slate-800 font-bold">{selectedBundle.nomorBundle}</strong> sudah berstatus <strong>LOCKED</strong>, pengeluaran berkas <strong className="text-slate-800 font-bold">{extractionTarget.nomorPermohonan}</strong> membutuhkan otorisasi persetujuan dari <strong>Supervisor</strong>.
+              </p>
 
-            <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-700 capitalize tracking-widest pl-1">Alasan pengeluaran berkas</label>
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Alasan Pengeluaran Berkas</label>
                 <textarea
                   placeholder="Tuliskan catatan alasan pengeluaran berkas untuk ditinjau oleh Supervisor..."
                   value={extractionNotes}
                   onChange={(e) => setExtractionNotes(e.target.value)}
                   disabled={loading}
                   rows={4}
-                  className="w-full text-xs font-bold bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white rounded-xl px-4 py-3 transition-all text-gray-800 resize-none"
+                  className="w-full text-xs font-semibold bg-white border border-slate-200 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 rounded-lg p-3 transition-all text-slate-800 resize-none shadow-3xs"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 select-none">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 select-none">
                 <button
                   type="button"
                   onClick={() => { setExtractionTarget(null); setExtractionNotes(''); }}
                   disabled={loading}
-                  className="px-3.5 py-2 text-slate-500 hover:text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                  className="h-10 px-4 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs transition-all cursor-pointer disabled:opacity-40"
                 >
                   Batal
                 </button>
                 <button
-                  onClick={handleRemoveFromBundle}
+                  onClick={() => handleRemoveFromBundle()}
                   disabled={loading || !extractionNotes.trim()}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center"
+                  className="h-10 px-4 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   {loading ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
                   ) : (
-                    'Kirim permintaan otorisasi'
+                    'Kirim Permintaan Otorisasi'
                   )}
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* DIALOG: Details Modal Overlay */}
       {selectedRequest && (

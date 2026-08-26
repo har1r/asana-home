@@ -22,6 +22,10 @@ export async function getSubmittedPermohonan() {
     // Solusi: ambil semua SUBMITTED dari DB, lalu filter bundleId di sisi JavaScript.
     const all = await prisma.permohonan.findMany({
       where: { status: 'SUBMITTED' },
+      include: {
+        dataBaru: true,
+        penginput: { select: { id: true, name: true, email: true } }
+      },
       orderBy: { createdAt: 'asc' }
     });
 
@@ -239,7 +243,12 @@ export async function getBundles() {
         status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'] }
       },
       include: {
-        permohonan: true,
+        permohonan: {
+          include: {
+            dataBaru: true,
+            penginput: { select: { id: true, name: true, email: true } }
+          }
+        },
         peneliti: { select: { name: true } }
       },
       orderBy: { createdAt: 'desc' }

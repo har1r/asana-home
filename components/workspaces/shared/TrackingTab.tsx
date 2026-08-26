@@ -54,6 +54,22 @@ const getAbbreviatedJenis = (jenis: string) => {
   }
 };
 
+const STATUS_LABEL_MAP: Record<string, string> = {
+  SUBMITTED: 'Diajukan',
+  REVISION: 'Revisi',
+  BUNDLED: 'Terbundel',
+  LOCKED: 'Terkunci',
+  IN_MANIFEST: 'Dimanifest',
+  ARCHIVED: 'Diarsipkan',
+  COMPLETED: 'Selesai',
+  REJECTED: 'Ditolak',
+  DRAFT: 'Draf',
+  VOID: 'Dibatalkan',
+  SENT: 'Dikirim',
+};
+
+const getStatusLabel = (status: string) => STATUS_LABEL_MAP[status] || status;
+
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'SUBMITTED': return 'bg-emerald-50 text-emerald-700 border-emerald-250/30';
@@ -430,7 +446,7 @@ export default function TrackingTab() {
                               <span className={`text-[8.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${
                                 m.status === 'SENT' ? 'bg-emerald-50 text-emerald-700 border-emerald-150' : 'bg-slate-100 text-slate-600 border-slate-200'
                               }`}>
-                                {m.status}
+                                {getStatusLabel(m.status)}
                               </span>
                               
                               {m.status === 'SENT' ? (
@@ -513,6 +529,8 @@ export default function TrackingTab() {
                                             <table className="w-full text-left border-collapse text-xs">
                                               <thead>
                                                 <tr className="bg-slate-50/50 text-[9px] font-bold text-slate-500 uppercase border-b border-slate-100 select-none">
+                                                  <th className="py-2 px-3">Tgl. Input</th>
+                                                  <th className="py-2 px-3">Petugas Input</th>
                                                   <th className="py-2 px-3">NOP</th>
                                                   <th className="py-2 px-3">No. Pelayanan</th>
                                                   <th className="py-2 px-3">Nama Pemohon</th>
@@ -523,7 +541,7 @@ export default function TrackingTab() {
                                               <tbody className="divide-y divide-slate-100 text-xs">
                                                 {permohonansCount === 0 ? (
                                                   <tr>
-                                                    <td colSpan={5} className="py-4 text-center text-slate-400 italic">Bundle ini kosong.</td>
+                                                    <td colSpan={7} className="py-4 text-center text-slate-400 italic">Bundle ini kosong.</td>
                                                   </tr>
                                                 ) : (
                                                   b.permohonan.map((p: any) => {
@@ -537,16 +555,24 @@ export default function TrackingTab() {
                                                       <tr 
                                                         key={p.id} 
                                                         onClick={() => setSelectedDoc(mappedPermohonan)}
-                                                        className={`hover:bg-slate-50/60 transition-colors cursor-pointer ${
-                                                          isSelected ? 'bg-indigo-50/30' : ''
+                                                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                                                          isSelected ? 'bg-indigo-50/40 font-semibold text-slate-900' : 'text-slate-700'
                                                         }`}
                                                       >
+                                                        <td className="py-2 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                                                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
+                                                          <div className="flex items-center gap-1 min-w-0" title={p.penginput?.name || "Petugas Input"}>
+                                                            <span className="truncate max-w-[120px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
+                                                          </div>
+                                                        </td>
                                                         <td className="py-3 px-3 font-mono font-bold text-slate-700">{formatNop(p.nop)}</td>
                                                         <td className="py-3 px-3 font-mono font-bold text-indigo-750">{p.nomorPelayanan || p.nomorPermohonan}</td>
                                                         <td className="py-3 px-3 text-slate-600 truncate max-w-[120px] uppercase font-bold">{p.namaWajibPajak}</td>
                                                         <td className="py-3 px-3 text-center">
                                                           <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(p.status)}`}>
-                                                            {p.status}
+                                                            {getStatusLabel(p.status)}
                                                           </span>
                                                         </td>
                                                         <td className="py-3 px-3 text-right">
@@ -605,6 +631,8 @@ export default function TrackingTab() {
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="bg-slate-50/50 text-[9px] font-bold text-slate-500 uppercase border-b border-slate-100 select-none">
+                            <th className="py-2.5 px-3">Tgl. Input</th>
+                            <th className="py-2.5 px-3">Petugas Input</th>
                             <th className="py-2.5 px-3">NOP</th>
                             <th className="py-2.5 px-3">No. Pelayanan</th>
                             <th className="py-2.5 px-3">Nama Pemohon</th>
@@ -626,6 +654,14 @@ export default function TrackingTab() {
                                   isSelected ? 'bg-indigo-50/30 font-bold' : ''
                                 }`}
                               >
+                                <td className="py-3 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                </td>
+                                 <td className="py-3 px-3 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
+                                   <div className="flex items-center gap-1 min-w-0" title={p.penginput?.name || "Petugas Input"}>
+                                     <span className="truncate max-w-[120px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
+                                   </div>
+                                 </td>
                                 <td className="py-3 px-3 font-mono font-bold text-slate-700">{formatNop(p.nop)}</td>
                                 <td className="py-3 px-3 font-mono font-bold text-indigo-750">{p.nomorPelayanan || p.nomorPermohonan}</td>
                                 <td className="py-3 px-3 text-slate-600 truncate max-w-[120px] uppercase font-bold">{p.namaWajibPajak}</td>

@@ -21,16 +21,17 @@ export async function getDigitizationBundles() {
   }
 
   try {
-    // Fetch all LOCKED and IN_MANIFEST bundles
+    // Fetch ALL bundles for Pengarsip workspace
     const list = await prisma.bundle.findMany({
-      where: {
-        status: { in: ["LOCKED", "IN_MANIFEST"] }
-      },
       include: {
         permohonan: {
           include: {
+            penginput: { select: { id: true, name: true, email: true } },
             dataBaru: true,
             arsipDigital: {
+              include: {
+                pengarsip: { select: { name: true } }
+              },
               orderBy: { versi: "desc" }
             },
             permintaanKoreksi: {
@@ -43,21 +44,17 @@ export async function getDigitizationBundles() {
       orderBy: { createdAt: "desc" }
     });
 
-    // Filter in JS to strictly show LOCKED bundles,
-    // and IN_MANIFEST bundles only if they have a permohonan in BUNDLED status with SUPERSEDED archives.
-    const filteredList = list.filter((bundle) => {
-      if (bundle.status === "LOCKED") {
-        return true;
+    // Fetch ALL permohonan across system for overall system KPI metrics
+    const allPermohonan = await prisma.permohonan.findMany({
+      include: {
+        dataBaru: true,
+        arsipDigital: {
+          where: { status: "ACTIVE" }
+        }
       }
-      if (bundle.status === "IN_MANIFEST") {
-        return bundle.permohonan.some(
-          (p) => p.status === "BUNDLED" && p.arsipDigital.some((ad) => ad.status === "SUPERSEDED")
-        );
-      }
-      return false;
     });
 
-    return { success: true, list: filteredList };
+    return { success: true, list, allPermohonan };
   } catch (error: any) {
     console.error("[ACTION-GET-DIGIT-BUNDLES-ERR]", error);
     return { success: false, list: [], error: "Gagal mengambil daftar bundle digitalisasi." };
@@ -80,8 +77,12 @@ export async function getBundleDetails(bundleId: string) {
       include: {
         permohonan: {
           include: {
+            penginput: { select: { id: true, name: true, email: true } },
             dataBaru: true,
             arsipDigital: {
+              include: {
+                pengarsip: { select: { name: true } }
+              },
               orderBy: { versi: "desc" }
             },
             permintaanKoreksi: {
@@ -197,7 +198,7 @@ export async function uploadArsipDigital(formData: FormData) {
       }
 
       // Find the last active archive version
-      const lastActive = await tx.arsipDigital.findFirst({
+      const lastActive = await (tx as any).arsipDigital.findFirst({
         where: {
           permohonanId,
           dataBaruId: dataBaruId || null,
@@ -217,7 +218,7 @@ export async function uploadArsipDigital(formData: FormData) {
       }
 
       // Create new ACTIVE archive
-      const newArchive = await tx.arsipDigital.create({
+      const newArchive = await (tx as any).arsipDigital.create({
         data: {
           permohonanId,
           dataBaruId: dataBaruId || null,
@@ -238,7 +239,7 @@ export async function uploadArsipDigital(formData: FormData) {
         if (permohonan.jenisPermohonan === "MUTASI_SEBAGIAN") {
           const totalFractions = permohonan.dataBaru.length;
           // Count active uploads for all fractions (including the one just created)
-          const activeFractionsCount = await tx.arsipDigital.count({
+          const activeFractionsCount = await (tx as any).arsipDigital.count({
             where: {
               permohonanId,
               status: "ACTIVE",
@@ -464,21 +465,21 @@ export async function getPengarsipStats() {
           // digitization queue: files that do NOT have ACTIVE digital archive
           if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
             const unarchivedFractions = p.dataBaru.filter(db => 
-              !p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "ACTIVE")
+              !p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE")
             ).length;
             queueFileCount += (unarchivedFractions === 0 && p.dataBaru.length === 0) ? 1 : unarchivedFractions;
 
             // re-upload queue: fractions that have SUPERSEDED archive and no ACTIVE archive
             const supersededFractions = p.dataBaru.filter(db => 
-              p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "SUPERSEDED") &&
-              !p.arsipDigital.some(ad => ad.dataBaruId === db.id && ad.status === "ACTIVE")
+              p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "SUPERSEDED") &&
+              !p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE")
             ).length;
             reuploadFileCount += supersededFractions;
           } else {
             queueFileCount += 1;
 
-            const hasSuperseded = p.arsipDigital.some(ad => ad.dataBaruId === null && ad.status === "SUPERSEDED");
-            const hasActive = p.arsipDigital.some(ad => ad.dataBaruId === null && ad.status === "ACTIVE");
+            const hasSuperseded = p.arsipDigital.some((ad: any) => ad.dataBaruId === null && ad.status === "SUPERSEDED");
+            const hasActive = p.arsipDigital.some((ad: any) => ad.dataBaruId === null && ad.status === "ACTIVE");
             if (hasSuperseded && !hasActive) {
               reuploadFileCount += 1;
             }

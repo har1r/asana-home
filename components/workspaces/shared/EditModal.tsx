@@ -384,8 +384,12 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
     needDataBaru, dataBaru
   ]);
 
-  // Auto-fill kecamatan and desa objek based on NOP
+  // Auto-fill kecamatan and desa objek based on NOP (skipped on initial load)
   useEffect(() => {
+    if (isNopInitialLoad.current) {
+      isNopInitialLoad.current = false;
+      return;
+    }
     const rawNop = nop.replace(/[^\d]/g, '');
     if (rawNop.length >= 10) {
       const kecCode = rawNop.slice(4, 7);
@@ -421,12 +425,14 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
     }
   }, [jenisPermohonan, dataBaru.length]);
 
-  // Track initial sync of EditModal to prevent overriding the stored date on modal open
+  // Track initial sync of EditModal to prevent overriding stored data/date on modal open
   const isInitialLoad = React.useRef(true);
+  const isNopInitialLoad = React.useRef(true);
 
   useEffect(() => {
     if (editTarget) {
       isInitialLoad.current = true;
+      isNopInitialLoad.current = true;
     }
   }, [editTarget]);
 
@@ -825,59 +831,67 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
   const currentStepLabel = steps[currentStep - 1]?.label;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-white/20 flex flex-col animate-scaleUp">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-xl overflow-hidden border border-slate-200/90 flex flex-col animate-scaleUp">
 
-        {/* Gradient Header */}
-        <div className="relative bg-gradient-to-br from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] px-6 pt-5 pb-6 select-none overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="relative flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="bg-white/25 rounded-lg p-1.5 shrink-0">
-                <Edit className="w-3.5 h-3.5 text-[#2c333f]" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[9px] font-extrabold text-[#2c333f]/60 tracking-widest capitalize leading-none mb-1">Edit Permohonan</span>
-                <span className="text-sm font-extrabold text-[#2c333f] font-mono tracking-tight truncate leading-none">
-                  {editTarget.nomorPelayanan || editTarget.nomorPermohonan}
-                </span>
-              </div>
+        {/* Header - Aligned with Sidebar & Header clean UI design system */}
+        <div className="bg-[#f8fafc] px-6 py-4 flex items-center justify-between gap-4 select-none border-b border-slate-200/80">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-[#00a389]/10 border border-[#00a389]/20 p-2 rounded-xl shrink-0 flex items-center justify-center">
+              <Edit className="w-4 h-4 text-[#00a389]" />
             </div>
-            <button
-              onClick={onClose}
-              className="bg-white/25 hover:bg-white/40 text-[#2c333f] p-1.5 rounded-xl transition-all cursor-pointer shrink-0"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                Edit Permohonan
+              </span>
+              <span className="text-sm font-black text-slate-800 font-mono tracking-tight truncate leading-none">
+                {editTarget.nomorPelayanan || editTarget.nomorPermohonan}
+              </span>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all cursor-pointer shrink-0"
+            title="Tutup Modal"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Stepper Navigation Indicator */}
+        {/* Labeled Multi-Step Stepper Bar (Identical to CreateForm.tsx) */}
         {steps.length > 1 && (
-          <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 select-none">
-            <div className="flex items-center justify-between px-2 relative">
-              <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-slate-200/60 -translate-y-1/2 z-0" />
+          <div className="border-b border-slate-200/80 bg-slate-50/80 px-6 py-3 select-none">
+            <div className="flex items-center justify-between gap-2 max-w-xl mx-auto">
               {steps.map((step, idx) => {
-                const isCompleted = idx + 1 < currentStep;
-                const isActive = idx + 1 === currentStep;
+                const stepNum = idx + 1;
+                const isActive = currentStep === stepNum;
+                const isCompleted = currentStep > stepNum;
+
                 return (
-                  <div key={step.label} className="flex flex-col items-center gap-1.5 z-10 bg-slate-50 px-3 rounded-lg">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
-                      isCompleted 
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : isActive
-                          ? 'bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] text-[#2c333f] border-transparent font-black shadow-md scale-110'
-                          : 'bg-white text-slate-400 border border-slate-200'
-                    }`}>
-                      {isCompleted ? '✓' : idx + 1}
-                    </div>
-                    <span className={`text-[9px] font-extrabold capitalize tracking-wider ${
-                      isActive ? 'text-[#2c333f]' : isCompleted ? 'text-emerald-600' : 'text-slate-400'
-                    }`}>
-                      {step.label}
-                    </span>
-                  </div>
+                  <React.Fragment key={step.label}>
+                    {idx > 0 && (
+                      <div className={`flex-1 h-0.5 transition-all ${isCompleted ? 'bg-[#00a389]' : 'bg-slate-200/80'}`} />
+                    )}
+                    <button
+                      type="button"
+                      disabled={stepNum > currentStep && !isCompleted}
+                      onClick={() => {
+                        if (stepNum < currentStep || isCompleted) setCurrentStep(stepNum);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-xs font-extrabold ${isActive
+                          ? 'bg-[#00a389] text-white shadow-3xs'
+                          : isCompleted
+                            ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
+                            : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
+                        }`}
+                    >
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
+                        }`}>
+                        {isCompleted ? '✓' : stepNum}
+                      </span>
+                      <span>{step.label}</span>
+                    </button>
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -887,14 +901,14 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
         <div className="p-6 flex flex-col gap-4">
 
           {error && (
-            <div className="bg-red-50/80 border border-red-200 text-red-750 text-xs font-bold rounded-xl px-4 py-2.5 flex items-start gap-2 animate-fadeIn">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl px-4 py-2.5 flex items-start gap-2 animate-fadeIn">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-4 py-2.5 flex items-start gap-2 animate-fadeIn">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-4 py-2.5 flex items-start gap-2 animate-fadeIn">
               <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
               <span>{success}</span>
             </div>
@@ -907,70 +921,42 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 1: DATA UTAMA */}
               {currentStepLabel === 'Data Utama' && (
-                <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs animate-fadeIn">
-                  <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest border-b border-slate-100 pb-1.5 mb-1">1. Data Utama</h4>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Jenis Layanan Permohonan</label>
-                    <select
-                      value={jenisPermohonan}
-                      onChange={(e) => setJenisPermohonan(e.target.value)}
-                      disabled={loading}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-805 focus:outline-none focus:border-indigo-500 transition-all shadow-3xs"
-                    >
-                      {JENIS_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">No. Pelayanan <span className="text-red-500"> *</span></label>
-                    <input
-                      type="text"
-                      id="edit_nomorPelayanan"
-                      value={nomorPelayanan}
-                      onChange={(e) => setNomorPelayanan(e.target.value.toUpperCase())}
-                      style={{ textTransform: 'uppercase' }}
-                      disabled={loading}
-                      className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.nomorPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                    />
-                    {formErrors.nomorPelayanan && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.nomorPelayanan}</span>}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Tanggal Nopel <span className="text-red-500"> *</span></label>
-                      <input
-                        type="date"
-                        id="edit_tanggalNoPelayanan"
-                        value={tanggalNoPelayanan}
-                        onChange={(e) => setTanggalNoPelayanan(e.target.value)}
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">
+                        Jenis Layanan Permohonan <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={jenisPermohonan}
+                        onChange={(e) => setJenisPermohonan(e.target.value)}
                         disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.tanggalNoPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                      />
-                      {formErrors.tanggalNoPelayanan && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.tanggalNoPelayanan}</span>}
+                        className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer"
+                      >
+                        {JENIS_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Tanggal Selesai <span className="text-red-500"> *</span></label>
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor Pelayanan <span className="text-rose-500">*</span></label>
                       <input
-                        type="date"
-                        id="edit_tanggalPenyelesaian"
-                        value={tanggalPenyelesaian}
-                        onChange={(e) => setTanggalPenyelesaian(e.target.value)}
+                        type="text"
+                        id="edit_nomorPelayanan"
+                        value={nomorPelayanan}
+                        onChange={(e) => setNomorPelayanan(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase' }}
                         disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.tanggalPenyelesaian ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nomorPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.tanggalPenyelesaian && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.tanggalPenyelesaian}</span>}
+                      {formErrors.nomorPelayanan && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.nomorPelayanan}</span>}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1 flex items-center justify-between">
-                        <span>Nomor Objek Pajak (NOP) <span className="text-red-500"> *</span></span>
-                        <span className={`text-[9px] font-mono font-bold pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      <label className="text-xs font-bold text-slate-700 tracking-wide flex items-center justify-between">
+                        <span>Nomor Objek Pajak (NOP) <span className="text-rose-500">*</span></span>
+                        <span className={`text-[10px] font-mono font-bold pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
                           {nop.replace(/[^\d]/g, '').length}/18 digit
                           {nop.replace(/[^\d]/g, '').length === 18 && ' ✓'}
                         </span>
@@ -979,6 +965,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         type="text"
                         id="edit_nop"
                         maxLength={24}
+                        placeholder="Contoh: 36.19.xxx.xxx.xxx-xxxx.x"
                         value={nop}
                         onChange={(e) => {
                           const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
@@ -993,18 +980,18 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           setNop(fmt);
                         }}
                         disabled={loading}
-                        className={`w-full text-xs font-bold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 font-mono focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.nop ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 font-sans tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nop ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.nop && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.nop}</span>}
+                      {formErrors.nop && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.nop}</span>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nomor WhatsApp WP <span className="text-red-500"> *</span></label>
-                      <div className={`flex items-center bg-white border rounded-xl overflow-hidden shadow-3xs transition-all focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 ${
-                        formErrors.noWhatsapp ? 'border-red-500' : 'border-slate-200'
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor WhatsApp WP <span className="text-rose-500">*</span></label>
+                      <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${
+                        formErrors.noWhatsapp ? 'border-rose-500' : 'border-slate-200/90'
                       }`}>
-                        <span className="bg-slate-50 border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-500 select-none flex items-center gap-1 shrink-0">
-                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 select-none flex items-center gap-1 shrink-0">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
                           <span>+62</span>
                         </span>
                         <input
@@ -1014,10 +1001,36 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           value={noWhatsapp.startsWith('62') ? noWhatsapp.slice(2) : noWhatsapp}
                           onChange={handleWhatsappChange}
                           disabled={loading}
-                          className="w-full px-3 py-2.5 text-xs font-semibold text-gray-755 focus:outline-none bg-transparent"
+                          className="w-full px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none bg-transparent"
                         />
                       </div>
-                      {formErrors.noWhatsapp && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.noWhatsapp}</span>}
+                      {formErrors.noWhatsapp && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.noWhatsapp}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Nopel <span className="text-rose-500">*</span></label>
+                      <input
+                        type="date"
+                        id="edit_tanggalNoPelayanan"
+                        value={tanggalNoPelayanan}
+                        onChange={(e) => setTanggalNoPelayanan(e.target.value)}
+                        disabled={loading}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalNoPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                      />
+                      {formErrors.tanggalNoPelayanan && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.tanggalNoPelayanan}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Selesai <span className="text-rose-500">*</span></label>
+                      <input
+                        type="date"
+                        id="edit_tanggalPenyelesaian"
+                        value={tanggalPenyelesaian}
+                        onChange={(e) => setTanggalPenyelesaian(e.target.value)}
+                        disabled={loading}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalPenyelesaian ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                      />
+                      {formErrors.tanggalPenyelesaian && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.tanggalPenyelesaian}</span>}
                     </div>
                   </div>
                 </div>
@@ -1025,12 +1038,11 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 2: DATA LAMA */}
               {currentStepLabel === 'Data Lama (Asal)' && needDataLama && (
-                <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs animate-fadeIn">
-                  <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest border-b border-slate-100 pb-1.5 mb-1">2. Data Lama (Pemilik & Objek Asal)</h4>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nama Pemilik Lama <span className="text-red-500"> *</span></label>
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* 1. Nama pemilik lama (Full Width) */}
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         id="edit_namaPemilikLama"
@@ -1038,164 +1050,166 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         onChange={(e) => setNamaPemilikLama(e.target.value.toUpperCase())}
                         style={{ textTransform: 'uppercase' }}
                         disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.namaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.namaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.namaPemilikLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.namaPemilikLama}</span>}
+                      {formErrors.namaPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.namaPemilikLama}</span>}
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Pemilik Lama <span className="text-red-500"> *</span></label>
-                      <input
-                        type="text"
-                        id="edit_alamatPemilikLama"
-                        value={alamatPemilikLama}
-                        onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase' }}
-                        disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.alamatPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                      />
-                      {formErrors.alamatPemilikLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.alamatPemilikLama}</span>}
-                    </div>
+                    {/* KELOMPOK ALAMAT, KECAMATAN, DESA (Symmetry side-by-side) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                      {/* Kiri: Pemilik */}
+                      <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-rose-500">*</span></label>
+                          <input
+                            type="text"
+                            id="edit_alamatPemilikLama"
+                            value={alamatPemilikLama}
+                            onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          />
+                          {formErrors.alamatPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.alamatPemilikLama}</span>}
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Pemilik <span className="text-red-500"> *</span></label>
-                        <input
-                          type="text"
-                          id="edit_kecamatanPemilikLama"
-                          value={kecamatanPemilikLama}
-                          onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.kecamatanPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                        />
-                        {formErrors.kecamatanPemilikLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.kecamatanPemilikLama}</span>}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
+                          <input
+                            type="text"
+                            id="edit_kecamatanPemilikLama"
+                            value={kecamatanPemilikLama}
+                            onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.kecamatanPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          />
+                          {formErrors.kecamatanPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanPemilikLama}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-rose-500">*</span></label>
+                          <input
+                            type="text"
+                            id="edit_desaPemilikLama"
+                            value={desaPemilikLama}
+                            onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.desaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          />
+                          {formErrors.desaPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.desaPemilikLama}</span>}
+                        </div>
                       </div>
 
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Pemilik <span className="text-red-500"> *</span></label>
-                        <input
-                          type="text"
-                          id="edit_desaPemilikLama"
-                          value={desaPemilikLama}
-                          onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.desaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                        />
-                        {formErrors.desaPemilikLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.desaPemilikLama}</span>}
+                      {/* Kanan: Objek */}
+                      <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek Pajak <span className="text-rose-500">*</span></label>
+                          <input
+                            type="text"
+                            id="edit_alamatObjekLama"
+                            value={alamatObjekLama}
+                            onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          />
+                          {formErrors.alamatObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.alamatObjekLama}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-rose-500">*</span></label>
+                          <select
+                            id="edit_kecamatanObjekLama"
+                            value={kecamatanObjekLama}
+                            onChange={(e) => {
+                              setKecamatanObjekLama(e.target.value);
+                              setDesaObjekLama('');
+                            }}
+                            disabled={loading}
+                            className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors.kecamatanObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          >
+                            <option value="">Pilih Kecamatan Objek</option>
+                            {Object.keys(KECAMATAN_DATA).map(kec => (
+                              <option key={kec} value={kec}>{kec}</option>
+                            ))}
+                          </select>
+                          {formErrors.kecamatanObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanObjekLama}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-rose-500">*</span></label>
+                          <select
+                            id="edit_desaObjekLama"
+                            value={desaObjekLama}
+                            onChange={(e) => setDesaObjekLama(e.target.value)}
+                            disabled={loading || !kecamatanObjekLama}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors.desaObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                          >
+                            <option value="">
+                              {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
+                            </option>
+                            {kecamatanObjekLama && KECAMATAN_DATA[kecamatanObjekLama]?.map(desa => (
+                              <option key={desa} value={desa}>{desa}</option>
+                            ))}
+                          </select>
+                          {formErrors.desaObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.desaObjekLama}</span>}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Objek Pajak <span className="text-red-500"> *</span></label>
-                      <input
-                        type="text"
-                        id="edit_alamatObjekLama"
-                        value={alamatObjekLama}
-                        onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase' }}
-                        disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.alamatObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                      />
-                      {formErrors.alamatObjekLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.alamatObjekLama}</span>}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Objek <span className="text-red-500"> *</span></label>
-                        <select
-                          id="edit_kecamatanObjekLama"
-                          value={kecamatanObjekLama}
-                          onChange={(e) => {
-                            setKecamatanObjekLama(e.target.value);
-                            setDesaObjekLama(''); // Reset desa
-                          }}
-                          disabled={loading}
-                          className={`w-full text-xs font-semibold bg-white border rounded-xl px-3 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs cursor-pointer ${formErrors.kecamatanObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                        >
-                          <option value="">Pilih Kecamatan Objek</option>
-                          {Object.keys(KECAMATAN_DATA).map(kec => (
-                            <option key={kec} value={kec}>{kec}</option>
-                          ))}
-                        </select>
-                        {formErrors.kecamatanObjekLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.kecamatanObjekLama}</span>}
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Objek <span className="text-red-500"> *</span></label>
-                        <select
-                          id="edit_desaObjekLama"
-                          value={desaObjekLama}
-                          onChange={(e) => setDesaObjekLama(e.target.value)}
-                          disabled={loading || !kecamatanObjekLama}
-                          className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs cursor-pointer ${formErrors.desaObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                        >
-                          <option value="">
-                            {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
-                          </option>
-                          {kecamatanObjekLama && KECAMATAN_DATA[kecamatanObjekLama]?.map(desa => (
-                            <option key={desa} value={desa}>{desa}</option>
-                          ))}
-                        </select>
-                        {formErrors.desaObjekLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.desaObjekLama}</span>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Tanah Asal <span className="text-red-500"> *</span></label>
+                        <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah Asal <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <input
                             type="number"
                             id="edit_luasTanahLama"
-                            min={0}
-                            step="any"
                             value={luasTanahLama}
                             onChange={(e) => setLuasTanahLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-10 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.luasTanahLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasTanahLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                          <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                             m²
                           </span>
                         </div>
-                        {formErrors.luasTanahLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.luasTanahLama}</span>}
+                        {formErrors.luasTanahLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.luasTanahLama}</span>}
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Bangunan Asal <span className="text-red-500"> *</span></label>
+                        <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan Asal <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <input
                             type="number"
                             id="edit_luasBangunanLama"
-                            min={0}
-                            step="any"
                             value={luasBangunanLama}
                             onChange={(e) => setLuasBangunanLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-10 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.luasBangunanLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasBangunanLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                          <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                             m²
                           </span>
                         </div>
-                        {formErrors.luasBangunanLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.luasBangunanLama}</span>}
+                        {formErrors.luasBangunanLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.luasBangunanLama}</span>}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nomor/Jenis Sertifikat Lama <span className="text-red-500"> *</span></label>
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         id="edit_sertifikatLama"
+                        placeholder="Contoh: SHM NO. 12345"
                         value={sertifikatLama}
                         onChange={(e) => setSertifikatLama(e.target.value.toUpperCase())}
                         style={{ textTransform: 'uppercase' }}
                         disabled={loading}
-                        className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors.sertifikatLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.sertifikatLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.sertifikatLama && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors.sertifikatLama}</span>}
+                      {formErrors.sertifikatLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.sertifikatLama}</span>}
                     </div>
                   </div>
                 </div>
@@ -1203,48 +1217,47 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 3: DATA BARU */}
               {currentStepLabel === 'Data Baru' && needDataBaru && (
-                <div className="flex flex-col gap-4 p-5 rounded-2xl bg-[#f3f6f9] shadow-3xs animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1 select-none">
-                    <h4 className="text-xs font-extrabold text-indigo-700 capitalize tracking-widest">3. Data Baru (Pemilik & Objek Baru)</h4>
-                    {jenisPermohonan === 'MUTASI_SEBAGIAN' && (
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                  {jenisPermohonan === 'MUTASI_SEBAGIAN' && (
+                    <div className="flex justify-end select-none mb-1">
                       <button
                         type="button"
                         onClick={handleAddOwner}
                         disabled={loading}
-                        className="px-2.5 py-1 text-[10px] font-bold text-indigo-650 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-bold text-[#00a389] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-emerald-200/60"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Tambah Pemilik
+                        <Plus className="w-3.5 h-3.5" /> Tambah Pemilik Baru
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-6">
                     {dataBaru.map((item, idx) => (
                       <div
                         key={idx}
-                        className={`flex flex-col gap-4 relative ${
-                          dataBaru.length > 1
-                            ? 'p-5 border border-slate-200/80 rounded-2xl pt-10 shadow-3xs bg-transparent'
-                            : ''
-                        }`}
+                        className={`flex flex-col gap-4 relative ${dataBaru.length > 1
+                          ? 'p-5 border border-slate-200/80 rounded-2xl pt-10 shadow-3xs bg-white'
+                          : ''
+                          }`}
                       >
                         {dataBaru.length > 1 && (
-                          <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none">
-                            <span className="text-[10px] font-extrabold text-indigo-650 capitalize tracking-wider">Pemilik Baru #{idx + 1}</span>
+                          <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
+                            <span className="text-xs font-bold text-[#00a389] tracking-wide">Pemilik Baru #{idx + 1}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveOwner(idx)}
                               disabled={loading}
-                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         )}
-                        <div className="flex flex-col gap-4">
-                          {/* 1. Nama Pemilik Baru (Full Width) */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nama Pemilik Baru <span className="text-red-500"> *</span></label>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          {/* 1. Nama pemilik baru (Full Width) */}
+                          <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-rose-500">*</span></label>
                             <input
                               type="text"
                               id={`edit_dataBaru.${idx}.namaPemilikBaru`}
@@ -1252,150 +1265,148 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                               onChange={(e) => handleOwnerChange(idx, 'namaPemilikBaru', e.target.value.toUpperCase())}
                               style={{ textTransform: 'uppercase' }}
                               disabled={loading}
-                              className={`w-full text-xs font-bold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-805 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                             />
-                            {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
+                            {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
                           </div>
 
-                          {/* 2. Alamat Pemilik Baru (Full Width) */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Pemilik Baru <span className="text-red-500"> *</span></label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                id={`edit_dataBaru.${idx}.alamatPemilikBaru`}
-                                value={item.alamatPemilikBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
-                                style={{ textTransform: 'uppercase' }}
-                                disabled={loading}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-20 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              />
-                              {needDataLama && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyPemilikFromLama(idx)}
-                                  className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[9px] font-extrabold rounded-md transition-all cursor-pointer select-none border ${
-                                    copiedAlamatPemilikIdx === idx
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'text-indigo-650 bg-indigo-50 hover:bg-indigo-100 border-transparent'
-                                  }`}
-                                  title="Salin alamat pemilik dari data lama"
+                          {/* KELOMPOK ALAMAT, KECAMATAN, DESA BARU (Symmetry side-by-side) */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                            {/* Kiri: Pemilik Baru */}
+                            <div className="flex flex-col gap-5">
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-rose-500">*</span></label>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    id={`edit_dataBaru.${idx}.alamatPemilikBaru`}
+                                    value={item.alamatPemilikBaru}
+                                    onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
+                                    disabled={loading}
+                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  />
+                                  {needDataLama && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyPemilikFromLama(idx)}
+                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatPemilikIdx === idx
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'text-[#00a389] bg-emerald-50 hover:bg-emerald-100 border-emerald-200/60'
+                                        }`}
+                                      title="Salin alamat pemilik dari data lama"
+                                    >
+                                      {copiedAlamatPemilikIdx === idx ? 'Tersalin ✓' : 'Salin'}
+                                    </button>
+                                  )}
+                                </div>
+                                {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
+                                <input
+                                  type="text"
+                                  id={`edit_dataBaru.${idx}.kecamatanPemilikBaru`}
+                                  value={item.kecamatanPemilikBaru}
+                                  onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                />
+                                {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-rose-500">*</span></label>
+                                <input
+                                  type="text"
+                                  id={`edit_dataBaru.${idx}.desaPemilikBaru`}
+                                  value={item.desaPemilikBaru}
+                                  onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                />
+                                {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
+                              </div>
+                            </div>
+
+                            {/* Kanan: Objek Baru */}
+                            <div className="flex flex-col gap-5">
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek <span className="text-rose-500">*</span></label>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    id={`edit_dataBaru.${idx}.alamatObjekBaru`}
+                                    value={item.alamatObjekBaru}
+                                    onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
+                                    disabled={loading}
+                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  />
+                                  {needDataLama && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyFromLama(idx)}
+                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatObjekIdx === idx
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'text-[#00a389] bg-emerald-50 hover:bg-emerald-100 border-emerald-200/60'
+                                        }`}
+                                      title="Salin alamat objek dari data lama"
+                                    >
+                                      {copiedAlamatObjekIdx === idx ? 'Tersalin ✓' : 'Salin'}
+                                    </button>
+                                  )}
+                                </div>
+                                {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-rose-500">*</span></label>
+                                <select
+                                  id={`edit_dataBaru.${idx}.kecamatanObjekBaru`}
+                                  value={item.kecamatanObjekBaru}
+                                  onChange={(e) => {
+                                    handleOwnerChange(idx, 'kecamatanObjekBaru', e.target.value);
+                                    handleOwnerChange(idx, 'desaObjekBaru', '');
+                                  }}
+                                  disabled={loading}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 >
-                                  {copiedAlamatPemilikIdx === idx ? 'Tersalin ✓' : 'Salin'}
-                                </button>
-                              )}
-                            </div>
-                            {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
-                          </div>
+                                  <option value="">Pilih Kecamatan Objek</option>
+                                  {Object.keys(KECAMATAN_DATA).map(kec => (
+                                    <option key={kec} value={kec}>{kec}</option>
+                                  ))}
+                                </select>
+                                {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
+                              </div>
 
-                          {/* 3. Kecamatan & Desa Pemilik Baru (Grid) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Pemilik <span className="text-red-500"> *</span></label>
-                              <input
-                                type="text"
-                                id={`edit_dataBaru.${idx}.kecamatanPemilikBaru`}
-                                value={item.kecamatanPemilikBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
-                                style={{ textTransform: 'uppercase' }}
-                                disabled={loading}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              />
-                              {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Pemilik <span className="text-red-500"> *</span></label>
-                              <input
-                                type="text"
-                                id={`edit_dataBaru.${idx}.desaPemilikBaru`}
-                                value={item.desaPemilikBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
-                                style={{ textTransform: 'uppercase' }}
-                                disabled={loading}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              />
-                              {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
-                            </div>
-                          </div>
-
-                          {/* 4. Alamat Objek Baru (Full Width) */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Alamat Objek Baru <span className="text-red-500"> *</span></label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                id={`edit_dataBaru.${idx}.alamatObjekBaru`}
-                                value={item.alamatObjekBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
-                                style={{ textTransform: 'uppercase' }}
-                                disabled={loading}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-20 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              />
-                              {needDataLama && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyFromLama(idx)}
-                                  className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[9px] font-extrabold rounded-md transition-all cursor-pointer select-none border ${
-                                    copiedAlamatObjekIdx === idx
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'text-indigo-655 bg-indigo-50 hover:bg-indigo-100 border-transparent'
-                                  }`}
-                                  title="Salin alamat objek dari data lama"
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-rose-500">*</span></label>
+                                <select
+                                  id={`edit_dataBaru.${idx}.desaObjekBaru`}
+                                  value={item.desaObjekBaru}
+                                  onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
+                                  disabled={loading || !item.kecamatanObjekBaru}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 >
-                                  {copiedAlamatObjekIdx === idx ? 'Tersalin ✓' : 'Salin'}
-                                </button>
-                              )}
-                            </div>
-                            {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
-                          </div>
-
-                          {/* 5. Kecamatan & Desa Objek Baru (Grid) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Kecamatan Objek <span className="text-red-500"> *</span></label>
-                              <select
-                                id={`edit_dataBaru.${idx}.kecamatanObjekBaru`}
-                                value={item.kecamatanObjekBaru}
-                                onChange={(e) => {
-                                  handleOwnerChange(idx, 'kecamatanObjekBaru', e.target.value);
-                                  handleOwnerChange(idx, 'desaObjekBaru', ''); // Reset desa
-                                }}
-                                disabled={loading}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs cursor-pointer ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              >
-                                <option value="">Pilih Kecamatan Objek</option>
-                                {Object.keys(KECAMATAN_DATA).map(kec => (
-                                  <option key={kec} value={kec}>{kec}</option>
-                                ))}
-                              </select>
-                              {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Desa Objek <span className="text-red-500"> *</span></label>
-                              <select
-                                id={`edit_dataBaru.${idx}.desaObjekBaru`}
-                                value={item.desaObjekBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
-                                disabled={loading || !item.kecamatanObjekBaru}
-                                className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs cursor-pointer ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
-                              >
-                                <option value="">
-                                  {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
-                                </option>
-                                {item.kecamatanObjekBaru && KECAMATAN_DATA[item.kecamatanObjekBaru]?.map(desa => (
-                                  <option key={desa} value={desa}>{desa}</option>
-                                ))}
-                              </select>
-                              {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
+                                  <option value="">
+                                    {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
+                                  </option>
+                                  {item.kecamatanObjekBaru && KECAMATAN_DATA[item.kecamatanObjekBaru]?.map(desa => (
+                                    <option key={desa} value={desa}>{desa}</option>
+                                  ))}
+                                </select>
+                                {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
+                              </div>
                             </div>
                           </div>
 
-                          {/* 6. Luas Tanah & Luas Bangunan Baru (Grid) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Tanah <span className="text-red-500"> *</span></label>
+                              <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah <span className="text-rose-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1403,17 +1414,17 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                   value={item.luasTanahBaru}
                                   onChange={(e) => handleOwnerChange(idx, 'luasTanahBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-10 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                                <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                                   m²
                                 </span>
                               </div>
-                              {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Luas Bangunan <span className="text-red-500"> *</span></label>
+                              <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan <span className="text-rose-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1421,50 +1432,51 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                   value={item.luasBangunanBaru}
                                   onChange={(e) => handleOwnerChange(idx, 'luasBangunanBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full text-xs font-semibold bg-white border rounded-xl pl-3.5 pr-10 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                <span className="text-slate-400 text-[10px] font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                                <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
                                   m²
                                 </span>
                               </div>
-                              {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
                             </div>
                           </div>
 
-                          {/* 7. Nomor/Jenis Sertifikat Baru (Full Width) */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-extrabold capitalize text-gray-500 tracking-wider pl-1">Nomor/Jenis Sertifikat Baru <span className="text-red-500"> *</span></label>
+                          <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
                             <input
                               type="text"
                               id={`edit_dataBaru.${idx}.sertifikatBaru`}
+                              placeholder="Contoh: SHM NO. 12345"
                               value={item.sertifikatBaru}
                               onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value.toUpperCase())}
                               style={{ textTransform: 'uppercase' }}
                               disabled={loading}
-                              className={`w-full text-xs font-semibold bg-white border rounded-xl px-3.5 py-2.5 transition-all text-gray-855 focus:outline-none focus:border-indigo-500 shadow-3xs ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200'}`}
+                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                             />
-                            {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-[10px] text-red-600 font-bold pl-1">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
+                            {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
                           </div>
                         </div>
                       </div>
                     ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             </div>
 
             {/* Stepper Footer Action Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 select-none">
+            <div className="flex items-center justify-between pt-3.5 mt-1 border-t border-slate-200/80 select-none">
               <div>
                 {/* Visual feedback of completion */}
                 {formProgress.filled === formProgress.total ? (
-                  <span className="text-[9px] font-extrabold text-emerald-600 animate-pulse">
-                    ✓ Lengkap
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                    ✓ 100% Lengkap
                   </span>
                 ) : (
-                  <span className="text-[9px] font-extrabold text-amber-600">
-                    ⚠️ {formProgress.total - formProgress.filled} kolom kosong
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1 font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00a389] inline-block" />
+                    {formProgress.percentage}% Terisi ({formProgress.filled}/{formProgress.total})
                   </span>
                 )}
               </div>
@@ -1475,7 +1487,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                     type="button"
                     onClick={handlePrevStep}
                     disabled={loading}
-                    className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer shadow-3xs"
                   >
                     Kembali
                   </button>
@@ -1487,7 +1499,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                     type="button"
                     onClick={onClose}
                     disabled={loading}
-                    className="px-3.5 py-2 text-slate-505 hover:text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 font-bold text-xs rounded-lg transition-all cursor-pointer shadow-3xs"
                   >
                     Batal
                   </button>
@@ -1498,7 +1510,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
+                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-extrabold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
                   >
                     Lanjut
                   </button>
@@ -1506,10 +1518,10 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2.5 bg-gradient-to-br from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] hover:opacity-90 text-[#2c333f] font-bold text-xs capitalize rounded-xl shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex items-center justify-center disabled:opacity-50 gap-1.5"
+                    className="px-6 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-extrabold text-xs rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center disabled:opacity-50 gap-1.5"
                   >
                     {loading ? (
-                      <span className="w-4 h-4 rounded-full border-2 border-[#2c333f]/30 border-t-[#2c333f] animate-spin" />
+                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                     ) : (
                       'Simpan'
                     )}

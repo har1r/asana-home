@@ -21,6 +21,7 @@ export async function getPendingKoreksi() {
       include: {
         permohonan: {
           include: {
+            penginput: { select: { id: true, name: true, email: true } },
             bundle: { select: { id: true, nomorBundle: true, status: true } }
           }
         },
@@ -55,6 +56,8 @@ export async function getKoreksiHistory() {
             jenisPermohonan: true,
             status: true,
             namaWajibPajak: true,
+            createdAt: true,
+            penginput: { select: { id: true, name: true, email: true } }
           }
         },
         pengaju: { select: { id: true, name: true, role: true } },

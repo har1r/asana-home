@@ -4,6 +4,7 @@
 // 1. IMPORT MODULE & IKON (LUCIDE REACT)
 // ==========================================
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import NotificationBell from './NotificationBell';
 import {
   ChevronDown,
@@ -67,6 +68,30 @@ export default function Sidebar() {
     setIsMobileMenuOpen
   } = useDashboard();
 
+  // --- User Session & Role ---
+  const { data: session } = useSession();
+  const userName = session?.user?.name || '';
+  const userRoleRaw = (session?.user as any)?.role || '';
+
+  const firstName = useMemo(() => {
+    if (!userName || !userName.trim()) return '';
+    return userName.trim().split(/\s+/)[0];
+  }, [userName]);
+
+  const userInitials = useMemo(() => {
+    if (!userName || !userName.trim()) return 'MU';
+    const parts = userName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0].substring(0, 2).toUpperCase();
+  }, [userName]);
+
+  const userRoleFormatted = useMemo(() => {
+    if (!userRoleRaw) return 'Starter Plan';
+    return userRoleRaw.charAt(0).toUpperCase() + userRoleRaw.slice(1).toLowerCase();
+  }, [userRoleRaw]);
+
   // --- Local UI State (Toggle Menu Dropdown) ---
   const [showProjects, setShowProjects] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
@@ -106,7 +131,7 @@ export default function Sidebar() {
         if (statsRes.success && statsRes.stats) {
           setStats({
             total: globalRes.totalPemohon || statsRes.stats.total || 0,
-            scanned: (statsRes.stats.completed || 0) + (statsRes.stats.sent || 0)
+            scanned: (statsRes.stats.completed || 0) + (statsRes.stats.archived || 0)
           });
         }
       } catch (e) {
@@ -158,10 +183,10 @@ export default function Sidebar() {
 
   // Menu Navigasi Utama
   const mainMenuItems: MenuItem[] = [
-    { id: 'beranda', label: 'Beranda Saya', icon: Home },
+    { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },
-    { id: 'tracking', label: 'Tracking', icon: Search },
+    { id: 'tracking', label: 'Lacak Permohonan', icon: Search },
     { id: 'help', label: 'Bantuan', icon: HelpCircle },
   ];
 
@@ -207,21 +232,21 @@ export default function Sidebar() {
                     <div className="flex gap-x-2 items-center">
                       <div className="relative flex items-center gap-2 text-gray-600">
                         <div className="w-7.5 h-7.5 rounded-lg bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
-                          <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">MU</p>
+                          <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">{userInitials}</p>
                         </div>
                       </div>
                       <div className="flex flex-col max-w-[130px]">
                         <div className="text-[#20272C] text-[13px] font-bold tracking-[-0.2px]">
                           <div className="flex items-center gap-x-1">
                             <div className="capitalize truncate">
-                              Mufti's Workspace
+                              {firstName ? `Hi, ${firstName}` : "Hi, User"}
                             </div>
                           </div>
                         </div>
                         <div className="text-[#808E9A] text-[11px] font-normal not-italic leading-normal truncate">
                           <div className="flex items-center gap-x-1">
                             <span className="capitalize truncate">
-                              Starter Plan
+                              {userRoleFormatted}
                             </span>
                           </div>
                         </div>

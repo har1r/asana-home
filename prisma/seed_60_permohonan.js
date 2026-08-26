@@ -143,7 +143,7 @@ async function main() {
 
   console.log('Creating users for each role...');
   const passwordHash = await bcrypt.hash('password123', 10);
-  
+
   const roles = [
     { name: 'Ahmad Penginput', email: 'penginput@architax.com', role: 'PENGINPUT' },
     { name: 'Budi Peneliti', email: 'peneliti@architax.com', role: 'PENELITI' },
@@ -233,7 +233,7 @@ async function main() {
       if (type === 'MUTASI_SEBAGIAN') {
         needDataLama = true;
         needDataBaru = true;
-        
+
         namaPemilikLama = oldName;
         alamatPemilikLama = `JL. MAWAR NO. ${currentSeq}`;
         kecamatanPemilikLama = kecName;
@@ -248,19 +248,25 @@ async function main() {
         namaWajibPajak = newName; // derived from first new owner
         alamat = `JL. ANGGREK NO. ${currentSeq}`;
 
-        dataBaruList = [{
-          namaPemilikBaru: newName,
-          alamatPemilikBaru: `JL. ANGGREK NO. ${currentSeq}`,
-          kecamatanPemilikBaru: kecName,
-          desaPemilikBaru: desaName,
-          alamatObjekBaru: `JL. RAYA ${desaName} NO. ${currentSeq} B`, // split portion
-          kecamatanObjekBaru: kecName,
-          desaObjekBaru: desaName,
-          luasTanahBaru: 150.0, // partial land mutation
-          luasBangunanBaru: 75.0, // partial building mutation
-          sertifikatBaru: `SHM-${kecCode}-${desaCode}-NEW-${currentSeq}`
-        }];
-      } 
+        const msFractionCounts = [1, 1, 1, 1, 1, 2, 3, 4, 5, 6];
+        const fCount = msFractionCounts[i - 1]; // 5 with 1 fraction, then 2, 3, 4, 5, 6
+        dataBaruList = [];
+        for (let f = 0; f < fCount; f++) {
+          const fName = f === 0 ? newName : generateName(currentSeq * 10 + f, true);
+          dataBaruList.push({
+            namaPemilikBaru: `${fName}${fCount > 1 ? ` (Pecahan ${f + 1})` : ''}`,
+            alamatPemilikBaru: `JL. ANGGREK NO. ${currentSeq}-${f + 1}`,
+            kecamatanPemilikBaru: kecName,
+            desaPemilikBaru: desaName,
+            alamatObjekBaru: `JL. RAYA ${desaName} NO. ${currentSeq} B${f + 1}`,
+            kecamatanObjekBaru: kecName,
+            desaObjekBaru: desaName,
+            luasTanahBaru: Math.round(300 / fCount),
+            luasBangunanBaru: Math.round(150 / fCount),
+            sertifikatBaru: `SHM-${kecCode}-${desaCode}-NEW-${currentSeq}-${f + 1}`
+          });
+        }
+      }
       else if (type === 'MUTASI_HABIS_REGULER') {
         needDataLama = true;
         needDataBaru = true;
@@ -291,7 +297,7 @@ async function main() {
           luasBangunanBaru: 100.0, // matches old area (regular transfer)
           sertifikatBaru: `SHM-${kecCode}-${desaCode}-NEW-${currentSeq}`
         }];
-      } 
+      }
       else if (type === 'MUTASI_HABIS_UPDATE') {
         needDataLama = true;
         needDataBaru = true;
@@ -322,7 +328,7 @@ async function main() {
           luasBangunanBaru: 120.0, // updated building area (new renovation)
           sertifikatBaru: `SHM-${kecCode}-${desaCode}-NEW-${currentSeq}`
         }];
-      } 
+      }
       else if (type === 'PEMBETULAN') {
         needDataLama = true;
         needDataBaru = true;
@@ -355,7 +361,7 @@ async function main() {
           luasBangunanBaru: 80.0, // corrected area
           sertifikatBaru: `SHM-${kecCode}-${desaCode}-NEW-${currentSeq}`
         }];
-      } 
+      }
       else if (type === 'PENGAKTIFAN') {
         needDataLama = true;
         needDataBaru = false;
@@ -373,7 +379,7 @@ async function main() {
 
         namaWajibPajak = oldName; // active owner
         alamat = `JL. TULIP NO. ${currentSeq}`;
-      } 
+      }
       else if (type === 'OBJEK_PAJAK_BARU') {
         needDataLama = false;
         needDataBaru = true;

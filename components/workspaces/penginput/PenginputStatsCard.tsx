@@ -6,7 +6,7 @@ import { FavoritesCardSkeleton } from '@/components/skeletons/SkeletonBase';
 
 
 export default function PenginputStatsCard() {
-  const [stats, setStats] = useState({ total: 0, revision: 0, sent: 0, completed: 0, rejected: 0 });
+  const [stats, setStats] = useState({ total: 0, submitted: 0, revision: 0, bundled: 0, archived: 0, completed: 0, rejected: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,14 +33,24 @@ export default function PenginputStatsCard() {
       bg: "bg-[#4e5bf2]"
     },
     {
+      title: "Diajukan",
+      count: stats.submitted,
+      bg: "bg-[#00a389]"
+    },
+    {
       title: "Revisi",
       count: stats.revision,
       bg: "bg-[#ffb000]"
     },
     {
-      title: "Dikirim",
-      count: stats.sent,
-      bg: "bg-[#3abde7]"
+      title: "Terbundel",
+      count: stats.bundled,
+      bg: "bg-[#3b82f6]"
+    },
+    {
+      title: "Diarsipkan",
+      count: stats.archived,
+      bg: "bg-[#6366f1]"
     },
     {
       title: "Selesai",
@@ -76,7 +86,7 @@ export default function PenginputStatsCard() {
       </div>
 
       {/* Grid containing the colored cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 justify-items-center sm:justify-items-stretch">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 justify-items-center sm:justify-items-stretch">
         {statItems.map((tile, index) => (
           <div
             key={index}
