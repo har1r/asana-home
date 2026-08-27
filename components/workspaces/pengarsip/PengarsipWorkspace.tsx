@@ -15,6 +15,7 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   RotateCcw,
   Boxes,
   FileSpreadsheet,
@@ -35,6 +36,7 @@ import {
   User,
 } from "lucide-react";
 import { formatNop, toTitleCase } from "@/components/workspaces/shared/constants";
+import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
 import {
   getDigitizationBundles,
   getBundleDetails,
@@ -374,6 +376,21 @@ export default function PengarsipWorkspace() {
   const searchArsipInputRef = useRef<HTMLInputElement | null>(null);
   const [currentArsipPage, setCurrentArsipPage] = useState<number>(1);
   const [itemsPerArsipPage, setItemsPerArsipPage] = useState<number>(10);
+
+  // Sort State for Arsip Table
+  const [sortBy, setSortBy] = useState<'terbaru' | 'tgl_nopel_desc' | 'tgl_nopel_asc' | 'nama_asc'>('terbaru');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Modal Detail Permohonan
   const [globalSelectedRequest, setGlobalSelectedRequest] = useState<any | null>(null);
@@ -805,15 +822,28 @@ export default function PengarsipWorkspace() {
     );
   }, [filteredBundlesList, activeBundlePage, itemsPerBundlePage]);
 
+  // Sort Arsip List
+  const sortedArsipList = useMemo(() => {
+    const list = [...filteredArsipList];
+    if (sortBy === 'tgl_nopel_desc') {
+      list.sort((a, b) => new Date(b.tanggalNoPelayanan || b.createdAt || 0).getTime() - new Date(a.tanggalNoPelayanan || a.createdAt || 0).getTime());
+    } else if (sortBy === 'tgl_nopel_asc') {
+      list.sort((a, b) => new Date(a.tanggalNoPelayanan || a.createdAt || 0).getTime() - new Date(b.tanggalNoPelayanan || b.createdAt || 0).getTime());
+    } else if (sortBy === 'nama_asc') {
+      list.sort((a, b) => (a.displayNamaWajibPajak || a.namaWajibPajak || '').localeCompare(b.displayNamaWajibPajak || b.namaWajibPajak || ''));
+    }
+    return list;
+  }, [filteredArsipList, sortBy]);
+
   // Pagination for Arsip
-  const totalArsipPages = Math.ceil(filteredArsipList.length / itemsPerArsipPage);
+  const totalArsipPages = Math.ceil(sortedArsipList.length / itemsPerArsipPage);
   const activeArsipPage = currentArsipPage > totalArsipPages ? 1 : currentArsipPage;
   const paginatedArsipList = useMemo(() => {
-    return filteredArsipList.slice(
+    return sortedArsipList.slice(
       (activeArsipPage - 1) * itemsPerArsipPage,
       activeArsipPage * itemsPerArsipPage
     );
-  }, [filteredArsipList, activeArsipPage, itemsPerArsipPage]);
+  }, [sortedArsipList, activeArsipPage, itemsPerArsipPage]);
 
   return (
     <div id="pengarsip-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-6">
@@ -853,20 +883,20 @@ export default function PengarsipWorkspace() {
           </div>
         )}
 
-        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling) */}
-        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
+        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling - 100% Identik dengan Peneliti) */}
+        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Metric 1: Total Pemohon */}
             <div
               onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Total Pemohon</span>
-                <span className="text-xl font-black font-mono text-slate-900">{kpiCounts.totalPemohon}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Pemohon</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{kpiCounts.totalPemohon}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -875,13 +905,13 @@ export default function PengarsipWorkspace() {
             {/* Metric 2: Sudah Terupload */}
             <div
               onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md hover:bg-slate-50 text-slate-600`}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md hover:bg-slate-50 text-slate-600`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Sudah Terupload</span>
-                <span className="text-xl font-black font-mono text-slate-900">{kpiCounts.sudahTerupload}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Sudah Terupload</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{kpiCounts.sudahTerupload}</span>
               </div>
-              <span className="text-xs font-black font-mono px-2 py-0.5 rounded-md border bg-slate-100 text-slate-500 border-slate-200/80">
+              <span className="text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200/80">
                 {kpiCounts.totalPemohon > 0 ? `${((kpiCounts.sudahTerupload / kpiCounts.totalPemohon) * 100).toFixed(0)}%` : '0%'}
               </span>
             </div>
@@ -889,14 +919,14 @@ export default function PengarsipWorkspace() {
             {/* Metric 3: Belum Diupload */}
             <div
               onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Belum Diupload</span>
-                <span className="text-xl font-black font-mono text-slate-900">{kpiCounts.belumDiupload}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Belum Diupload</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{kpiCounts.belumDiupload}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {kpiCounts.totalPemohon > 0 ? `${((kpiCounts.belumDiupload / kpiCounts.totalPemohon) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -905,25 +935,25 @@ export default function PengarsipWorkspace() {
             {/* Metric 4: Dikembalikan / Re-upload */}
             <div
               onClick={() => { setFilterBundleStatus('REUPLOAD'); setCurrentBundlePage(1); handleSwitchTab('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'REUPLOAD'
-                ? 'bg-amber-100/90 text-amber-900 font-bold'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'REUPLOAD'
+                ? 'bg-amber-100/90 text-amber-900 font-semibold'
                 : kpiCounts.perluReupload > 0
                   ? 'bg-amber-50/70 hover:bg-amber-100/80 text-amber-800'
                   : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize flex items-center gap-1">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans flex items-center gap-1">
                   <span>Re-upload</span>
                   {kpiCounts.perluReupload > 0 && (
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
                   )}
                 </span>
-                <span className={`text-xl font-black font-mono ${kpiCounts.perluReupload > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                <span className={`text-lg font-bold font-mono ${kpiCounts.perluReupload > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
                   {kpiCounts.perluReupload}
                 </span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'REUPLOAD'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'REUPLOAD'
                 ? 'bg-amber-500 text-white border-amber-500'
                 : kpiCounts.perluReupload > 0
                   ? 'bg-amber-500 text-white border-amber-500'
@@ -936,12 +966,12 @@ export default function PengarsipWorkspace() {
         </div>
 
         {/* Clean View Mode Switcher Tabs (Equal Width 2 Tabs Layout) */}
-        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none">
+        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none font-sans">
           <button
             type="button"
             onClick={() => handleSwitchTab("bundle")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === "bundle"
-              ? "bg-white text-slate-900 shadow-xs"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans ${viewMode === "bundle"
+              ? "bg-white text-slate-900 shadow-xs font-normal"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
@@ -950,8 +980,8 @@ export default function PengarsipWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchTab("arsip")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === "arsip"
-              ? "bg-white text-slate-900 shadow-xs"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans ${viewMode === "arsip"
+              ? "bg-white text-slate-900 shadow-xs font-normal"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
@@ -981,11 +1011,11 @@ export default function PengarsipWorkspace() {
 
         {/* ==================== VIEW MODE: DAFTAR BUNDLE ==================== */}
         {viewMode === "bundle" && (
-          <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
+          <div className="flex flex-col gap-4 min-h-[300px]">
 
-            {/* Header Toolbar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS (Matching Peneliti 100%) */}
+            <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none font-sans">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 {/* Search input for Bundles */}
                 <div className="relative w-full md:w-[403px] max-w-full">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
@@ -995,8 +1025,8 @@ export default function PengarsipWorkspace() {
                     onChange={(e) => setSearchBundleQuery(e.target.value)}
                     onFocus={() => setIsBundleSearchFocused(true)}
                     onBlur={() => setIsBundleSearchFocused(false)}
-                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
-                    placeholder="Cari No. Bundle, Jenis Pelayanan."
+                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
+                    placeholder="Cari No. Bundle, Jenis Pelayanan..."
                   />
                   {searchBundleQuery && (
                     <button onClick={() => setSearchBundleQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors">
@@ -1006,50 +1036,50 @@ export default function PengarsipWorkspace() {
                 </div>
 
                 {/* Right side controls: Refresh Button */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 font-sans">
                   <button
                     onClick={() => fetchBundles(true)}
                     disabled={isRefreshing || listLoading}
-                    className="p-2.5 h-10 w-10 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                    className="p-2.5 h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
                     title="Refresh Data"
                   >
                     <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Filter Jenis Layanan Pills for Bundles */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 select-none pb-1">
-              {[
-                { val: "ALL", label: "Semua" },
-                { val: "MUTASI_SEBAGIAN", label: "Mutasi Sebagian" },
-                { val: "MUTASI_HABIS_UPDATE", label: "Mutasi Habis (Update)" },
-                { val: "MUTASI_HABIS_REGULER", label: "Mutasi Habis (Reguler)" },
-                { val: "OBJEK_PAJAK_BARU", label: "OP Baru" },
-                { val: "PEMBETULAN", label: "Pembetulan" },
-                { val: "PENGAKTIFAN", label: "Pengaktifan" }
-              ].map((item) => {
-                const isActive = filterBundleJenisLayanan === item.val;
-                const count = bundleJenisCounts[item.val] ?? 0;
-                return (
-                  <button
-                    key={item.val}
-                    type="button"
-                    onClick={() => setFilterBundleJenisLayanan(item.val)}
-                    className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
-                      ? "bg-[#00a389] text-white border-[#00a389] shadow-3xs"
-                      : "bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90"
-                      }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-                      }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+              {/* Quick Filter Chips for Bundles (Unified inside Command Bar Card) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 shrink-0 select-none font-sans">
+                {[
+                  { val: "ALL", label: "Semua" },
+                  { val: "MUTASI_SEBAGIAN", label: "Mutasi Sebagian" },
+                  { val: "MUTASI_HABIS_UPDATE", label: "Mutasi Habis (Update)" },
+                  { val: "MUTASI_HABIS_REGULER", label: "Mutasi Habis (Reguler)" },
+                  { val: "OBJEK_PAJAK_BARU", label: "OP Baru" },
+                  { val: "PEMBETULAN", label: "Pembetulan" },
+                  { val: "PENGAKTIFAN", label: "Pengaktifan" }
+                ].map((item) => {
+                  const isActive = filterBundleJenisLayanan === item.val;
+                  const count = bundleJenisCounts[item.val] ?? 0;
+                  return (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => setFilterBundleJenisLayanan(item.val)}
+                      className={`h-7 px-2.5 rounded-md text-[13px] font-normal font-sans transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
+                        ? "bg-[#00a389] text-white border-[#00a389] shadow-3xs"
+                        : "bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300"
+                        }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold font-mono ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Bundle Grid */}
@@ -1057,13 +1087,14 @@ export default function PengarsipWorkspace() {
               {loading ? (
                 <div className="col-span-full py-20 flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />
-                  <span className="text-xs font-semibold text-slate-500">Memuat data...</span>
+                  <span className="text-[13px] font-normal text-slate-500 font-sans">Memuat data...</span>
                 </div>
               ) : paginatedBundlesList.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-xs text-slate-400 font-medium italic select-none">
-                  {searchBundleQuery
-                    ? "Tidak ada bundle yang sesuai dengan pencarian."
-                    : "Tidak ada bundle digitalisasi saat ini."}
+                <div className="col-span-full py-10 text-center select-none font-sans">
+                  <EmptyDataAnimation
+                    title={searchBundleQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Bundle"}
+                    description={searchBundleQuery ? "Tidak ada bundle yang sesuai dengan kata kunci pencarian." : "Daftar bundle digitalisasi kosong saat ini."}
+                  />
                 </div>
               ) : (
                 paginatedBundlesList.map((b) => {
@@ -1097,7 +1128,6 @@ export default function PengarsipWorkspace() {
                     },
                     { totalCount: 0, uploadedCount: 0 }
                   );
-                  const isAllUploaded = b.permohonan?.length > 0 && b.permohonan.every((p: any) => p.status === "ARCHIVED");
 
                   const pengarsipName = (() => {
                     if (!b.permohonan) return null;
@@ -1135,26 +1165,30 @@ export default function PengarsipWorkspace() {
 
                   const hasReupload = bundleHasReupload(b);
 
+                  const createdDateFormatted = b.createdAt
+                    ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '—';
+
                   return (
                     <div
                       key={b.id}
                       onClick={() => handleSelectBundle(b)}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[130px] ${hasReupload
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[125px] ${hasReupload
                         ? "bg-amber-50/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md"
                         : isSelected
-                          ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+                          ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                           : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
                         }`}
                     >
                       {/* Top Row: Number */}
-                      <div className="flex items-center justify-between gap-3 w-full">
-                        <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
+                      <div className="flex items-center justify-between gap-3 w-full font-sans">
+                        <span className="font-mono text-[13px] font-normal text-slate-800 tracking-tight break-all whitespace-normal block font-sans" title={b.nomorBundle}>
                           {b.nomorBundle}
                         </span>
 
                         {hasReupload && (
                           <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8.5px] font-black uppercase bg-amber-500 text-white shadow-3xs select-none shrink-0"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-normal bg-amber-500 text-white shadow-3xs select-none shrink-0 font-sans"
                             title="Terdapat permohonan dikembalikan yang perlu di-upload ulang"
                           >
                             <RotateCcw className="w-2.5 h-2.5" />
@@ -1163,22 +1197,35 @@ export default function PengarsipWorkspace() {
                         )}
                       </div>
 
-                      {/* Middle Row: Service Type Tag | Dynamic Count Badge Centered Horizontally */}
-                      <div className="flex items-center justify-center gap-2.5 w-full py-1">
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, " ") : "Umum"}>
+                      {/* Middle Row: Service Type Tag | Status Badge | Pemohon Count Badge (Matching Peneliti Card Layout) */}
+                      <div className="flex items-center justify-center gap-2 w-full py-1 flex-wrap sm:flex-nowrap font-sans">
+                        {/* Service Type Tag */}
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[12px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, " ") : "Umum"}>
                           {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : "—"}
                         </span>
 
-                        {/* Thin Vertical Line Separator */}
+                        {/* Thin Vertical Line Separator 1 */}
                         <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
 
-                        {/* Dynamic Count Badge */}
+                        {/* Status Pill Badge */}
+                        <span className={`px-2 py-0.5 rounded-full text-[12px] font-normal border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 font-sans ${b.status === 'LOCKED'
+                          ? 'bg-slate-900 text-slate-100 border-slate-800'
+                          : b.status === 'IN_MANIFEST'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-emerald-50 text-[#008f78] border-emerald-200'
+                          }`}>
+                          {renderStatusIcon()}
+                          <span>{getStatusLabel(b.status)}</span>
+                        </span>
+
+                        {/* Thin Vertical Line Separator 2 */}
+                        <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
+
+                        {/* Count Badge (Matching Peneliti Red Pill Badge) */}
                         <span
-                          className={`flex items-center justify-center text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs transition-all ${uploadedCount === totalCount && totalCount > 0
+                          className={`flex items-center justify-center text-white text-[12px] font-normal px-2 py-0.5 rounded-full leading-none shrink-0 shadow-3xs transition-all font-sans ${uploadedCount === totalCount && totalCount > 0
                             ? "bg-[#00a389]"
-                            : uploadedCount > 0
-                              ? "bg-amber-500"
-                              : "bg-[#f25c54]"
+                            : "bg-[#f25c54]"
                             }`}
                           title={`${uploadedCount} dari ${totalCount} Pemohon Terupload`}
                         >
@@ -1186,11 +1233,11 @@ export default function PengarsipWorkspace() {
                         </span>
                       </div>
 
-                      {/* Bottom Footer Row: Avatar Initials / Creation Date & Status Badge */}
+                      {/* Bottom Footer Row: Avatar Initials / Creation Date (Matching Peneliti Footer Layout) */}
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/80 font-sans mt-auto">
                         <div className="flex items-center gap-2 min-w-0">
                           {pengarsipName ? (
-                            <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={`Diarsipkan oleh ${pengarsipName}`}>
+                            <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-3xs" title={`Diarsipkan oleh ${pengarsipName}`}>
                               {getAvatarInitials(pengarsipName)}
                             </div>
                           ) : (
@@ -1200,14 +1247,9 @@ export default function PengarsipWorkspace() {
                           )}
                         </div>
 
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
-                          ? 'bg-slate-900 text-slate-100 border-slate-800'
-                          : b.status === 'IN_MANIFEST'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          }`}>
-                          {renderStatusIcon()}
-                          <span>{getStatusLabel(b.status)}</span>
+                        {/* Creation Date on Right Side */}
+                        <span className="text-[12px] font-normal text-slate-500 font-sans shrink-0">
+                          {createdDateFormatted}
                         </span>
                       </div>
                     </div>
@@ -1281,122 +1323,135 @@ export default function PengarsipWorkspace() {
 
         {/* ==================== VIEW MODE: DAFTAR ARSIP ==================== */}
         {viewMode === "arsip" && (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-4">
             {selectedBundle ? (
-              <div className="flex flex-col gap-2.5 animate-fadeIn">
+              <div className="flex flex-col gap-4 animate-fadeIn">
 
-                {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS CARD */}
-                <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* TIER 2: UNIFIED COMMAND BAR CONTAINER (Matching Peneliti Tab Kunci & Cetak 100%) */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs mb-1 select-none font-sans">
+                  {/* Left: Active Bundle Number Badge & Status Badge */}
+                  <div className="flex items-center gap-2 font-sans">
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchTab("bundle")}
+                      className="font-sans text-[13px] font-normal text-slate-800 bg-white border border-slate-200/90 px-3 py-1 rounded-md shadow-3xs hover:bg-slate-50 transition-colors cursor-pointer"
+                      title={`Bundle Aktif: ${selectedBundle?.nomorBundle || '—'}. Klik untuk berpindah bundle.`}
+                    >
+                      {selectedBundle?.nomorBundle || '—'}
+                    </button>
+                    <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(selectedBundle?.status)}`}>
+                      {getStatusLabel(selectedBundle?.status)}
+                    </span>
+                  </div>
 
-                    {/* Left Side: Search Bar (Compact Width) */}
-                    <div className="relative w-full md:w-96">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
-                      <input
-                        ref={searchArsipInputRef}
-                        type="text"
-                        value={searchArsipQuery}
-                        onChange={(e) => { setSearchArsipQuery(e.target.value); setCurrentArsipPage(1); }}
-                        onFocus={() => setIsArsipSearchFocused(true)}
-                        onBlur={() => setIsArsipSearchFocused(false)}
-                        className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
-                        placeholder="Cari No. Pelayanan, NOP, Nama Pemohon..."
-                      />
-                      {searchArsipQuery ? (
-                        <button
-                          type="button"
-                          onClick={() => { setSearchArsipQuery(''); setCurrentArsipPage(1); }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Hapus Pencarian"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 pointer-events-none">
-                          <kbd className="px-1.5 py-0.5 text-[9px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 rounded font-sans">
-                            /
-                          </kbd>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Side: Active Short Bundle Badge + Mode Switcher ('Nopel' vs 'Pemohon') + Refresh */}
-                    <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                      {/* Short Bundle Badge Box (matching Peneliti Workspace) */}
+                  {/* Right: Display Mode Switcher ('Nopel' vs 'Pemohon') + Refresh Button */}
+                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap font-sans">
+                    {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
+                    <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
                       <button
                         type="button"
-                        onClick={() => handleSwitchTab("bundle")}
-                        className="h-10 px-3 rounded-md border border-emerald-200 bg-emerald-50 text-[#008f78] hover:bg-emerald-100 font-bold text-xs transition-all cursor-pointer shadow-3xs flex items-center justify-center shrink-0 font-mono"
-                        title={`Bundle Aktif: ${selectedBundle?.nomorBundle || '—'}. Klik untuk berpindah bundle.`}
+                        onClick={() => { setArsipDisplayMode('berkas'); setCurrentArsipPage(1); }}
+                        className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'berkas'
+                          ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                          : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
                       >
-                        <span className="font-mono font-black">{selectedBundle ? getShortBundleNum(selectedBundle.nomorBundle) : '—'}</span>
+                        <span>Nopel</span>
                       </button>
-
-                      {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
-                      <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
-                        <button
-                          type="button"
-                          onClick={() => { setArsipDisplayMode('berkas'); setCurrentArsipPage(1); }}
-                          className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'berkas'
-                            ? 'bg-white text-slate-900 shadow-3xs font-bold'
-                            : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
-                        >
-                          <span>Nopel</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setArsipDisplayMode('pemohon'); setCurrentArsipPage(1); }}
-                          className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'pemohon'
-                            ? 'bg-white text-slate-900 shadow-3xs font-bold'
-                            : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
-                        >
-                          <span>Pemohon</span>
-                        </button>
-                      </div>
-
                       <button
                         type="button"
-                        onClick={() => fetchData(true)}
-                        disabled={isRefreshing || listLoading}
-                        className="h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
-                        title="Refresh Data"
+                        onClick={() => { setArsipDisplayMode('pemohon'); setCurrentArsipPage(1); }}
+                        className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${arsipDisplayMode === 'pemohon'
+                          ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                          : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
                       >
-                        <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                        <span>Pemohon</span>
                       </button>
                     </div>
+
+                    {/* Refresh Button */}
+                    <button
+                      type="button"
+                      onClick={() => fetchData(true)}
+                      disabled={isRefreshing || listLoading}
+                      className="h-8 w-8 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
+                      title="Refresh Data"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                    </button>
                   </div>
                 </div>
 
                 {/* TIER 3: DATA CANVAS & ENTERPRISE TABLE CARD */}
                 <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[400px]">
                   <div className="overflow-x-auto scrollbar-thin flex-1">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse font-sans">
                       <thead>
-                        <tr className="bg-slate-50/90 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none whitespace-nowrap">
-                          <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
-                          <th className="py-3 px-2 text-center w-10 min-w-[40px]">⭐</th>
-                          <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
-                          <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
-                          <th className="py-3 px-4 min-w-[100px]">Tgl. Nopel</th>
-                          <th className="py-3 px-4 min-w-[100px]">Tgl. Selesai</th>
-                          <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
-                          <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
-                          <th className="py-3 px-4 min-w-[170px]">Nama Pemohon</th>
-                          <th className="py-3 px-4 min-w-[120px]">Jenis Layanan</th>
-                          <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
-                          <th className="py-3 px-4 min-w-[120px]">Tgl. Upload</th>
-                          <th className="py-3 px-4 text-center w-28 min-w-[110px]">Aksi</th>
+                        <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                          <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                            <span>No</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                            <span>⭐</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                            <span>Tgl. Input</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                            <span>Petugas Input</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                            <span>Tgl. Nopel</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                            <span>Tgl. Selesai</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                            <span>No. Pelayanan</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
+                            <span>Nomor Objek Pajak</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[170px] relative font-normal text-slate-600">
+                            <span>Nama Pemohon</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[120px] relative font-normal text-slate-600">
+                            <span>Jenis Layanan</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 text-center min-w-[100px] relative font-normal text-slate-600">
+                            <span>Status</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[120px] relative font-normal text-slate-600">
+                            <span>Tgl. Upload</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 text-center w-28 min-w-[110px] font-normal text-slate-600">
+                            <span>Aksi</span>
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700 bg-white">
+                      <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 bg-white font-sans">
                         {paginatedArsipList.length === 0 ? (
                           <tr>
-                            <td colSpan={13} className="py-14 text-center text-slate-400 font-bold italic">
-                              Bundle tidak memiliki permohonan yang cocok.
+                            <td colSpan={13} className="py-10 text-center select-none font-sans">
+                              <EmptyDataAnimation
+                                title={searchArsipQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Permohonan"}
+                                description={searchArsipQuery ? "Bundle tidak memiliki permohonan yang cocok dengan kata kunci pencarian." : "Tidak ada permohonan terpasang dalam bundle ini."}
+                              />
                             </td>
                           </tr>
                         ) : (
@@ -1422,14 +1477,14 @@ export default function PengarsipWorkspace() {
                               <tr
                                 key={p.uniqueRowKey || p.id}
                                 onClick={() => setGlobalSelectedRequest(p)}
-                                className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-slate-700 ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : needsReUpload ? "bg-amber-50/50 border-l-4 border-l-amber-500" : isFrozen ? "bg-amber-50/20" : ""
+                                className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans h-11 ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : needsReUpload ? "bg-amber-50/50 border-l-4 border-l-amber-500" : isFrozen ? "bg-amber-50/20" : ""
                                   }`}
                               >
-                                <td className="py-3 px-4 text-center text-xs font-bold text-slate-400 font-mono">
+                                <td className="py-2.5 px-4 text-center text-[12px] font-normal text-slate-600 font-sans">
                                   {itemNumber}
                                 </td>
 
-                                <td className="py-3 px-2 text-center" onClick={(e) => {
+                                <td className="py-2.5 px-2 text-center" onClick={(e) => {
                                   e.stopPropagation();
                                   handleToggleFavorite(p.id);
                                 }}>
@@ -1445,36 +1500,36 @@ export default function PengarsipWorkspace() {
                                   </button>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
-                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
+                                <td className="py-2.5 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
+                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                 </td>
-                                <td className="py-3 px-4 text-slate-700 text-xs font-bold font-sans whitespace-nowrap uppercase">
+                                <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap capitalize">
                                   <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                    <span className="truncate max-w-[130px] uppercase font-sans">{p.penginput?.name || "Petugas Input"}</span>
+                                    <span className="truncate max-w-[130px] capitalize font-sans">{toTitleCase(p.penginput?.name || "Petugas Input")}</span>
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
+                                <td className="py-2.5 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">{nopolDate}</td>
 
-                                <td className="py-3 px-4 whitespace-nowrap font-sans">
+                                <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                                   {p.tanggalPenyelesaian ? (
                                     <div className="flex items-center gap-1">
                                       {isOverdue(p.tanggalPenyelesaian, p.status) && (
                                         <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                       )}
-                                      <span className={`text-xs font-sans font-bold uppercase ${isOverdue(p.tanggalPenyelesaian, p.status)
-                                        ? 'text-rose-600 font-bold'
+                                      <span className={`text-[12px] font-sans font-normal capitalize ${isOverdue(p.tanggalPenyelesaian, p.status)
+                                        ? 'text-rose-600 font-normal'
                                         : 'text-slate-600'
                                         }`}>
-                                        {penyelesaianDate.toUpperCase()}
+                                        {penyelesaianDate}
                                       </span>
                                     </div>
                                   ) : "—"}
                                 </td>
 
-                                <td className="py-3 px-4 min-w-[150px] group/cell relative font-sans">
+                                <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs font-bold text-slate-700 font-sans tracking-tight uppercase">
+                                    <span className="text-[12px] font-normal text-slate-600 font-sans tracking-tight capitalize">
                                       {p.nomorPelayanan || p.nomorPermohonan}
                                     </span>
                                     {isFrozen && (
@@ -1503,9 +1558,9 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+                                <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-xs font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
+                                    <span className="text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
                                       {formatNop(p.nop)}
                                     </span>
                                     <button
@@ -1522,10 +1577,10 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 group/cell relative font-sans">
+                                <td className="py-2.5 px-4 group/cell relative font-sans">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
-                                      {(p.displayNamaWajibPajak || p.namaWajibPajak).toUpperCase()}
+                                    <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap capitalize font-sans">
+                                      {toTitleCase(p.displayNamaWajibPajak || p.namaWajibPajak)}
                                     </span>
                                     {p.isPecahanRow && (
                                       <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
@@ -1546,26 +1601,26 @@ export default function PengarsipWorkspace() {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 font-sans">
+                                <td className="py-2.5 px-4 font-sans">
                                   <span
-                                    className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide select-none"
+                                    className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
                                     title={p.jenisPermohonan?.replace(/_/g, " ")}
                                   >
                                     {getAbbreviatedJenis(p.jenisPermohonan)}
                                   </span>
                                 </td>
 
-                                <td className="py-3 px-4 text-center font-sans">
+                                <td className="py-2.5 px-4 text-center font-sans">
                                   <div className="flex items-center justify-center">
-                                    <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase font-sans ${getStatusBadgeClass(p.status)}`}>
+                                    <span className={`inline-block text-[12px] font-normal px-2.5 py-0.5 rounded-full border capitalize font-sans ${getStatusBadgeClass(p.status)}`}>
                                       {getStatusLabel(p.status)}
                                     </span>
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
+                                <td className="py-2.5 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
                                   {activeArchive?.createdAt
-                                    ? new Date(activeArchive.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
+                                    ? new Date(activeArchive.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                                     : '—'}
                                 </td>
 
@@ -1740,22 +1795,25 @@ export default function PengarsipWorkspace() {
                 </div>
               </div>
             ) : (
-              /* Empty state — belum ada bundle dipilih */
-              <div className="bg-white border border-slate-200/90 rounded-md shadow-3xs flex flex-col items-center justify-center py-28 px-8 text-center select-none">
-                <div className="w-14 h-14 bg-[#00a389]/10 border border-[#00a389]/20 rounded-2xl flex items-center justify-center mb-4 shadow-3xs">
-                  <Boxes className="w-7 h-7 text-[#00a389]" />
+              /* Clean & Premium Empty Placeholder with Select-bro.svg */
+              <div className="py-14 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
+                <img
+                  src="/assets/Select-bro.svg"
+                  alt="Pilih Bundle"
+                  className="w-56 h-56 max-w-full object-contain pointer-events-none drop-shadow-xs"
+                />
+                <div className="space-y-1.5 max-w-sm">
+                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight font-sans">Belum Ada Bundle yang Dipilih</h3>
+                  <p className="text-xs text-slate-500 font-normal leading-relaxed font-sans">
+                    Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold font-sans">Pilih Bundle</strong> terlebih dahulu untuk mengunggah berkas arsip digital.
+                  </p>
+                  <button
+                    onClick={() => handleSwitchTab("bundle")}
+                    className="mt-3 px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
+                  >
+                    <span>Pilih Bundle Sekarang</span>
+                  </button>
                 </div>
-                <p className="text-sm font-bold text-slate-800 mb-1.5">Pilih bundle terlebih dahulu</p>
-                <p className="text-xs text-slate-400 font-semibold max-w-xs leading-relaxed mb-4">
-                  Buka tab "Daftar Bundle", pilih bundle yang ingin diproses, dan daftar berkas arsipnya akan tampil di sini.
-                </p>
-                <button
-                  onClick={() => handleSwitchTab("bundle")}
-                  className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-lg shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <Boxes className="w-3.5 h-3.5" />
-                  <span>Ke Daftar Bundle</span>
-                </button>
               </div>
             )}
           </div>
@@ -1849,18 +1907,18 @@ export default function PengarsipWorkspace() {
 
       {/* ==================== MODAL: Detail Pecahan (Mutasi Sebagian) ==================== */}
       {mounted && showFractionsModal && fractionTargetPermohonan && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 select-none animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-scaleUp max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 select-none animate-fadeIn font-sans">
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-scaleUp max-h-[90vh] font-sans">
 
             {/* Modal Header */}
-            <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex items-center justify-between">
+            <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex items-center justify-between font-sans">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="bg-[#00a389]/10 border border-[#00a389]/20 p-2 rounded-lg shrink-0 flex items-center justify-center">
                   <FolderOpen className="w-4 h-4 text-[#00a389]" />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1">Digitalisasi Pecahan</span>
-                  <span className="text-sm font-black text-slate-900 font-mono tracking-tight truncate leading-none">
+                <div className="flex flex-col min-w-0 font-sans">
+                  <span className="text-[13px] font-normal text-slate-600 capitalize leading-none mb-1 font-sans">Digitalisasi Pecahan</span>
+                  <span className="text-[13px] font-normal text-slate-800 tracking-tight truncate leading-none font-sans">
                     {fractionTargetPermohonan.nomorPelayanan || fractionTargetPermohonan.nomorPermohonan}
                   </span>
                 </div>
@@ -1877,13 +1935,13 @@ export default function PengarsipWorkspace() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4 max-h-[70vh] bg-slate-50">
+            <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4 max-h-[70vh] bg-slate-50 font-sans">
 
               {/* Info Box */}
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl leading-relaxed text-[#008f78] text-[11px] font-semibold flex items-start gap-2">
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl leading-relaxed text-[#008f78] text-[13px] font-normal flex items-start gap-2 font-sans">
                 <AlertTriangle className="w-4 h-4 text-[#00a389] shrink-0 mt-0.5" />
-                <span>
-                  Silakan unggah dokumen PDF hasil scan untuk setiap pecahan di bawah ini. Status permohonan utama akan otomatis berubah menjadi <strong>Diarsipkan</strong> setelah semua pecahan selesai didigitalisasi.
+                <span className="font-sans">
+                  Silakan unggah dokumen PDF hasil scan untuk setiap pecahan di bawah ini. Status permohonan utama akan otomatis berubah menjadi <strong className="font-normal text-emerald-800">Diarsipkan</strong> setelah semua pecahan selesai didigitalisasi.
                 </span>
               </div>
 
@@ -1902,7 +1960,7 @@ export default function PengarsipWorkspace() {
               />
 
               {/* Fraction Cards List */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 font-sans">
                 {fractionTargetPermohonan.dataBaru?.map((db: any, idx: number) => {
                   const dbActiveArchive = fractionTargetPermohonan.arsipDigital?.find((ad: any) => ad.status === "ACTIVE" && ad.dataBaruId === db.id);
                   const dbNeedsReUpload = fractionTargetPermohonan.status === "BUNDLED" && fractionTargetPermohonan.arsipDigital?.some((ad: any) => ad.dataBaruId === db.id && ad.status === "SUPERSEDED");
@@ -1912,15 +1970,15 @@ export default function PengarsipWorkspace() {
                   return (
                     <div
                       key={db.id}
-                      className="p-4 bg-white border border-slate-200/90 rounded-xl flex flex-col gap-3 shadow-3xs hover:border-[#00a389]/40 transition-all duration-200"
+                      className="p-4 bg-white border border-slate-200/90 rounded-xl flex flex-col gap-3 shadow-3xs hover:border-[#00a389]/40 transition-all duration-200 font-sans"
                     >
                       {/* Card Header */}
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 font-sans">
+                        <div className="flex items-center gap-2 font-sans">
+                          <span className="text-[12px] font-normal text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded capitalize font-sans">
                             Pecahan #{idx + 1}
                           </span>
-                          <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-full border leading-none ${hasDbArchive
+                          <span className={`inline-block text-[12px] font-normal px-2.5 py-0.5 rounded-full border capitalize font-sans ${hasDbArchive
                             ? 'bg-emerald-50 text-[#008f78] border-emerald-200'
                             : dbNeedsReUpload
                               ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
@@ -1929,9 +1987,9 @@ export default function PengarsipWorkspace() {
                             {hasDbArchive ? 'Diarsipkan' : dbNeedsReUpload ? 'Re-upload' : 'Belum Unggah'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 font-sans">
                           {isFrozen ? (
-                            <span className="text-[9px] text-amber-600 font-extrabold bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase tracking-wide">
+                            <span className="text-[12px] text-amber-600 font-normal bg-amber-50 px-2 py-0.5 rounded border border-amber-100 capitalize font-sans">
                               Frozen
                             </span>
                           ) : (
@@ -1943,9 +2001,9 @@ export default function PengarsipWorkspace() {
                                     setTimeout(() => fractionFileInputRef.current?.click(), 50);
                                   }}
                                   disabled={loading}
-                                  className="px-3 py-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-50 text-white text-[10px] font-extrabold rounded-lg shadow-3xs transition-all cursor-pointer flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-50 text-white text-[13px] font-normal rounded-md shadow-3xs transition-all cursor-pointer flex items-center gap-1 font-sans"
                                 >
-                                  <Upload className="w-3 h-3" />
+                                  <Upload className="w-3.5 h-3.5" />
                                   <span>Unggah</span>
                                 </button>
                               )}
@@ -1957,9 +2015,9 @@ export default function PengarsipWorkspace() {
                                     setTimeout(() => fractionFileInputRef.current?.click(), 50);
                                   }}
                                   disabled={loading}
-                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-[10px] font-extrabold rounded-lg shadow-3xs transition-all cursor-pointer flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-[13px] font-normal rounded-md shadow-3xs transition-all cursor-pointer flex items-center gap-1 font-sans"
                                 >
-                                  <RotateCcw className="w-3 h-3" />
+                                  <RotateCcw className="w-3.5 h-3.5" />
                                   <span>Re-upload</span>
                                 </button>
                               )}
@@ -1969,7 +2027,7 @@ export default function PengarsipWorkspace() {
                                   href={dbActiveArchive.urlBlob}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="p-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-all flex items-center justify-center cursor-pointer shadow-3xs"
+                                  className="p-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-md text-emerald-700 transition-all flex items-center justify-center cursor-pointer shadow-3xs"
                                   title={`v${dbActiveArchive.versi} — Buka PDF`}
                                 >
                                   <FileCheck className="w-3.5 h-3.5 text-[#00a389]" />
@@ -1983,7 +2041,7 @@ export default function PengarsipWorkspace() {
                                     setTimeout(() => fractionFileInputRef.current?.click(), 50);
                                   }}
                                   disabled={loading}
-                                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 text-[10px] font-extrabold"
+                                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 text-[13px] font-normal font-sans"
                                 >
                                   <FolderOpen className="w-3.5 h-3.5 text-slate-400" />
                                   <span>Ganti</span>
@@ -1995,22 +2053,22 @@ export default function PengarsipWorkspace() {
                       </div>
 
                       {/* Card Content Properties */}
-                      <div className="grid grid-cols-2 gap-3.5 text-xs font-semibold text-slate-800">
+                      <div className="grid grid-cols-2 gap-3.5 text-[13px] font-normal text-slate-800 font-sans">
                         <div>
-                          <span className="text-slate-400 block text-[9px] uppercase tracking-wide mb-0.5">Nama Pemilik Baru</span>
-                          <span className="capitalize text-slate-800 font-bold">{db.namaPemilikBaru?.toLowerCase()}</span>
+                          <span className="text-slate-600 block text-[13px] font-normal capitalize mb-0.5 font-sans">Nama Pemilik Baru</span>
+                          <span className="capitalize text-slate-800 font-normal font-sans">{toTitleCase(db.namaPemilikBaru || "—")}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[9px] uppercase tracking-wide mb-0.5">Nomor Sertifikat Baru</span>
-                          <span className="font-mono text-slate-900 font-black">{db.sertifikatBaru || "—"}</span>
+                          <span className="text-slate-600 block text-[13px] font-normal capitalize mb-0.5 font-sans">Nomor Sertifikat Baru</span>
+                          <span className="text-slate-800 font-normal font-sans capitalize">{db.sertifikatBaru || "—"}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[9px] uppercase tracking-wide mb-0.5">Luas Tanah Baru</span>
-                          <span className="text-slate-700 font-bold">{db.luasTanahBaru} m²</span>
+                          <span className="text-slate-600 block text-[13px] font-normal capitalize mb-0.5 font-sans">Luas Tanah Baru</span>
+                          <span className="text-slate-800 font-normal font-sans capitalize">{db.luasTanahBaru} m²</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[9px] uppercase tracking-wide mb-0.5">Luas Bangunan Baru</span>
-                          <span className="text-slate-700 font-bold">{db.luasBangunanBaru} m²</span>
+                          <span className="text-slate-600 block text-[13px] font-normal capitalize mb-0.5 font-sans">Luas Bangunan Baru</span>
+                          <span className="text-slate-800 font-normal font-sans capitalize">{db.luasBangunanBaru} m²</span>
                         </div>
                       </div>
 
@@ -2021,14 +2079,14 @@ export default function PengarsipWorkspace() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 border-t border-slate-200/80 px-6 py-4 flex items-center justify-end select-none">
+            <div className="bg-slate-50 border-t border-slate-200/80 px-6 py-4 flex items-center justify-end select-none font-sans">
               <button
                 type="button"
                 onClick={() => {
                   setShowFractionsModal(false);
                   setFractionTargetPermohonan(null);
                 }}
-                className="px-5 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl transition-colors cursor-pointer shadow-3xs"
+                className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md transition-colors cursor-pointer shadow-3xs font-sans capitalize"
               >
                 Tutup
               </button>

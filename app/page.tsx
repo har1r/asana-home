@@ -10,7 +10,8 @@ export default async function Page({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const tabQuery = resolvedSearchParams.tab;
+  const rawTab = resolvedSearchParams.tab;
+  const tabQuery = Array.isArray(rawTab) ? rawTab[0] : rawTab;
   const initialTab = isValidTab(tabQuery) ? tabQuery : 'beranda';
 
   const cookieStore = await cookies();

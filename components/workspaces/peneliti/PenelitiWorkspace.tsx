@@ -28,6 +28,7 @@ import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from '@/components/skeletons/SkeletonBase';
 import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
+import { EmptyDataAnimation } from '@/components/workspaces/shared/EmptyDataAnimation';
 
 /** Skeleton komponen dasar KPI Strip & Tabs untuk PenelitiWorkspace */
 function PenelitiBaseHeaderSkeleton() {
@@ -500,6 +501,10 @@ const getStatusBadgeClass = (status: string) => {
       return 'bg-slate-800 text-slate-100 border-slate-700';
     case 'IN_MANIFEST':
       return 'bg-emerald-100 text-emerald-800 border-emerald-200/50';
+    case 'DRAFT':
+      return 'bg-amber-100 text-amber-800 border-amber-200/50';
+    case 'VOID':
+      return 'bg-rose-100 text-rose-800 border-rose-200/50';
     case 'ARCHIVED':
       return 'bg-indigo-100 text-indigo-800 border-indigo-200/50';
     case 'COMPLETED':
@@ -570,6 +575,8 @@ export default function PenelitiWorkspace() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'last_modified' | 'newest' | 'oldest' | 'a_z'>('last_modified');
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [currentSubmittedPage, setCurrentSubmittedPage] = useState(1);
   const [itemsPerSubmittedPage, setItemsPerSubmittedPage] = useState(10);
 
@@ -1051,10 +1058,10 @@ export default function PenelitiWorkspace() {
 
   const deferredSearchSubmittedQuery = useDeferredValue(searchSubmittedQuery);
 
-  // Filter Submitted Queue Client-side (Memoized & Deferred)
+  // Filter & Sort Submitted Queue Client-side (Memoized & Deferred)
   const filteredSubmittedList = useMemo(() => {
     const q = deferredSearchSubmittedQuery.toLowerCase().trim();
-    return submittedList.filter((item) => {
+    const list = submittedList.filter((item) => {
       const matchesSearch =
         !q ||
         item.namaWajibPajak.toLowerCase().includes(q) ||
@@ -1066,7 +1073,29 @@ export default function PenelitiWorkspace() {
 
       return matchesSearch && matchesJenis;
     });
-  }, [submittedList, deferredSearchSubmittedQuery, filterJenisLayanan]);
+
+    return list.sort((a, b) => {
+      if (sortBy === 'a_z') {
+        const nameA = (a.displayNamaWajibPajak || a.namaWajibPajak || '').toLowerCase();
+        const nameB = (b.displayNamaWajibPajak || b.namaWajibPajak || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      if (sortBy === 'newest') {
+        const dateA = new Date(a.tanggalNoPelayanan || a.tanggalPermohonan || a.createdAt || 0).getTime();
+        const dateB = new Date(b.tanggalNoPelayanan || b.tanggalPermohonan || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      }
+      if (sortBy === 'oldest') {
+        const dateA = new Date(a.tanggalNoPelayanan || a.tanggalPermohonan || a.createdAt || 0).getTime();
+        const dateB = new Date(b.tanggalNoPelayanan || b.tanggalPermohonan || b.createdAt || 0).getTime();
+        return dateA - dateB;
+      }
+      // 'last_modified' default
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [submittedList, deferredSearchSubmittedQuery, filterJenisLayanan, sortBy]);
 
   // Expandable rows state for Mode Nopel inline expansion
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -1217,14 +1246,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 1: Total Bundle */}
             <div
               onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Bundle</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Bundle</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundlesList.length}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -1233,14 +1262,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 2: Draf */}
             <div
               onClick={() => { setFilterBundleStatus('DRAFT'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Draf (Aktif)</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Draf (Aktif)</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.DRAFT}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.DRAFT / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1249,14 +1278,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 3: Terkunci */}
             <div
               onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Terkunci</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Terkunci</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.LOCKED}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.LOCKED / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1265,14 +1294,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 4: Dimanifest */}
             <div
               onClick={() => { setFilterBundleStatus('IN_MANIFEST'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Dimanifest</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dimanifest</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.IN_MANIFEST}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.IN_MANIFEST / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1281,14 +1310,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 5: Dibatalkan / Void */}
             <div
               onClick={() => { setFilterBundleStatus('VOID'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Dibatalkan</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dibatalkan</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.VOID}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.VOID / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1297,11 +1326,11 @@ export default function PenelitiWorkspace() {
         </div>
 
         {/* Clean View Mode Switcher Tabs (Equal Width Layout, without count badges) */}
-        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-3 gap-1 shadow-3xs select-none">
+        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-3 gap-1 shadow-3xs select-none font-sans">
           <button
             type="button"
             onClick={() => handleSwitchStep('bundle')}
-            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'bundle'
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans ${viewMode === 'bundle'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1311,7 +1340,7 @@ export default function PenelitiWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchStep('list')}
-            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'list'
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans ${viewMode === 'list'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1321,7 +1350,7 @@ export default function PenelitiWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchStep('print')}
-            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'print'
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans ${viewMode === 'print'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1346,9 +1375,9 @@ export default function PenelitiWorkspace() {
 
         {/* ==================== VIEW MODE: LIST (Daftar Permohonan / Isi Antrean) ==================== */}
         {viewMode === 'list' && (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-4">
             {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS */}
-            <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
+            <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs mb-1 select-none">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 {/* Left Side: Search Bar */}
                 <div className="relative w-full md:w-96">
@@ -1360,7 +1389,7 @@ export default function PenelitiWorkspace() {
                     onChange={(e) => setSearchSubmittedQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
+                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
                     placeholder="Cari No. Pelayanan, NOP, Nama Pemohon..."
                   />
                   {searchSubmittedQuery ? (
@@ -1387,7 +1416,7 @@ export default function PenelitiWorkspace() {
                     <button
                       type="button"
                       onClick={() => setViewMode('bundle')}
-                      className={`h-10 px-3 rounded-md border transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 text-xs font-bold relative font-sans ${selectedBundle
+                      className={`h-10 px-3 rounded-md border transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 text-[13px] font-normal relative font-sans ${selectedBundle
                         ? 'bg-emerald-50 border-emerald-200 text-[#008f78] hover:bg-emerald-100'
                         : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
                         }`}
@@ -1416,32 +1445,6 @@ export default function PenelitiWorkspace() {
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
-                  <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchDisplayMode('berkas')}
-                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
-                        ? 'bg-white text-slate-900 shadow-3xs font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
-                    >
-                      <span>Nopel</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchDisplayMode('pemohon')}
-                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
-                        ? 'bg-white text-slate-900 shadow-3xs font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
-                    >
-                      <span>Pemohon</span>
-                    </button>
                   </div>
 
                   {/* Tombol Refresh Manual */}
@@ -1477,7 +1480,7 @@ export default function PenelitiWorkspace() {
                         setFilterJenisLayanan(item.val);
                         setCurrentSubmittedPage(1);
                       }}
-                      className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 font-sans ${isActive
+                      className={`h-7 px-2.5 rounded-md text-[13px] font-normal transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 font-sans ${isActive
                         ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
                         : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300'
                         }`}
@@ -1493,6 +1496,78 @@ export default function PenelitiWorkspace() {
               </div>
             </div>
 
+            {/* TOOLBAR OUTSIDE TABLE: DROPDOWN URUTKAN (KIRI) & TAB NOPEL/PEMOHON (KANAN) */}
+            <div className="flex items-center justify-between mb-1 select-none font-sans">
+              {/* Left Side: Urutkan Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className="flex items-center gap-1.5 text-[13px] font-normal text-slate-600 transition-colors cursor-pointer py-1 rounded-md"
+                  title="Urutkan Data Tabel"
+                >
+                  <span>Urutkan</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180 text-slate-800' : ''}`} />
+                </button>
+
+                {isSortOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setIsSortOpen(false)}
+                    />
+                    <div className="absolute left-0 mt-1 w-52 bg-white rounded-md shadow-md border border-slate-200/90 py-1 z-30 animate-fadeIn font-sans">
+                      {[
+                        { id: 'last_modified', label: 'Terbaru Diperbarui' },
+                        { id: 'newest', label: 'Terbaru (Tgl. Nopel)' },
+                        { id: 'oldest', label: 'Terlama (Tgl. Nopel)' },
+                        { id: 'a_z', label: 'A - Z (Nama Pemohon)' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            setSortBy(opt.id as any);
+                            setIsSortOpen(false);
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-[13px] transition-colors cursor-pointer flex items-center justify-between font-sans text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-normal"
+                        >
+                          <span>{opt.label}</span>
+                          {sortBy === opt.id && (
+                            <Check className="w-3.5 h-3.5 text-[#00a389] shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Right Side: Display Mode Switcher ('Nopel' vs 'Pemohon') */}
+              <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchDisplayMode('berkas')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
+                >
+                  <span>Nopel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchDisplayMode('pemohon')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                >
+                  <span>Pemohon</span>
+                </button>
+              </div>
+            </div>
+
             {/* TIER 3: DATA CANVAS & ENTERPRISE TABLE CARD */}
             <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[500px]">
 
@@ -1500,51 +1575,64 @@ export default function PenelitiWorkspace() {
               <div className="overflow-x-auto scrollbar-thin flex-1">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-400 capitalize tracking-wider text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
-                      <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
-                      <th className="py-3 px-2 text-center w-10 min-w-[40px]">⭐</th>
-                      <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
-                      <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
-                      <th className="py-3 px-4 min-w-[100px]">Tgl. Nopel</th>
-                      <th className="py-3 px-4 min-w-[100px]">Tgl. Selesai</th>
-                      <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
-                      <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
-                      <th className="py-3 px-4 min-w-[170px]">Nama Pemohon</th>
-                      <th className="py-3 px-4 min-w-[120px]">Jenis Layanan</th>
-                      <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
-                      <th className="py-3 px-4 text-center w-28 min-w-[110px]">Aksi</th>
+                    <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                      <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                        <span>No</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                        <span>⭐</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                        <span>Tgl. Input</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                        <span>Petugas Input</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                        <span>Tgl. Nopel</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                        <span>Tgl. Selesai</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                        <span>No. Pelayanan</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
+                        <span>Nomor Objek Pajak</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[170px] relative font-normal text-slate-600">
+                        <span>Nama Pemohon</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[120px] relative font-normal text-slate-600">
+                        <span>Jenis Layanan</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 text-center min-w-[100px] relative font-normal text-slate-600">
+                        <span>Status</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 text-center w-28 min-w-[110px] font-normal text-slate-600">
+                        <span>Aksi</span>
+                      </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-[11px] font-bold font-sans bg-white">
+                  <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans bg-white">
                     {filteredSubmittedList.length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="py-16 px-5 text-center bg-white">
-                          <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
-                            <FishingAnimation isSearch={!!(searchSubmittedQuery || filterJenisLayanan !== 'ALL')} />
-                            <div className="flex flex-col gap-1">
-                              <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider">
-                                {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
-                                  ? 'Hasil Pencarian Tidak Ditemukan'
-                                  : 'Belum Ada Permohonan'}
-                              </h5>
-                              <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4">
-                                {searchSubmittedQuery || filterJenisLayanan !== 'ALL'
-                                  ? 'Kami tidak menemukan data yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.'
-                                  : 'Antrean permohonan masuk kosong. Saat ini tidak ada berkas yang perlu diverifikasi.'}
-                              </p>
-                            </div>
-                            {(searchSubmittedQuery || filterJenisLayanan !== 'ALL') && (
-                              <button
-                                onClick={() => {
-                                  setSearchSubmittedQuery('');
-                                  setFilterJenisLayanan('ALL');
-                                }}
-                                className="mt-1 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-lg transition-all cursor-pointer shadow-3xs"
-                              >
-                                Reset Pencarian
-                              </button>
-                            )}
-                          </div>
+                        <td colSpan={12} className="py-10 text-center bg-white font-sans select-none">
+                          <EmptyDataAnimation
+                            title={searchSubmittedQuery || filterJenisLayanan !== 'ALL' ? 'Hasil Pencarian Tidak Ditemukan' : 'Belum Ada Permohonan'}
+                            description={searchSubmittedQuery || filterJenisLayanan !== 'ALL' ? 'Kami tidak menemukan data yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.' : 'Antrean permohonan masuk kosong. Saat ini tidak ada berkas yang perlu diverifikasi.'}
+                          />
                         </td>
                       </tr>
                     ) : (
@@ -1561,10 +1649,10 @@ export default function PenelitiWorkspace() {
                           <tr
                             key={item.uniqueRowKey || item.id}
                             onClick={() => setSelectedRequest(item)}
-                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[11px] font-bold font-sans text-slate-700 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
+                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[12px] font-normal font-sans text-slate-600 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
                               }`}
                           >
-                            <td className="py-2.5 px-4 text-center font-bold text-slate-400 font-sans text-[11px]">{itemNumber}</td>
+                            <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[12px]">{itemNumber}</td>
                             <td className="py-2.5 px-2 text-center" onClick={(e) => {
                               e.stopPropagation();
                               handleToggleFavorite(item.id);
@@ -1580,33 +1668,33 @@ export default function PenelitiWorkspace() {
                                   }`} />
                               </button>
                             </td>
-                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
-                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                             </td>
-                            <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
+                            <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap">
                               <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
-                                <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
+                                <span className="truncate max-w-[130px] font-sans font-normal">{toTitleCase(item.penginput?.name || "Petugas Input")}</span>
                               </div>
                             </td>
-                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
+                            <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">{nopolDate}</td>
                             <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                               {item.tanggalPenyelesaian ? (
                                 <div className="flex items-center gap-1">
                                   {isOverdue(item.tanggalPenyelesaian, item.status) && (
                                     <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                   )}
-                                  <span className={`text-[11px] font-sans font-bold uppercase ${isOverdue(item.tanggalPenyelesaian, item.status)
-                                    ? 'text-rose-600 font-bold'
+                                  <span className={`text-[12px] font-sans font-normal capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                    ? 'text-rose-600 font-normal'
                                     : 'text-slate-600'
                                     }`}>
-                                    {penyelesaianDate.toUpperCase()}
+                                    {penyelesaianDate}
                                   </span>
                                 </div>
                               ) : "—"}
                             </td>
                             <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
+                                <span className="text-[12px] font-normal text-slate-600 font-sans tracking-tight capitalize">
                                   {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchSubmittedQuery)}
                                 </span>
                                 <button
@@ -1624,7 +1712,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
+                                <span className="text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
                                   {highlightText(formatNop(item.nop), searchSubmittedQuery)}
                                 </span>
                                 <button
@@ -1642,8 +1730,8 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 group/cell relative min-w-[170px] font-sans">
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
-                                  {highlightText(item.displayNamaWajibPajak.toUpperCase(), searchSubmittedQuery)}
+                                <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap capitalize font-sans">
+                                  {highlightText(toTitleCase(item.displayNamaWajibPajak), searchSubmittedQuery)}
                                 </span>
                                 {item.isPecahanRow && (
                                   <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
@@ -1665,7 +1753,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 font-sans">
                               <span
-                                className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
+                                className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
                                 title={item.jenisPermohonan.replace(/_/g, ' ')}
                               >
                                 {getAbbreviatedJenis(item.jenisPermohonan)}
@@ -1673,7 +1761,7 @@ export default function PenelitiWorkspace() {
                             </td>
                             <td className="py-2.5 px-4 text-center font-sans">
                               <div className="flex items-center justify-center gap-1">
-                                <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
+                                <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
                                   {getStatusLabel(item.status)}
                                 </span>
                               </div>
@@ -1791,9 +1879,10 @@ export default function PenelitiWorkspace() {
 
         {/* ==================== VIEW MODE: BUNDLE (Buat Bundle) ==================== */}
         {viewMode === 'bundle' && (
-          <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="flex flex-col gap-4 min-h-[300px]">
+            {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS (Matching Isi Bundle style & tight spacing) */}
+            <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 {/* Search input for Bundles (Aligned width & style with Header search) */}
                 <div className="relative w-full md:w-[403px] max-w-full">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
@@ -1803,7 +1892,7 @@ export default function PenelitiWorkspace() {
                     onChange={(e) => setSearchBundleQuery(e.target.value)}
                     onFocus={() => setIsBundleSearchFocused(true)}
                     onBlur={() => setIsBundleSearchFocused(false)}
-                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
+                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-lg text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
                     placeholder="Cari No. Bundle, Jenis Pelayanan."
                   />
                   {!isBundleSearchFocused && !searchBundleQuery && (
@@ -1823,7 +1912,7 @@ export default function PenelitiWorkspace() {
                   <button
                     onClick={handleCreateBundle}
                     disabled={loading}
-                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-semibold text-xs rounded-lg shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-lg shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                   >
                     <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Buat</span>
@@ -1839,39 +1928,39 @@ export default function PenelitiWorkspace() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Filter Jenis Layanan Pills for Bundles (Replacing Status Pills) */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 select-none pb-1">
-              {[
-                { val: 'ALL', label: 'Semua' },
-                { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
-                { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
-                { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
-                { val: 'OBJEK_PAJAK_BARU', label: 'OP Baru' },
-                { val: 'PEMBETULAN', label: 'Pembetulan' },
-                { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
-              ].map((item) => {
-                const isActive = filterBundleJenisLayanan === item.val;
-                const count = bundleJenisCounts[item.val] ?? 0;
-                return (
-                  <button
-                    key={item.val}
-                    type="button"
-                    onClick={() => setFilterBundleJenisLayanan(item.val)}
-                    className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
-                      ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
-                      : 'bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90'
-                      }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+              {/* Filter Jenis Layanan Pills for Bundles (Replacing Status Pills) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 shrink-0 select-none font-sans">
+                {[
+                  { val: 'ALL', label: 'Semua' },
+                  { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+                  { val: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis (Update)' },
+                  { val: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis (Reguler)' },
+                  { val: 'OBJEK_PAJAK_BARU', label: 'OP Baru' },
+                  { val: 'PEMBETULAN', label: 'Pembetulan' },
+                  { val: 'PENGAKTIFAN', label: 'Pengaktifan' }
+                ].map((item) => {
+                  const isActive = filterBundleJenisLayanan === item.val;
+                  const count = bundleJenisCounts[item.val] ?? 0;
+                  return (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => setFilterBundleJenisLayanan(item.val)}
+                      className={`h-7 px-2.5 rounded-md text-[13px] font-normal font-sans transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
+                        ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
+                        : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1933,7 +2022,7 @@ export default function PenelitiWorkspace() {
                   >
                     {/* Top Row: Number */}
                     <div className="flex items-center justify-between gap-3 w-full">
-                      <span className="text-[10px] sm:text-xs font-black text-slate-850 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
+                      <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight break-all whitespace-normal block" title={b.nomorBundle}>
                         {b.nomorBundle}
                       </span>
                     </div>
@@ -1941,7 +2030,7 @@ export default function PenelitiWorkspace() {
                     {/* Middle Row: Service Type Tag | Status | Count Badge Centered Horizontally */}
                     <div className="flex items-center justify-center gap-2 w-full py-1 flex-wrap sm:flex-nowrap">
                       {/* Service Type Tag */}
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none select-none tracking-wide uppercase ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
                         {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : '—'}
                       </span>
 
@@ -1949,7 +2038,7 @@ export default function PenelitiWorkspace() {
                       <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
 
                       {/* Status Pill Badge */}
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 ${b.status === 'LOCKED'
+                      <span className={`px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 font-sans ${b.status === 'LOCKED'
                         ? 'bg-slate-900 text-slate-100 border-slate-800'
                         : b.status === 'IN_MANIFEST'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -1980,22 +2069,22 @@ export default function PenelitiWorkspace() {
                       <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
 
                       {/* Count Badge */}
-                      <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs" title={`${berkasCount} Permohonan NOPEL (${pemohonCount} Pemohon)`}>
+                      <span className="flex items-center justify-center bg-[#f25c54] text-white text-[13px] font-normal px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs font-sans" title={`${berkasCount} Permohonan NOPEL (${pemohonCount} Pemohon)`}>
                         {pemohonCount} Pemohon
                       </span>
                     </div>
 
                     {/* Bottom Row: Peneliti Profile Initials Avatar & Creation Date */}
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/80 text-[10px] text-slate-400 font-semibold select-none mt-auto">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/80 text-[13px] text-slate-600 font-normal select-none mt-auto font-sans">
                       {/* Peneliti Avatar Initials & Name */}
                       <div className="flex items-center gap-1.5 min-w-0" title={`Pembuat Bundle: ${b.peneliti?.name || 'Peneliti'}`}>
-                        <div className="w-5 h-5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-black shrink-0 shadow-3xs">
+                        <div className="w-5 h-5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-3xs font-sans">
                           {getInitials(b.peneliti?.name || 'Peneliti')}
                         </div>
                       </div>
 
                       {/* Creation Date */}
-                      <span className="font-mono text-[10px] text-slate-500 font-bold shrink-0">
+                      <span className="font-mono text-[13px] text-slate-600 font-normal shrink-0">
                         {b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                       </span>
                     </div>
@@ -2118,28 +2207,23 @@ export default function PenelitiWorkspace() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
                   {/* Left: Bundle Number & Status */}
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-xs text-slate-900 bg-white border border-slate-200/90 px-3 py-1.5 rounded-md shadow-3xs">
+                    <span className="font-sans text-[13px] font-normal text-slate-800 bg-white border border-slate-200/90 px-3 py-1 rounded-md shadow-3xs">
                       {selectedBundle.nomorBundle}
                     </span>
-                    <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-md border uppercase font-sans ${selectedBundle.status === 'LOCKED'
-                      ? 'bg-emerald-50 text-[#008f78] border-emerald-200'
-                      : selectedBundle.status === 'DRAFT'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}>
-                      {selectedBundle.status}
+                    <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(selectedBundle.status)}`}>
+                      {getStatusLabel(selectedBundle.status)}
                     </span>
                   </div>
 
                   {/* Right: Mode Switcher + Action Buttons */}
                   <div className="flex items-center gap-2.5 shrink-0 flex-wrap font-sans">
                     {/* Display Mode Switcher ('Nopel' vs 'Pemohon') */}
-                    <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10 font-sans">
+                    <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
                       <button
                         type="button"
                         onClick={() => handleSwitchDisplayMode('berkas')}
-                        className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
-                          ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                        className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+                          ? 'bg-white text-slate-900 shadow-3xs font-normal'
                           : 'text-slate-600 hover:text-slate-900'
                           }`}
                         title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
@@ -2149,8 +2233,8 @@ export default function PenelitiWorkspace() {
                       <button
                         type="button"
                         onClick={() => handleSwitchDisplayMode('pemohon')}
-                        className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
-                          ? 'bg-white text-slate-900 shadow-3xs font-bold'
+                        className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
+                          ? 'bg-white text-slate-900 shadow-3xs font-normal'
                           : 'text-slate-600 hover:text-slate-900'
                           }`}
                         title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
@@ -2164,7 +2248,7 @@ export default function PenelitiWorkspace() {
                       <button
                         onClick={() => handleResetBundleType(selectedBundle.id)}
                         disabled={loading}
-                        className="h-10 px-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shrink-0 font-sans"
+                        className="h-10 px-3 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-normal rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shrink-0 font-sans"
                         title="Reset jenis permohonan bundle"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -2177,7 +2261,7 @@ export default function PenelitiWorkspace() {
                       <button
                         onClick={handleLockBundle}
                         disabled={loading || (selectedBundle.permohonan || []).length === 0}
-                        className="h-10 px-4 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-md shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-sans"
+                        className="h-10 px-4 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 font-sans"
                       >
                         <Lock className="w-4 h-4" />
                         <span>Kunci Bundle</span>
@@ -2189,7 +2273,7 @@ export default function PenelitiWorkspace() {
                       href={`/api/pdf/surat-pengantar-bundle/${selectedBundle.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-10 px-4 bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-700 font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-2 cursor-pointer shrink-0 font-sans"
+                      className="h-10 px-4 bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-700 text-[13px] font-normal rounded-md shadow-3xs transition-all flex items-center gap-2 cursor-pointer shrink-0 font-sans"
                       title="Unduh / Cetak Surat Pengantar PDF"
                     >
                       <Printer className="w-4 h-4 text-[#00a389]" />
@@ -2213,26 +2297,64 @@ export default function PenelitiWorkspace() {
                         <div className="overflow-x-auto scrollbar-thin flex-1">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-400 capitalize tracking-wider text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
-                                <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
-                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
-                                <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
-                                <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
-                                <th className="py-3 px-4 min-w-[100px]">Tgl. Nopel</th>
-                                <th className="py-3 px-4 min-w-[100px]">Tgl. Selesai</th>
-                                <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
-                                <th className="py-3 px-4 min-w-[170px]">Nomor Objek Pajak</th>
-                                <th className="py-3 px-4 min-w-[170px]">Nama Pemohon</th>
-                                <th className="py-3 px-4 min-w-[120px]">Jenis Layanan</th>
-                                <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
-                                <th className="py-3 px-4 text-center w-24 min-w-[96px]">Aksi</th>
+                              <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                                <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                                  <span>No</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                                  <span>⭐</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                                  <span>Tgl. Input</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                                  <span>Petugas Input</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Tgl. Nopel</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Tgl. Selesai</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                                  <span>No. Pelayanan</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[170px] relative font-normal text-slate-600">
+                                  <span>Nomor Objek Pajak</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[170px] relative font-normal text-slate-600">
+                                  <span>Nama Pemohon</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[120px] relative font-normal text-slate-600">
+                                  <span>Jenis Layanan</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 text-center min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Status</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 text-center w-24 min-w-[96px] font-normal text-slate-600">
+                                  <span>Aksi</span>
+                                </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 text-[11px] font-bold font-sans bg-white">
+                            <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans bg-white">
                               {paginatedPrintList.length === 0 ? (
                                 <tr>
-                                  <td colSpan={12} className="py-14 text-center text-slate-400 text-xs font-semibold">
-                                    Bundle masih kosong. Silakan masukkan berkas dari tab 'Isi Antrean'.
+                                  <td colSpan={12} className="py-10 text-center select-none font-sans bg-white">
+                                    <EmptyDataAnimation
+                                      title="Belum Ada Permohonan"
+                                      description="Bundle ini masih kosong. Silakan masukkan berkas dari tab 'Isi Antrean'."
+                                    />
                                   </td>
                                 </tr>
                               ) : (
@@ -2250,9 +2372,9 @@ export default function PenelitiWorkspace() {
                                     <tr
                                       key={item.uniqueRowKey || item.id}
                                       onClick={() => setSelectedRequest(item)}
-                                      className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[11px] font-bold font-sans text-slate-700 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : isFrozen ? 'bg-amber-50/30' : ''}`}
+                                      className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group text-[12px] font-normal font-sans text-slate-600 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : isFrozen ? 'bg-amber-50/30' : ''}`}
                                     >
-                                      <td className="py-2.5 px-4 text-center font-bold text-slate-400 font-sans text-[11px]">{itemNumber}</td>
+                                      <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[12px]">{itemNumber}</td>
                                       <td className="py-2.5 px-2 text-center">
                                         <button
                                           type="button"
@@ -2264,33 +2386,33 @@ export default function PenelitiWorkspace() {
                                             }`} />
                                         </button>
                                       </td>
-                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
-                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
+                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                       </td>
-                                      <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap uppercase">
+                                      <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap">
                                         <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || "Petugas Input"}>
-                                          <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || "Petugas Input"}</span>
+                                          <span className="truncate max-w-[130px] font-sans font-normal">{toTitleCase(item.penginput?.name || "Petugas Input")}</span>
                                         </div>
                                       </td>
-                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
+                                      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">{nopolDate}</td>
                                       <td className="py-2.5 px-4 whitespace-nowrap font-sans">
                                         {item.tanggalPenyelesaian ? (
                                           <div className="flex items-center gap-1">
                                             {isOverdue(item.tanggalPenyelesaian, item.status) && (
                                               <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                             )}
-                                            <span className={`text-[11px] font-sans font-bold uppercase ${isOverdue(item.tanggalPenyelesaian, item.status)
-                                              ? 'text-rose-600 font-bold'
+                                            <span className={`text-[12px] font-sans font-normal capitalize ${isOverdue(item.tanggalPenyelesaian, item.status)
+                                              ? 'text-rose-600 font-normal'
                                               : 'text-slate-600'
                                               }`}>
-                                              {penyelesaianDate.toUpperCase()}
+                                              {penyelesaianDate}
                                             </span>
                                           </div>
                                         ) : "—"}
                                       </td>
                                       <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
+                                          <span className="text-[12px] font-normal text-slate-600 font-sans tracking-tight capitalize">
                                             {item.nomorPelayanan || item.nomorPermohonan}
                                           </span>
                                           <button
@@ -2317,7 +2439,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
+                                          <span className="text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
                                             {formatNop(item.nop)}
                                           </span>
                                           <button
@@ -2338,8 +2460,8 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 group/cell relative min-w-[170px] font-sans">
                                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
-                                            {(item.displayNamaWajibPajak || item.namaWajibPajak).toUpperCase()}
+                                          <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap capitalize font-sans">
+                                            {toTitleCase(item.displayNamaWajibPajak || item.namaWajibPajak)}
                                           </span>
                                           {item.isPecahanRow && (
                                             <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
@@ -2364,7 +2486,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 font-sans">
                                         <span
-                                          className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
+                                          className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
                                           title={item.jenisPermohonan.replace(/_/g, ' ')}
                                         >
                                           {getAbbreviatedJenis(item.jenisPermohonan)}
@@ -2372,7 +2494,7 @@ export default function PenelitiWorkspace() {
                                       </td>
                                       <td className="py-2.5 px-4 text-center font-sans">
                                         <div className="flex items-center justify-center gap-1">
-                                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
+                                          <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
                                             {getStatusLabel(item.status)}
                                           </span>
                                         </div>
@@ -2501,16 +2623,24 @@ export default function PenelitiWorkspace() {
                 </div>
               </div>
             ) : (
-              /* Clean & Premium Empty Placeholder */
-              <div className="py-20 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
-                <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#00a389] shadow-3xs">
-                  <Boxes className="w-8 h-8 stroke-[1.5]" />
-                </div>
-                <div className="space-y-1 max-w-sm">
-                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Detail Bundle & Cetak</h3>
-                  <p className="text-xs text-slate-400 font-semibold leading-relaxed">
-                    Silakan pilih salah satu bundle di tab <strong className="text-slate-600 font-bold">Pilih Bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
+              /* Clean & Premium Empty Placeholder with Select-bro.svg */
+              <div className="py-14 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
+                <img
+                  src="/assets/Select-bro.svg"
+                  alt="Pilih Bundle"
+                  className="w-56 h-56 max-w-full object-contain pointer-events-none drop-shadow-xs"
+                />
+                <div className="space-y-1.5 max-w-sm">
+                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight font-sans">Belum Ada Bundle yang Dipilih</h3>
+                  <p className="text-xs text-slate-500 font-normal leading-relaxed font-sans">
+                    Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold font-sans">Pilih Bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
                   </p>
+                  <button
+                    onClick={() => handleSwitchStep('bundle')}
+                    className="mt-3 px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
+                  >
+                    <span>Pilih Bundle Sekarang</span>
+                  </button>
                 </div>
               </div>
             )}

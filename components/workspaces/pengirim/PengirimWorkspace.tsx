@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
 import {
   FileText,
   Search,
@@ -199,12 +201,49 @@ const getAvatarInitials = (name?: string) => {
 };
 
 const STATUS_LABEL_MAP: Record<string, string> = {
-  DRAFT: 'Draf',
+  SUBMITTED: 'Diajukan',
+  REVISION: 'Revisi',
+  BUNDLED: 'Terbundel',
   LOCKED: 'Terkunci',
+  IN_MANIFEST: 'Dimanifest',
+  ARCHIVED: 'Diarsipkan',
+  COMPLETED: 'Selesai',
+  REJECTED: 'Ditolak',
+  DRAFT: 'Draf',
+  VOID: 'Dibatalkan',
   SENT: 'Dikirim',
 };
 
-const getStatusLabel = (status: string) => STATUS_LABEL_MAP[status] || status;
+const getStatusLabel = (status: string) => {
+  if (!status) return '—';
+  if (STATUS_LABEL_MAP[status]) return STATUS_LABEL_MAP[status];
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
+
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'SUBMITTED':
+      return 'bg-[#00a389]/10 text-[#008f78] border-[#00a389]/20';
+    case 'REVISION':
+      return 'bg-amber-100 text-amber-800 border-amber-200/50 animate-pulse';
+    case 'BUNDLED':
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200/50';
+    case 'LOCKED':
+      return 'bg-slate-900 text-slate-100 border-slate-700';
+    case 'IN_MANIFEST':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200/50';
+    case 'ARCHIVED':
+      return 'bg-teal-100 text-[#008f78] border-teal-200/50';
+    case 'COMPLETED':
+      return 'bg-sky-100 text-sky-800 border-sky-200/50';
+    case 'REJECTED':
+      return 'bg-rose-100 text-rose-800 border-rose-200/50';
+    case 'SENT':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200/50';
+    default:
+      return 'bg-slate-100 text-slate-700 border-slate-200/50';
+  }
+};
 
 const getShortBundleNum = (bundleNum: string) => {
   if (!bundleNum) return '—';
@@ -352,10 +391,7 @@ export default function PengirimWorkspace() {
 
   // Process Permohonan List according to Display Mode (berkas vs pemohon)
   const processedBundlePermohonanList = useMemo(() => {
-    const rawList = selectedBundleInManifest?.permohonan || [];
-    // Only display permohonans that are ready in Pengirim workspace (ARCHIVED or SENT).
-    // Permohonan returned to Pengarsip (status BUNDLED) will be excluded so the row disappears after Supervisor approval.
-    const permohonanList = rawList.filter((p: any) => p.status === 'ARCHIVED' || p.status === 'SENT');
+    const permohonanList = selectedBundleInManifest?.permohonan || [];
 
     if (bundleDisplayMode === 'pemohon') {
       const result: any[] = [];
@@ -797,20 +833,20 @@ export default function PengirimWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
 
-        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling) */}
-        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling - 100% Identik dengan Pengarsip & Peneliti) */}
+        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Metric 1: Total Manifest */}
             <div
               onClick={() => { setFilterManifestStatus('ALL'); setCurrentManifestPage(1); handleSwitchTab('daftar-manifest'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Total Manifest</span>
-                <span className="text-xl font-black font-mono text-slate-900">{manifestStatusCounts.ALL}</span>
+              <div className="flex flex-col gap-0.5 font-sans">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Manifest</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{manifestStatusCounts.ALL}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterManifestStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterManifestStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -819,14 +855,14 @@ export default function PengirimWorkspace() {
             {/* Metric 2: Draf */}
             <div
               onClick={() => { setFilterManifestStatus('DRAFT'); setCurrentManifestPage(1); handleSwitchTab('daftar-manifest'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Draf</span>
-                <span className="text-xl font-black font-mono text-slate-900">{manifestStatusCounts.DRAFT}</span>
+              <div className="flex flex-col gap-0.5 font-sans">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Draf</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{manifestStatusCounts.DRAFT}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterManifestStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterManifestStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {manifestsList.length > 0 ? `${((manifestStatusCounts.DRAFT / manifestsList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -835,14 +871,14 @@ export default function PengirimWorkspace() {
             {/* Metric 3: Terkunci */}
             <div
               onClick={() => { setFilterManifestStatus('LOCKED'); setCurrentManifestPage(1); handleSwitchTab('daftar-manifest'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Terkunci</span>
-                <span className="text-xl font-black font-mono text-slate-900">{manifestStatusCounts.LOCKED}</span>
+              <div className="flex flex-col gap-0.5 font-sans">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Terkunci</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{manifestStatusCounts.LOCKED}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterManifestStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterManifestStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {manifestsList.length > 0 ? `${((manifestStatusCounts.LOCKED / manifestsList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -851,14 +887,14 @@ export default function PengirimWorkspace() {
             {/* Metric 4: Dikirim */}
             <div
               onClick={() => { setFilterManifestStatus('SENT'); setCurrentManifestPage(1); handleSwitchTab('daftar-manifest'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'SENT' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterManifestStatus === 'SENT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Dikirim</span>
-                <span className="text-xl font-black font-mono text-slate-900">{manifestStatusCounts.SENT}</span>
+              <div className="flex flex-col gap-0.5 font-sans">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dikirim</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{manifestStatusCounts.SENT}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterManifestStatus === 'SENT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterManifestStatus === 'SENT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {manifestsList.length > 0 ? `${((manifestStatusCounts.SENT / manifestsList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -867,12 +903,12 @@ export default function PengirimWorkspace() {
         </div>
 
         {/* Clean View Mode Switcher Tabs (Equal Width 2 Tabs Layout) */}
-        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none">
+        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none font-sans">
           <button
             type="button"
             onClick={() => handleSwitchTab("daftar-manifest")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${workspaceTab === "daftar-manifest"
-              ? "bg-white text-slate-900 shadow-xs"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal font-sans text-center transition-all cursor-pointer ${workspaceTab === "daftar-manifest"
+              ? "bg-white text-slate-800 shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
@@ -881,8 +917,8 @@ export default function PengirimWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchTab("kelola-pengiriman")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${workspaceTab === "kelola-pengiriman"
-              ? "bg-white text-slate-900 shadow-xs"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal font-sans text-center transition-all cursor-pointer ${workspaceTab === "kelola-pengiriman"
+              ? "bg-white text-slate-800 shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
@@ -892,18 +928,18 @@ export default function PengirimWorkspace() {
 
         {/* Error & Success Banners */}
         {error && (
-          <div className="bg-rose-50/90 border border-rose-200 text-rose-800 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
+          <div className="bg-rose-50/90 border border-rose-200 text-rose-800 text-[13px] font-normal font-sans rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
             <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-            <span className="flex-1">{error}</span>
+            <span className="flex-1 font-sans">{error}</span>
             <button onClick={() => setError("")} className="text-rose-400 hover:text-rose-600 shrink-0 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
         {success && (
-          <div className="bg-emerald-50/90 border border-emerald-200 text-[#008f78] text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
+          <div className="bg-emerald-50/90 border border-emerald-200 text-[#008f78] text-[13px] font-normal font-sans rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
-            <span className="flex-1">{success}</span>
+            <span className="flex-1 font-sans">{success}</span>
             <button onClick={() => setSuccess("")} className="text-emerald-500 hover:text-emerald-700 shrink-0 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
@@ -912,12 +948,12 @@ export default function PengirimWorkspace() {
 
         {/* ==================== TAB: DAFTAR MANIFEST ==================== */}
         {workspaceTab === "daftar-manifest" && (
-          <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
-            {/* Header row */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                {/* Search Manifest */}
-                <div className="relative w-full md:w-[403px] max-w-full">
+          <div className="flex flex-col gap-4 min-h-[300px] font-sans">
+            {/* TIER 2: UNIFIED COMMAND BAR CARD */}
+            <div className="bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none font-sans">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Search input for Manifests */}
+                <div className="relative w-full md:w-[403px] max-w-full font-sans">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                   <input
                     type="text"
@@ -926,7 +962,7 @@ export default function PengirimWorkspace() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
+                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
                     placeholder="Cari nomor manifest..."
                   />
                   {!isSearchFocused && !searchQuery && (
@@ -937,7 +973,7 @@ export default function PengirimWorkspace() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -945,20 +981,20 @@ export default function PengirimWorkspace() {
                 </div>
 
                 {/* Right side controls: Buat Button + Refresh Button */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 font-sans">
                   <button
                     onClick={handleCreateManifest}
                     disabled={loading}
-                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Buat</span>
                   </button>
 
                   <button
                     onClick={() => fetchInitialData(true)}
                     disabled={isRefreshing || listLoading}
-                    className="p-2.5 h-10 w-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                    className="p-2.5 h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
                     title="Refresh Data"
                   >
                     <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
@@ -967,47 +1003,19 @@ export default function PengirimWorkspace() {
               </div>
             </div>
 
-            {/* Filter Status Pills for Manifests */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 select-none pb-1">
-              {['ALL', 'DRAFT', 'LOCKED', 'SENT'].map((st) => {
-                const isActive = filterManifestStatus === st;
-                const count = manifestStatusCounts[st] ?? 0;
-                return (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setFilterManifestStatus(st)}
-                    className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
-                      ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
-                      : 'bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90'
-                      }`}
-                  >
-                    {st !== 'ALL' && (
-                      <span className={`w-1.5 h-1.5 rounded-full ${st === 'DRAFT' ? 'bg-slate-300' : st === 'LOCKED' ? 'bg-amber-400' : 'bg-emerald-400'
-                        }`} />
-                    )}
-                    <span>{st === 'ALL' ? 'Semua' : getStatusLabel(st)}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Manifest Grid (Exact Preserved Content, Rounded-md Updated) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Manifest Cards Grid (Standalone outside Command Bar container) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
               {loading && manifestsList.length === 0 ? (
                 <div className="col-span-full py-20 flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />
-                  <span className="text-xs font-semibold text-slate-500">Memuat data...</span>
+                  <span className="text-[13px] font-normal text-slate-500 font-sans">Memuat data...</span>
                 </div>
               ) : filteredManifests.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-xs text-slate-400 font-medium italic select-none">
-                  {searchQuery || filterManifestStatus !== 'ALL'
-                    ? "Tidak ada manifest yang sesuai dengan kriteria pencarian."
-                    : "Daftar manifest pengiriman kosong. Silakan buat manifest baru untuk memulai."}
+                <div className="col-span-full py-10 text-center select-none font-sans">
+                  <EmptyDataAnimation
+                    title={searchQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Manifest"}
+                    description={searchQuery ? "Tidak ada manifest yang sesuai dengan kata kunci pencarian." : "Daftar manifest pengiriman kosong saat ini."}
+                  />
                 </div>
               ) : (
                 paginatedManifests.map((m) => {
@@ -1027,18 +1035,18 @@ export default function PengirimWorkspace() {
                     <div
                       key={m.id}
                       onClick={() => handleSelectManifest(m)}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[140px] ${isSelected
-                        ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+                      className={`p-4 rounded-xl border flex flex-col justify-between gap-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[140px] font-sans ${isSelected
+                        ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                         : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
                         }`}
                     >
-                      {/* Top Row: Manifest Number & Status Badge */}
-                      <div className="flex items-center justify-between gap-2 w-full">
-                        <span className="text-xs font-bold text-slate-800 font-mono tracking-tight truncate">
+                      {/* Baris 1 (Header): Nomor Manifest & Badge Status */}
+                      <div className="flex items-center justify-between gap-2 w-full font-sans">
+                        <span className="font-mono text-[13px] font-normal text-slate-800 tracking-tight truncate font-sans">
                           {highlightText(m.nomorManifest, searchQuery)}
                         </span>
 
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider shrink-0 ${m.status === 'LOCKED'
+                        <span className={`px-2.5 py-0.5 rounded-full text-[12px] font-normal border leading-none capitalize tracking-wider shrink-0 font-sans ${m.status === 'LOCKED'
                           ? 'bg-slate-900 text-slate-100 border-slate-800'
                           : m.status === 'SENT'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -1048,10 +1056,10 @@ export default function PengirimWorkspace() {
                         </span>
                       </div>
 
-                      {/* Middle (Body): 2 Columns divided by vertical line separator */}
-                      <div className="py-2 px-1 bg-slate-50 rounded-md border border-slate-100 flex items-center text-[10px]">
+                      {/* Baris 2 (Body): 2 Columns divided by vertical line separator */}
+                      <div className="py-2 px-1 bg-slate-50 rounded-md border border-slate-100 flex items-center text-[12px] font-normal font-sans">
                         {/* Left Column: Jumlah Bundle */}
-                        <div className="flex-1 flex items-center justify-center font-extrabold text-[#008f78]">
+                        <div className="flex-1 flex items-center justify-center font-normal text-[#008f78] font-sans">
                           <span>{bundlesCount} Bundle</span>
                         </div>
 
@@ -1059,24 +1067,21 @@ export default function PengirimWorkspace() {
                         <div className="w-px h-3.5 bg-slate-200/90 shrink-0" />
 
                         {/* Right Column: Total Pemohon */}
-                        <div className="flex-1 flex items-center justify-center font-semibold text-slate-600">
+                        <div className="flex-1 flex items-center justify-center font-normal text-slate-600 font-sans">
                           <span>{totalPecahanCount} Pemohon</span>
                         </div>
                       </div>
 
-                      {/* Bottom Row: Pengirim avatar + tanggal */}
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={m.pengirim?.name}>
+                      {/* Baris 3 (Footer): Pengirim avatar + tanggal */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 font-sans mt-auto">
+                        <div className="flex items-center gap-2 min-w-0 font-sans">
+                          <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-3xs" title={m.pengirim?.name}>
                             {getAvatarInitials(m.pengirim?.name)}
                           </div>
-                          <span className="text-[9px] font-semibold text-slate-500 truncate max-w-[110px]" title={m.pengirim?.name}>
-                            {m.pengirim?.name || 'Petugas Pengirim'}
-                          </span>
                         </div>
 
-                        <span className="text-[9.5px] font-semibold text-slate-400 flex items-center gap-1 shrink-0">
-                          <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="text-[12px] font-normal text-slate-500 flex items-center gap-1 shrink-0 font-sans">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                         </span>
                       </div>
@@ -1156,19 +1161,26 @@ export default function PengirimWorkspace() {
         {workspaceTab === "kelola-pengiriman" && (
           <div className="w-full">
             {!selectedManifest ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-8 select-none bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[300px]">
-                <div className="w-14 h-14 bg-[#00a389]/10 border border-[#00a389]/20 rounded-md flex items-center justify-center mb-4 shadow-3xs">
-                  <Truck className="w-7 h-7 text-[#00a389]" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-16 px-8 select-none bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[400px] font-sans">
+                <div className="mb-2 relative flex items-center justify-center">
+                  <Image
+                    src="/assets/Select-Bro.svg"
+                    alt="Pilih Manifest"
+                    width={224}
+                    height={224}
+                    className="w-56 h-56 object-contain pointer-events-none drop-shadow-sm select-none"
+                    priority
+                  />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1">Pilih Manifest Terlebih Dahulu</h3>
-                <p className="text-xs text-slate-400 font-semibold max-w-sm leading-relaxed mb-4">
-                  Silakan pilih salah satu manifest di tab <strong>Daftar Manifest</strong> terlebih dahulu untuk mengelola pengiriman map bundle.
+                <h3 className="text-[13px] font-normal text-slate-800 mb-1 capitalize font-sans">Pilih Manifest Terlebih Dahulu</h3>
+                <p className="text-[12px] text-slate-500 font-normal max-w-sm leading-relaxed mb-4 font-sans">
+                  Silakan pilih salah satu manifest di tab <strong className="font-normal text-slate-700">Daftar Manifest</strong> terlebih dahulu untuk mengelola pengiriman map bundle.
                 </p>
                 <button
                   onClick={() => handleSwitchTab("daftar-manifest")}
-                  className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 capitalize"
                 >
-                  <Boxes className="w-3.5 h-3.5" />
+                  <Boxes className="w-4 h-4 stroke-[2]" />
                   <span>Ke Daftar Manifest</span>
                 </button>
               </div>
@@ -1177,11 +1189,11 @@ export default function PengirimWorkspace() {
               <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[500px]">
 
                 {/* Top Header Bar */}
-                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none font-sans">
                   <div>
-                    <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-2">
-                      <span className="font-mono font-black text-slate-900 text-sm">{selectedManifest.nomorManifest}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border leading-none capitalize tracking-wider ${selectedManifest.status === 'LOCKED'
+                    <h2 className="font-normal text-[13px] capitalize text-slate-800 font-sans flex items-center gap-2">
+                      <span className="font-mono font-normal text-slate-800 text-[13px]">{selectedManifest.nomorManifest}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[12px] font-normal border leading-none capitalize tracking-wider font-sans ${selectedManifest.status === 'LOCKED'
                         ? 'bg-slate-900 text-slate-100 border-slate-800'
                         : selectedManifest.status === 'SENT'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -1190,31 +1202,30 @@ export default function PengirimWorkspace() {
                         {getStatusLabel(selectedManifest.status)}
                       </span>
                     </h2>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                      Kelola daftar bundle terpasang dan kirim berkas permohonan ke supervisor/tanda terima.
-                    </p>
                   </div>
                 </div>
 
                 {/* Grid 2 Columns: Antrean Bundle & Bundle Terpasang */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch font-sans">
 
                   {/* KIRI: Antrean Bundle Tersedia */}
-                  <div className="bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-3 h-[420px]">
-                    <div className="flex items-center justify-between shrink-0 border-b border-slate-100 pb-3">
-                      <h4 className="text-xs font-black text-slate-700 capitalize tracking-wider select-none flex items-center gap-2">
+                  <div className="bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-3 h-[420px] font-sans">
+                    <div className="flex items-center justify-between shrink-0 border-b border-slate-100 pb-3 font-sans">
+                      <h4 className="text-[13px] font-normal text-slate-800 capitalize select-none flex items-center gap-2 font-sans">
                         <span>Antrean Bundle</span>
-                        <span className="bg-slate-100 text-slate-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-slate-200">
+                        <span className="bg-slate-100 text-slate-600 text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full border border-slate-200">
                           {eligibleBundlesList.length}
                         </span>
                       </h4>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-1 scrollbar-thin font-sans">
                       {eligibleBundlesList.length === 0 ? (
-                        <div className="my-auto py-6 px-4 flex flex-col items-center justify-center text-center bg-slate-50/50 rounded-md border border-dashed border-slate-200 select-none gap-2">
-                          <p className="text-xs font-bold text-slate-600">Antrean Bundle Kosong</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Tidak ada map bundle locked terarsip di antrean.</p>
+                        <div className="my-auto py-4 px-4 flex flex-col items-center justify-center text-center select-none font-sans">
+                          <EmptyDataAnimation
+                            title="Antrean Bundle Kosong"
+                            description="Tidak ada map bundle locked terarsip di antrean."
+                          />
                         </div>
                       ) : (
                         eligibleBundlesList.map((b) => {
@@ -1228,19 +1239,19 @@ export default function PengirimWorkspace() {
                           return (
                             <div
                               key={b.id}
-                              className="p-3.5 sm:p-4 bg-slate-50/70 border border-slate-200/80 rounded-md text-xs flex flex-col justify-between gap-3 hover:border-[#00a389]/40 transition-all select-none shrink-0 min-h-[76px]"
+                              className="p-3.5 sm:p-4 bg-slate-50/70 border border-slate-200/80 rounded-md text-[13px] flex flex-col justify-between gap-3 hover:border-[#00a389]/40 transition-all select-none shrink-0 min-h-[76px] font-sans"
                             >
-                              <div className="flex items-center justify-between gap-3 w-full">
-                                <span className="text-xs font-bold text-slate-800 font-mono tracking-tight truncate">
+                              <div className="flex items-center justify-between gap-3 w-full font-sans">
+                                <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate font-sans">
                                   {b.nomorBundle}
                                 </span>
-                                <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${bTotalPecahan} Berkas`}>
+                                <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-bold font-mono w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${bTotalPecahan} Berkas`}>
                                   {bTotalPecahan}
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between gap-3 w-full">
-                                <span className="bg-emerald-50 text-[#008f78] text-[9px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-200 uppercase leading-none shrink-0">
+                              <div className="flex items-center justify-between gap-3 w-full font-sans">
+                                <span className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans">
                                   {getAbbreviatedJenis(b.jenisPermohonan)}
                                 </span>
 
@@ -1248,7 +1259,7 @@ export default function PengirimWorkspace() {
                                   <button
                                     onClick={() => handleAddBundle(b.id)}
                                     disabled={loading}
-                                    className="py-1 px-2.5 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-[10px] rounded-md transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-3xs shrink-0"
+                                    className="py-1 px-2.5 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[12px] font-sans rounded-md transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-3xs shrink-0 capitalize"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>
@@ -1262,21 +1273,23 @@ export default function PengirimWorkspace() {
                   </div>
 
                   {/* KANAN: Map Bundle Terpasang Dalam Manifest */}
-                  <div className="bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-3 h-[420px]">
-                    <div className="flex items-center justify-between shrink-0 border-b border-slate-100 pb-3">
-                      <h4 className="text-xs font-black text-slate-700 capitalize tracking-wider select-none flex items-center gap-2">
+                  <div className="bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-3 h-[420px] font-sans">
+                    <div className="flex items-center justify-between shrink-0 border-b border-slate-100 pb-3 font-sans">
+                      <h4 className="text-[13px] font-normal text-slate-800 capitalize select-none flex items-center gap-2 font-sans">
                         <span>Bundle Terpasang</span>
-                        <span className="bg-emerald-50 text-[#008f78] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                        <span className="bg-emerald-50 text-[#008f78] text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full border border-emerald-200">
                           {(selectedManifest.bundle || []).length}
                         </span>
                       </h4>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-1 scrollbar-thin font-sans">
                       {selectedManifest.bundle?.length === 0 ? (
-                        <div className="my-auto py-6 px-4 flex flex-col items-center justify-center text-center bg-slate-50/50 rounded-md border border-dashed border-slate-200 select-none gap-2">
-                          <p className="text-xs font-bold text-slate-600">Belum Ada Bundle Terpasang</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Belum ada map bundle yang terpasang dalam manifest ini.</p>
+                        <div className="my-auto py-4 px-4 flex flex-col items-center justify-center text-center select-none font-sans">
+                          <EmptyDataAnimation
+                            title="Belum Ada Bundle Terpasang"
+                            description="Belum ada map bundle yang terpasang dalam manifest ini."
+                          />
                         </div>
                       ) : (
                         selectedManifest.bundle.map((b: any) => {
@@ -1292,7 +1305,7 @@ export default function PengirimWorkspace() {
                             <div
                               key={b.id}
                               onClick={() => setSelectedBundleInManifest(b)}
-                              className={`p-3.5 sm:p-4 rounded-md border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden select-none shrink-0 min-h-[76px] ${isSelectedBundle
+                              className={`p-3.5 sm:p-4 rounded-md border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden select-none shrink-0 min-h-[76px] font-sans ${isSelectedBundle
                                 ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                                 : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-white"
                                 }`}
@@ -1302,21 +1315,21 @@ export default function PengirimWorkspace() {
                                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#00a389] rounded-l-md" />
                               )}
 
-                              <div className="flex items-center justify-between gap-3 w-full">
-                                <span className="text-xs font-bold text-slate-800 font-mono tracking-tight truncate">
+                              <div className="flex items-center justify-between gap-3 w-full font-sans">
+                                <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate font-sans">
                                   {b.nomorBundle}
                                 </span>
-                                <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${bTotalPecahan} Berkas`}>
+                                <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-bold font-mono w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${bTotalPecahan} Berkas`}>
                                   {bTotalPecahan}
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between gap-3 w-full">
-                                <span className="bg-emerald-50 text-[#008f78] text-[9px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-200 uppercase leading-none shrink-0">
+                              <div className="flex items-center justify-between gap-3 w-full font-sans">
+                                <span className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans">
                                   {getAbbreviatedJenis(b.jenisPermohonan)}
                                 </span>
-                                <span className="text-slate-400 font-semibold text-[9.5px] flex items-center gap-1 shrink-0">
-                                  <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="text-slate-500 font-normal text-[12px] flex items-center gap-1 shrink-0 font-sans">
+                                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                   {b.updatedAt ? new Date(b.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '—'}
                                 </span>
                               </div>
@@ -1334,41 +1347,18 @@ export default function PengirimWorkspace() {
                   <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
 
                     {/* COMMAND BAR CARD */}
-                    <div className="bg-white border border-slate-200/90 rounded-md p-3 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-3 select-none">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-                        {selectedBundleInManifest && (
-                          <div className="relative w-full md:w-80">
-                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              value={searchBundlePermohonanQuery}
-                              onChange={(e) => setSearchBundlePermohonanQuery(e.target.value)}
-                              placeholder="Cari NOPEL, NOP, Pemohon... (Ctrl+K)"
-                              className="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200/90 rounded-md text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#00a389] focus:bg-white transition-all"
-                            />
-                            {searchBundlePermohonanQuery && (
-                              <button
-                                type="button"
-                                onClick={() => setSearchBundlePermohonanQuery('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                    <div className="bg-white border border-slate-200/90 rounded-md p-3 shadow-3xs flex flex-row items-center justify-end gap-3 select-none font-sans">
 
                       {selectedBundleInManifest && (
-                        <div className="flex items-center gap-2.5 shrink-0 justify-end flex-wrap">
+                        <div className="flex items-center gap-2.5 shrink-0 justify-end flex-wrap font-sans">
                           {/* Segmented Display Mode Switcher */}
-                          <div className="inline-flex p-0.5 bg-slate-100 border border-slate-200/80 rounded-md select-none">
+                          <div className="inline-flex p-0.5 bg-slate-100 border border-slate-200/80 rounded-md select-none font-sans">
                             <button
                               type="button"
                               onClick={() => setBundleDisplayMode('berkas')}
-                              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all cursor-pointer ${bundleDisplayMode === 'berkas'
-                                ? 'bg-white text-[#008f78] shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
+                              className={`px-2.5 py-1 rounded text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${bundleDisplayMode === 'berkas'
+                                ? 'bg-white text-slate-800 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-800'
                                 }`}
                             >
                               Nopel
@@ -1376,9 +1366,9 @@ export default function PengirimWorkspace() {
                             <button
                               type="button"
                               onClick={() => setBundleDisplayMode('pemohon')}
-                              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all cursor-pointer ${bundleDisplayMode === 'pemohon'
-                                ? 'bg-white text-[#008f78] shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
+                              className={`px-2.5 py-1 rounded text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${bundleDisplayMode === 'pemohon'
+                                ? 'bg-white text-slate-800 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-800'
                                 }`}
                             >
                               Pemohon
@@ -1389,7 +1379,7 @@ export default function PengirimWorkspace() {
                           <a
                             href={`/api/export/bundle/${selectedBundleInManifest.id}`}
                             download
-                            className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-md transition-all shadow-3xs cursor-pointer flex items-center justify-center"
+                            className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-md transition-all shadow-3xs cursor-pointer flex items-center justify-center font-sans"
                             title="Ekspor daftar permohonan ke Excel"
                           >
                             <FileSpreadsheet className="w-4 h-4 text-[#00a389]" />
@@ -1401,7 +1391,7 @@ export default function PengirimWorkspace() {
                               type="button"
                               onClick={() => handleRemoveBundle(selectedBundleInManifest.id)}
                               disabled={loading}
-                              className="p-1.5 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer shadow-3xs flex items-center justify-center disabled:opacity-40"
+                              className="p-1.5 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer shadow-3xs flex items-center justify-center disabled:opacity-40 font-sans"
                               title="Keluarkan bundle dari manifest"
                             >
                               <Trash className="w-4 h-4 text-rose-600" />
@@ -1413,30 +1403,68 @@ export default function PengirimWorkspace() {
 
                     {/* DATA CANVAS & TABLE CARD */}
                     {selectedBundleInManifest ? (
-                      <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-3xs overflow-hidden flex flex-col">
+                      <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-3xs overflow-hidden flex flex-col font-sans">
                         <div className="overflow-x-auto scrollbar-thin max-h-[440px]">
-                          <table className="w-full text-left border-collapse select-none">
+                          <table className="w-full text-left border-collapse select-none font-sans">
                             <thead>
-                              <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider text-left border-b border-slate-200 sticky top-0 z-10 shadow-2xs whitespace-nowrap">
-                                <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
-                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
-                                <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
-                                <th className="py-3 px-4 min-w-[130px]">Petugas Input</th>
-                                <th className="py-3 px-4 min-w-[110px]">Tgl. Nopel</th>
-                                <th className="py-3 px-4 min-w-[110px]">Tgl. Selesai</th>
-                                <th className="py-3 px-4 min-w-[150px]">No. Pelayanan</th>
-                                <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
-                                <th className="py-3 px-4 min-w-[180px]">Nama Pemohon</th>
-                                <th className="py-3 px-4 min-w-[110px]">Jenis Layanan</th>
-                                <th className="py-3 px-4 text-center min-w-[100px]">Status</th>
-                                <th className="py-3 px-4 text-center w-24 min-w-[96px]">Aksi</th>
+                              <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                                <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                                  <span>No</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                                  <span>⭐</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                                  <span>Tgl. Input</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                                  <span>Petugas Input</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Tgl. Nopel</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Tgl. Selesai</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                                  <span>No. Pelayanan</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
+                                  <span>Nomor Objek Pajak</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[170px] relative font-normal text-slate-600">
+                                  <span>Nama Pemohon</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 min-w-[120px] relative font-normal text-slate-600">
+                                  <span>Jenis Layanan</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 text-center min-w-[100px] relative font-normal text-slate-600">
+                                  <span>Status</span>
+                                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                                </th>
+                                <th className="py-3 px-4 text-center w-28 min-w-[110px] font-normal text-slate-600">
+                                  <span>Aksi</span>
+                                </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white text-xs font-semibold text-slate-700">
+                            <tbody className="divide-y divide-slate-100 bg-white text-[12px] font-normal text-slate-600 font-sans">
                               {paginatedBundlePermohonanList.length === 0 ? (
                                 <tr>
-                                  <td colSpan={12} className="py-14 text-center text-xs text-slate-400 font-bold italic bg-slate-50/50">
-                                    Tidak ada berkas permohonan yang cocok.
+                                  <td colSpan={12} className="py-10 text-center select-none font-sans">
+                                    <EmptyDataAnimation
+                                      title={searchBundlePermohonanQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Permohonan"}
+                                      description={searchBundlePermohonanQuery ? "Tidak ada permohonan yang sesuai dengan kata kunci pencarian." : "Tidak ada berkas permohonan terpasang dalam bundle ini."}
+                                    />
                                   </td>
                                 </tr>
                               ) : (
@@ -1454,10 +1482,10 @@ export default function PengirimWorkspace() {
                                     <tr
                                       key={p.uniqueRowKey || p.id}
                                       onClick={() => setSelectedPermohonanForDetails(p)}
-                                      className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-xs font-semibold text-slate-700 ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : isFrozen ? "bg-amber-50/20" : ""
+                                      className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : isFrozen ? "bg-amber-50/20" : ""
                                         }`}
                                     >
-                                      <td className="py-3 px-4 text-center text-xs font-bold text-slate-400 font-mono">
+                                      <td className="py-3 px-4 text-center text-[12px] font-normal text-slate-400 font-mono">
                                         {itemNumber}
                                       </td>
 
@@ -1477,17 +1505,17 @@ export default function PengirimWorkspace() {
                                         </button>
                                       </td>
 
-                                      <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">
-                                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
+                                      <td className="py-3 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
+                                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                       </td>
 
-                                      <td className="py-3 px-4 text-slate-700 text-xs font-bold font-sans whitespace-nowrap uppercase">
+                                      <td className="py-3 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap capitalize">
                                         <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                          <span className="truncate max-w-[130px] uppercase font-sans">{p.penginput?.name || "Petugas Input"}</span>
+                                          <span className="truncate max-w-[130px] font-sans font-normal capitalize">{toTitleCase(p.penginput?.name || "Petugas Input")}</span>
                                         </div>
                                       </td>
 
-                                      <td className="py-3 px-4 text-xs font-bold text-slate-600 font-sans whitespace-nowrap uppercase">{nopolDate.toUpperCase()}</td>
+                                      <td className="py-3 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">{nopolDate}</td>
 
                                       <td className="py-3 px-4 whitespace-nowrap font-sans">
                                         {p.tanggalPenyelesaian ? (
@@ -1495,11 +1523,11 @@ export default function PengirimWorkspace() {
                                             {isOverdue(p.tanggalPenyelesaian, p.status) && (
                                               <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                             )}
-                                            <span className={`text-xs font-sans font-bold uppercase ${isOverdue(p.tanggalPenyelesaian, p.status)
-                                              ? 'text-rose-600 font-bold'
+                                            <span className={`text-[12px] font-sans font-normal capitalize ${isOverdue(p.tanggalPenyelesaian, p.status)
+                                              ? 'text-rose-600 font-normal'
                                               : 'text-slate-600'
                                               }`}>
-                                              {penyelesaianDate.toUpperCase()}
+                                              {penyelesaianDate}
                                             </span>
                                           </div>
                                         ) : "—"}
@@ -1507,11 +1535,11 @@ export default function PengirimWorkspace() {
 
                                       <td className="py-3 px-4 min-w-[150px] group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="text-xs font-bold text-slate-700 font-sans tracking-tight uppercase">
+                                          <span className="text-[12px] font-normal text-slate-700 font-sans tracking-tight capitalize">
                                             {p.nomorPelayanan || p.nomorPermohonan}
                                           </span>
                                           {isFrozen && (
-                                            <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
+                                            <span className="text-[9px] font-normal capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none font-sans">
                                               <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                                               Frozen
                                             </span>
@@ -1533,7 +1561,7 @@ export default function PengirimWorkspace() {
 
                                       <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className="text-xs font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
+                                          <span className="text-[12px] font-normal text-slate-700 font-sans whitespace-nowrap capitalize">
                                             {formatNop(p.nop)}
                                           </span>
                                           <button
@@ -1553,11 +1581,11 @@ export default function PengirimWorkspace() {
 
                                       <td className="py-3 px-4 group/cell relative font-sans">
                                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                          <span className="text-xs font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
-                                            {(p.displayNamaWajibPajak || p.namaWajibPajak).toUpperCase()}
+                                          <span className="text-[12px] font-normal text-slate-700 whitespace-nowrap capitalize font-sans">
+                                            {toTitleCase(p.displayNamaWajibPajak || p.namaWajibPajak)}
                                           </span>
                                           {p.isPecahanRow && (
-                                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                            <span className="text-[10px] font-normal text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
                                               #{p.pecahanIndex}/{p.totalPecahan}
                                             </span>
                                           )}
@@ -1578,7 +1606,7 @@ export default function PengirimWorkspace() {
 
                                       <td className="py-3 px-4 font-sans">
                                         <span
-                                          className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide select-none"
+                                          className="text-[11px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide select-none"
                                           title={p.jenisPermohonan?.replace(/_/g, " ")}
                                         >
                                           {getAbbreviatedJenis(p.jenisPermohonan || selectedBundleInManifest.jenisPermohonan)}
@@ -1586,14 +1614,14 @@ export default function PengirimWorkspace() {
                                       </td>
 
                                       <td className="py-3 px-4 text-center font-sans">
-                                        <div className="flex items-center justify-center">
+                                        <div className="flex items-center justify-center font-sans">
                                           {isFrozen ? (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 select-none">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-normal bg-amber-100 text-amber-800 border border-amber-200 select-none capitalize font-sans">
                                               <Clock className="w-2.5 h-2.5 text-amber-600 animate-spin" />
                                               Frozen
                                             </span>
                                           ) : (
-                                            <span className={`inline-flex text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase font-sans ${p.status === "ARCHIVED" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-sky-100 text-sky-800 border-sky-200"}`}>
+                                            <span className={`inline-flex text-[12px] font-normal px-2.5 py-0.5 rounded-full border capitalize font-sans ${p.status === "ARCHIVED" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-sky-100 text-sky-800 border-sky-200"}`}>
                                               {getStatusLabel(p.status)}
                                             </span>
                                           )}
@@ -1642,70 +1670,83 @@ export default function PengirimWorkspace() {
                         </div>
 
                         {/* TABLE FOOTER PAGINATION */}
-                        <div className="border-t border-slate-200/90 bg-slate-50/80 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-slate-600 select-none">
-                          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-                            <span className="text-slate-500">
-                              Menampilkan {filteredBundlePermohonanList.length > 0 ? (activeBundlePermohonanPage - 1) * itemsPerBundlePermohonanPage + 1 : 0} - {Math.min(activeBundlePermohonanPage * itemsPerBundlePermohonanPage, filteredBundlePermohonanList.length)} dari {filteredBundlePermohonanList.length} permohonan
+                        <div className="border-t border-slate-200/90 bg-slate-50/80 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] font-normal text-slate-600 select-none font-sans">
+                          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start font-sans">
+                            <span className="text-slate-500 font-sans">
+                              {filteredBundlePermohonanList.length > 0
+                                ? `Menampilkan ${(activeBundlePermohonanPage - 1) * itemsPerBundlePermohonanPage + 1} - ${Math.min(activeBundlePermohonanPage * itemsPerBundlePermohonanPage, filteredBundlePermohonanList.length)} dari ${filteredBundlePermohonanList.length} ${bundleDisplayMode === 'pemohon' ? 'entri pemohon' : 'permohonan'}`
+                                : "Tidak ada data"}
                             </span>
-                            <div className="flex items-center gap-1">
+                            {/* Items per page switcher */}
+                            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 shadow-3xs font-sans">
                               {[10, 20, 50].map((size) => (
                                 <button
                                   key={size}
                                   type="button"
-                                  onClick={() => setItemsPerBundlePermohonanPage(size)}
-                                  className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all cursor-pointer ${itemsPerBundlePermohonanPage === size
-                                    ? 'bg-[#00a389] text-white'
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                  onClick={() => { setItemsPerBundlePermohonanPage(size); setCurrentBundlePermohonanPage(1); }}
+                                  className={`px-2 py-0.5 rounded text-[11px] font-normal transition-all cursor-pointer font-sans ${itemsPerBundlePermohonanPage === size
+                                    ? 'bg-[#00a389] text-white font-semibold shadow-3xs'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                                 >
                                   {size}
                                 </button>
                               ))}
-                              <span className="text-[11px] text-slate-400 font-bold ml-0.5">/hal</span>
+                              <span className="text-[11px] text-slate-400 font-normal pl-0.5 font-sans">/hal</span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setCurrentBundlePermohonanPage((prev) => Math.max(prev - 1, 1))}
-                              disabled={activeBundlePermohonanPage === 1}
-                              className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-bold"
-                            >
-                              Sebelumnya
-                            </button>
-                            <span className="px-2 text-slate-600 font-bold text-xs">
-                              {activeBundlePermohonanPage} / {totalBundlePermohonanPages}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setCurrentBundlePermohonanPage((prev) => Math.min(prev + 1, totalBundlePermohonanPages))}
-                              disabled={activeBundlePermohonanPage === totalBundlePermohonanPages}
-                              className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-bold"
-                            >
-                              Selanjutnya
-                            </button>
-                          </div>
+                          {totalBundlePermohonanPages > 1 && (
+                            <div className="flex items-center gap-1 font-sans">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentBundlePermohonanPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={activeBundlePermohonanPage === 1}
+                                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center font-sans"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              {Array.from({ length: totalBundlePermohonanPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                  type="button"
+                                  key={page}
+                                  onClick={() => setCurrentBundlePermohonanPage(page)}
+                                  className={`w-7 h-7 flex items-center justify-center rounded-md text-[12px] font-normal transition-all cursor-pointer font-sans ${activeBundlePermohonanPage === page
+                                    ? "bg-[#00a389] text-white font-semibold shadow-3xs scale-105"
+                                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs"
+                                    }`}
+                                >
+                                  {page}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => setCurrentBundlePermohonanPage((prev) => Math.min(prev + 1, totalBundlePermohonanPages))}
+                                disabled={activeBundlePermohonanPage === totalBundlePermohonanPages}
+                                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center font-sans"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      <div className="py-10 px-4 flex flex-col items-center justify-center text-center bg-slate-50/50 rounded-md border border-dashed border-slate-200 select-none gap-3 animate-fadeIn">
-                        <div className="flex flex-col gap-1 max-w-sm">
-                          <p className="text-xs font-extrabold text-slate-700">Pilih Map Bundle</p>
-                          <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
-                            Silakan pilih salah satu map bundle pada daftar di atas untuk menampilkan tabel detail berkas permohonan.
-                          </p>
-                        </div>
+                      <div className="py-6 px-4 flex flex-col items-center justify-center text-center select-none font-sans animate-fadeIn">
+                        <EmptyDataAnimation
+                          title="Pilih Map Bundle"
+                          description="Silakan pilih salah satu map bundle pada daftar di atas untuk menampilkan tabel detail berkas permohonan."
+                        />
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Bottom Action Bar Footer */}
-                <div className="border border-slate-200/90 bg-slate-50 p-5 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none shadow-3xs mt-auto">
-                  <div className="text-[11px] text-slate-500 font-bold max-w-lg flex items-center gap-2">
+                <div className="border border-slate-200/90 bg-slate-50 p-5 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none shadow-3xs mt-auto font-sans">
+                  <div className="text-[12px] text-slate-500 font-normal max-w-lg flex items-center gap-2 font-sans">
                     {selectedManifest.status === "DRAFT" && (
-                      <span>Masukkan map bundle terlebih dahulu lalu klik <strong>Kunci Manifest</strong> untuk siap dikirim.</span>
+                      <span>Masukkan map bundle terlebih dahulu lalu klik <strong className="font-normal text-slate-700">Kunci Manifest</strong> untuk siap dikirim.</span>
                     )}
                     {selectedManifest.status === "LOCKED" && (
                       <span>Cetak surat pengantar manifest dan unggah bukti tanda terima untuk menyelesaikan pengiriman.</span>
@@ -1715,25 +1756,25 @@ export default function PengirimWorkspace() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 justify-end shrink-0 flex-wrap">
+                  <div className="flex items-center gap-2 justify-end shrink-0 flex-wrap font-sans">
                     {selectedManifest.status === "DRAFT" && (
                       <button
                         onClick={handleLockManifest}
                         disabled={loading || selectedManifest.bundle?.length === 0}
-                        className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-md shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed capitalize"
                         title="Kunci Manifest"
                       >
-                        <Lock className="w-4 h-4 text-white" />
+                        <Lock className="w-4 h-4 text-white stroke-[2]" />
                         <span>Kunci Manifest</span>
                       </button>
                     )}
 
                     {selectedManifest.status === "LOCKED" && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap font-sans">
                         <button
                           onClick={handleRevisiManifest}
                           disabled={loading}
-                          className="px-3 py-2 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md font-extrabold text-xs transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 disabled:opacity-40"
+                          className="px-3 py-2 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 disabled:opacity-40 capitalize"
                           title="Batal Kunci Manifest"
                         >
                           <Unlock className="w-4 h-4 text-rose-600" />
@@ -1744,7 +1785,7 @@ export default function PengirimWorkspace() {
                           href={`/api/pdf/surat-pengantar-manifest/${selectedManifest.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-2 text-slate-700 hover:text-[#008f78] bg-white border border-slate-200 hover:border-slate-300 rounded-md font-extrabold text-xs transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
+                          className="px-3 py-2 text-slate-700 hover:text-[#008f78] bg-white border border-slate-200 hover:border-slate-300 rounded-md font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 capitalize"
                           title="Cetak Surat Pengantar Manifest"
                         >
                           <Printer className="w-4 h-4 text-slate-600" />
@@ -1761,7 +1802,7 @@ export default function PengirimWorkspace() {
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           disabled={loading}
-                          className="px-4 py-2 text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md font-extrabold text-xs shadow-3xs transition-all cursor-pointer flex items-center gap-1.5"
+                          className="px-4 py-2 text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md font-normal text-[13px] font-sans shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 capitalize"
                           title="Unggah Bukti Tanda Terima"
                         >
                           <Upload className="w-4 h-4 text-white" />
@@ -1771,12 +1812,12 @@ export default function PengirimWorkspace() {
                     )}
 
                     {selectedManifest.status === "SENT" && selectedManifest.buktiTandaTerima && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap font-sans">
                         <a
                           href={`/api/pdf/surat-pengantar-manifest/${selectedManifest.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-2 text-slate-700 hover:text-[#008f78] bg-white border border-slate-200 hover:border-slate-300 rounded-md font-extrabold text-xs transition-all cursor-pointer shadow-3xs flex items-center gap-1.5"
+                          className="px-3 py-2 text-slate-700 hover:text-[#008f78] bg-white border border-slate-200 hover:border-slate-300 rounded-md font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 capitalize"
                           title="Cetak Surat Pengantar Manifest"
                         >
                           <Printer className="w-4 h-4 text-slate-600" />

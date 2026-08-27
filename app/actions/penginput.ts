@@ -10,6 +10,8 @@ import { revalidatePath } from 'next/cache';
 import { getGlobalBerandaStats as getGlobalBerandaStatsFromBeranda } from './beranda';
 import { randomInt } from 'crypto';
 
+import { formatAlamatLengkap } from '@/components/workspaces/shared/constants';
+
 /* ============================================================================
  * BAGIAN 1: SKEMA VALIDASI ZOD & SANITASI INPUT DATA
  * ============================================================================ */
@@ -21,9 +23,15 @@ import { randomInt } from 'crypto';
 const dataBaruItemSchema = z.object({
   namaPemilikBaru: z.string().trim().min(1, 'Nama pemilik baru wajib diisi'),
   alamatPemilikBaru: z.string().trim().min(1, 'Alamat pemilik baru wajib diisi'),
+  blokPemilikBaru: z.string().optional().nullable(),
+  rtPemilikBaru: z.string().optional().nullable(),
+  rwPemilikBaru: z.string().optional().nullable(),
   kecamatanPemilikBaru: z.string().trim().min(1, 'Kecamatan pemilik baru wajib diisi'),
   desaPemilikBaru: z.string().trim().min(1, 'Desa pemilik baru wajib diisi'),
   alamatObjekBaru: z.string().trim().min(1, 'Alamat objek baru wajib diisi'),
+  blokObjekBaru: z.string().optional().nullable(),
+  rtObjekBaru: z.string().optional().nullable(),
+  rwObjekBaru: z.string().optional().nullable(),
   kecamatanObjekBaru: z.string().trim().min(1, 'Kecamatan objek baru wajib diisi'),
   desaObjekBaru: z.string().trim().min(1, 'Desa objek baru wajib diisi'),
   luasTanahBaru: z.coerce.number().min(0, 'Luas tanah baru harus >= 0'),
@@ -53,9 +61,15 @@ const permohonanSchema = z.object({
   // Data Lama
   namaPemilikLama: z.string().optional().nullable(),
   alamatPemilikLama: z.string().optional().nullable(),
+  blokPemilikLama: z.string().optional().nullable(),
+  rtPemilikLama: z.string().optional().nullable(),
+  rwPemilikLama: z.string().optional().nullable(),
   kecamatanPemilikLama: z.string().optional().nullable(),
   desaPemilikLama: z.string().optional().nullable(),
   alamatObjekLama: z.string().optional().nullable(),
+  blokObjekLama: z.string().optional().nullable(),
+  rtObjekLama: z.string().optional().nullable(),
+  rwObjekLama: z.string().optional().nullable(),
   kecamatanObjekLama: z.string().optional().nullable(),
   desaObjekLama: z.string().optional().nullable(),
   luasTanahLama: z.coerce.number().optional().nullable(),
@@ -168,8 +182,18 @@ export async function createPermohonan(rawInput: any) {
       ? validated.dataBaru[0].namaPemilikBaru
       : (validated.namaPemilikLama || "");
     const derivedAlamat = (validated.dataBaru && validated.dataBaru.length > 0)
-      ? validated.dataBaru[0].alamatPemilikBaru
-      : (validated.alamatPemilikLama || "");
+      ? formatAlamatLengkap({
+          alamat: validated.dataBaru[0].alamatPemilikBaru,
+          blok: validated.dataBaru[0].blokPemilikBaru,
+          rt: validated.dataBaru[0].rtPemilikBaru,
+          rw: validated.dataBaru[0].rwPemilikBaru
+        })
+      : formatAlamatLengkap({
+          alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
+          blok: validated.blokPemilikLama,
+          rt: validated.rtPemilikLama,
+          rw: validated.rwPemilikLama
+        });
 
     const needDataLama = [
       'MUTASI_SEBAGIAN',
@@ -203,9 +227,15 @@ export async function createPermohonan(rawInput: any) {
         // Data Lama
         namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
         alamatPemilikLama: needDataLama ? validated.alamatPemilikLama : null,
+        blokPemilikLama: needDataLama ? validated.blokPemilikLama : null,
+        rtPemilikLama: needDataLama ? validated.rtPemilikLama : null,
+        rwPemilikLama: needDataLama ? validated.rwPemilikLama : null,
         kecamatanPemilikLama: needDataLama ? validated.kecamatanPemilikLama : null,
         desaPemilikLama: needDataLama ? validated.desaPemilikLama : null,
         alamatObjekLama: needDataLama ? validated.alamatObjekLama : null,
+        blokObjekLama: needDataLama ? validated.blokObjekLama : null,
+        rtObjekLama: needDataLama ? validated.rtObjekLama : null,
+        rwObjekLama: needDataLama ? validated.rwObjekLama : null,
         kecamatanObjekLama: needDataLama ? validated.kecamatanObjekLama : null,
         desaObjekLama: needDataLama ? validated.desaObjekLama : null,
         luasTanahLama: needDataLama ? validated.luasTanahLama : null,
@@ -217,9 +247,15 @@ export async function createPermohonan(rawInput: any) {
           create: validated.dataBaru.map(item => ({
             namaPemilikBaru: item.namaPemilikBaru,
             alamatPemilikBaru: item.alamatPemilikBaru,
+            blokPemilikBaru: item.blokPemilikBaru || null,
+            rtPemilikBaru: item.rtPemilikBaru || null,
+            rwPemilikBaru: item.rwPemilikBaru || null,
             kecamatanPemilikBaru: item.kecamatanPemilikBaru,
             desaPemilikBaru: item.desaPemilikBaru,
             alamatObjekBaru: item.alamatObjekBaru,
+            blokObjekBaru: item.blokObjekBaru || null,
+            rtObjekBaru: item.rtObjekBaru || null,
+            rwObjekBaru: item.rwObjekBaru || null,
             kecamatanObjekBaru: item.kecamatanObjekBaru,
             desaObjekBaru: item.desaObjekBaru,
             luasTanahBaru: item.luasTanahBaru,
@@ -302,8 +338,18 @@ export async function updatePermohonan(id: string, rawInput: any) {
       ? validated.dataBaru[0].namaPemilikBaru
       : (validated.namaPemilikLama || "");
     const derivedAlamat = (validated.dataBaru && validated.dataBaru.length > 0)
-      ? validated.dataBaru[0].alamatPemilikBaru
-      : (validated.alamatPemilikLama || "");
+      ? formatAlamatLengkap({
+          alamat: validated.dataBaru[0].alamatPemilikBaru,
+          blok: validated.dataBaru[0].blokPemilikBaru,
+          rt: validated.dataBaru[0].rtPemilikBaru,
+          rw: validated.dataBaru[0].rwPemilikBaru
+        })
+      : formatAlamatLengkap({
+          alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
+          blok: validated.blokPemilikLama,
+          rt: validated.rtPemilikLama,
+          rw: validated.rwPemilikLama
+        });
 
     const needDataLama = [
       'MUTASI_SEBAGIAN',
@@ -344,9 +390,15 @@ export async function updatePermohonan(id: string, rawInput: any) {
           // Data Lama
           namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
           alamatPemilikLama: needDataLama ? validated.alamatPemilikLama : null,
+          blokPemilikLama: needDataLama ? validated.blokPemilikLama : null,
+          rtPemilikLama: needDataLama ? validated.rtPemilikLama : null,
+          rwPemilikLama: needDataLama ? validated.rwPemilikLama : null,
           kecamatanPemilikLama: needDataLama ? validated.kecamatanPemilikLama : null,
           desaPemilikLama: needDataLama ? validated.desaPemilikLama : null,
           alamatObjekLama: needDataLama ? validated.alamatObjekLama : null,
+          blokObjekLama: needDataLama ? validated.blokObjekLama : null,
+          rtObjekLama: needDataLama ? validated.rtObjekLama : null,
+          rwObjekLama: needDataLama ? validated.rwObjekLama : null,
           kecamatanObjekLama: needDataLama ? validated.kecamatanObjekLama : null,
           desaObjekLama: needDataLama ? validated.desaObjekLama : null,
           luasTanahLama: needDataLama ? validated.luasTanahLama : null,
@@ -358,9 +410,15 @@ export async function updatePermohonan(id: string, rawInput: any) {
             create: validated.dataBaru.map(item => ({
               namaPemilikBaru: item.namaPemilikBaru,
               alamatPemilikBaru: item.alamatPemilikBaru,
+              blokPemilikBaru: item.blokPemilikBaru || null,
+              rtPemilikBaru: item.rtPemilikBaru || null,
+              rwPemilikBaru: item.rwPemilikBaru || null,
               kecamatanPemilikBaru: item.kecamatanPemilikBaru,
               desaPemilikBaru: item.desaPemilikBaru,
               alamatObjekBaru: item.alamatObjekBaru,
+              blokObjekBaru: item.blokObjekBaru || null,
+              rtObjekBaru: item.rtObjekBaru || null,
+              rwObjekBaru: item.rwObjekBaru || null,
               kecamatanObjekBaru: item.kecamatanObjekBaru,
               desaObjekBaru: item.desaObjekBaru,
               luasTanahBaru: item.luasTanahBaru,

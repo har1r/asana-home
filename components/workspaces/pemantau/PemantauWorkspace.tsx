@@ -45,6 +45,7 @@ import {
 } from "@/app/actions/pemantau";
 import { useDashboard } from "@/context/DashboardContext";
 import { SkeletonBox, SkeletonText, SkeletonBadge } from "@/components/skeletons/SkeletonBase";
+import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
 
 type WorkspaceTab = "daftar-bundle" | "daftar-pantau";
 
@@ -519,20 +520,20 @@ export default function PemantauWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
 
-        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling) */}
-        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
+        {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling matching Peneliti) */}
+        <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Metric 1: Total Bundle */}
             <div
               onClick={() => { setFilterJenisLayanan('ALL'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Total Bundle</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleKpiCounts.total}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Bundle</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.total}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterJenisLayanan === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -541,14 +542,14 @@ export default function PemantauWorkspace() {
             {/* Metric 2: Mutasi Sebagian */}
             <div
               onClick={() => { setFilterJenisLayanan('MUTASI_SEBAGIAN'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Mutasi Sebagian</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleKpiCounts.ms}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Mutasi Sebagian</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.ms}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.ms / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -557,14 +558,14 @@ export default function PemantauWorkspace() {
             {/* Metric 3: Mutasi Habis */}
             <div
               onClick={() => { setFilterJenisLayanan('MUTASI_HABIS_REGULER'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Mutasi Habis</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleKpiCounts.mh}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Mutasi Habis</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.mh}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.mh / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -573,14 +574,14 @@ export default function PemantauWorkspace() {
             {/* Metric 4: Lainnya */}
             <div
               onClick={() => { setFilterJenisLayanan('OBJEK_PAJAK_BARU'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Lainnya</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleKpiCounts.other}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Lainnya</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.other}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.other / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -589,11 +590,11 @@ export default function PemantauWorkspace() {
         </div>
 
         {/* Clean View Mode Switcher Tabs (Equal Width 2 Tabs Layout) */}
-        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none">
+        <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none font-sans">
           <button
             type="button"
             onClick={() => handleSwitchTab("daftar-bundle")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${workspaceTab === "daftar-bundle"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans capitalize ${workspaceTab === "daftar-bundle"
               ? "bg-white text-slate-900 shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
@@ -603,7 +604,7 @@ export default function PemantauWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchTab("daftar-pantau")}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${workspaceTab === "daftar-pantau"
+            className={`py-2 px-3 rounded-md text-[13px] font-normal text-center transition-all cursor-pointer font-sans capitalize ${workspaceTab === "daftar-pantau"
               ? "bg-white text-slate-900 shadow-xs"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
@@ -648,11 +649,11 @@ export default function PemantauWorkspace() {
                     onChange={(e) => setSearchBundleQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
+                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
                     placeholder="Cari nomor bundle..."
                   />
                   {!isSearchFocused && !searchBundleQuery && (
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200/80 select-none pointer-events-none">
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200/80 select-none pointer-events-none font-sans">
                       Ctrl+K
                     </span>
                   )}
@@ -678,7 +679,7 @@ export default function PemantauWorkspace() {
               </div>
 
               {/* Quick Filter Chips (Pilih Jenis Layanan Praktis dengan Angka Count) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 select-none">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 select-none font-sans">
                 {[
                   { val: 'ALL', label: 'Semua' },
                   { val: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
@@ -698,13 +699,13 @@ export default function PemantauWorkspace() {
                         setFilterJenisLayanan(item.val);
                         setCurrentBundlePage(1);
                       }}
-                      className={`px-3.5 py-1 rounded-full text-[10px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
+                      className={`px-3.5 py-1 rounded-md text-[13px] font-normal transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border font-sans capitalize ${isActive
                         ? "bg-[#00a389] text-white border-[#00a389] shadow-3xs"
                         : "bg-white text-slate-500 hover:bg-slate-50 border-gray-200/90"
                         }`}
                     >
                       <span>{item.label}</span>
-                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                      <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-semibold ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
                         }`}>
                         {count}
                       </span>
@@ -715,9 +716,9 @@ export default function PemantauWorkspace() {
             </div>
 
             {/* Bundle Cards Grid (Exact Preserved Content, Palette & Rounded-md Updated) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
               {paginatedBundles.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-xs text-slate-400 font-medium italic select-none">
+                <div className="col-span-full py-20 text-center text-[13px] text-slate-400 font-normal italic select-none font-sans capitalize">
                   {searchBundleQuery
                     ? "Tidak ada bundle yang sesuai dengan kriteria pencarian."
                     : "Tidak ada bundle aktif dalam antrean pemantauan."}
@@ -764,17 +765,17 @@ export default function PemantauWorkspace() {
                         setSelectedBundle(b);
                         setSelectedPermohonan(null);
                       }}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none ${isSelected
+                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none font-sans ${isSelected
                           ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                           : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
                         }`}
                     >
                       {/* Top Row: Number & Count Badge */}
                       <div className="flex items-center justify-between gap-3 w-full">
-                        <span className="text-xs font-bold text-slate-800 font-mono tracking-tight truncate block max-w-[170px]" title={b.nomorBundle}>
+                        <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate block max-w-[170px]" title={b.nomorBundle}>
                           {b.nomorBundle}
                         </span>
-                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-full shrink-0 shadow-2xs" title={`${totalPemohon} Pemohon`}>
+                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-md shrink-0 shadow-2xs font-sans" title={`${totalPemohon} Pemohon`}>
                           {totalPemohon}
                         </span>
                       </div>
@@ -782,15 +783,15 @@ export default function PemantauWorkspace() {
                       {/* Middle: Progress bar + badges */}
                       <div className="flex flex-col gap-2.5 pt-2.5 border-t border-slate-100">
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between text-[9px] font-bold">
-                            <span className="text-slate-400">Progres</span>
+                          <div className="flex items-center justify-between text-[13px] font-normal font-sans">
+                            <span className="text-slate-600 capitalize">Progres</span>
                             <span className={`${progressPct === 100 ? "text-[#008f78]" : "text-slate-500"}`}>
                               {completedPemohon}/{totalPemohon} selesai
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-slate-100 rounded-md overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-500 ${progressPct === 100
+                              className={`h-full rounded-md transition-all duration-500 ${progressPct === 100
                                 ? "bg-[#00a389]"
                                 : progressPct > 0
                                   ? "bg-[#00a389]/70"
@@ -802,10 +803,10 @@ export default function PemantauWorkspace() {
                         </div>
 
                         <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 select-none uppercase tracking-wide">
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 select-none uppercase tracking-wide">
                             {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : 'Umum'}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[8px] font-extrabold border bg-emerald-50 text-[#008f78] border-emerald-200 uppercase tracking-wider select-none shrink-0">
+                          <span className="px-2 py-0.5 rounded-md text-[8px] font-extrabold border bg-emerald-50 text-[#008f78] border-emerald-200 uppercase tracking-wider select-none shrink-0">
                             TERKIRIM
                           </span>
                         </div>
@@ -813,13 +814,8 @@ export default function PemantauWorkspace() {
 
                       {/* Bottom: Pembuat (Peneliti) avatar + tanggal dibuat */}
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={pembuatName}>
-                            {pembuatInitials}
-                          </div>
-                          <span className="text-[9px] font-semibold text-slate-500 truncate max-w-[100px]" title={pembuatName}>
-                            {pembuatName}
-                          </span>
+                        <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={pembuatName}>
+                          {pembuatInitials}
                         </div>
                         {tanggalDibuat && (
                           <span className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 shrink-0">
@@ -924,13 +920,13 @@ export default function PemantauWorkspace() {
               /* Master-Detail Stacked Panel Layout */
               <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[500px]">
                 {/* Top Header Row */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none font-sans">
                   <div>
-                    <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-2">
+                    <h2 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-2">
                       <span>Daftar Permohonan:</span>
-                      <span className="font-mono font-black text-slate-900 text-sm">{selectedBundle.nomorBundle}</span>
+                      <span className="font-mono font-bold text-slate-900 text-[13px]">{selectedBundle.nomorBundle}</span>
                     </h2>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    <p className="text-[13px] font-normal text-slate-500 capitalize font-sans mt-0.5">
                       Pilih permohonan pada panel kiri untuk meninjau detail riwayat dan melakukan verifikasi penyelesaian.
                     </p>
                   </div>
@@ -943,7 +939,7 @@ export default function PemantauWorkspace() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-9 pl-9 pr-8 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs"
+                        className="w-full h-9 pl-9 pr-8 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
                         placeholder="Cari NOP, Nama Pemohon..."
                       />
                       {searchQuery && (
@@ -968,14 +964,14 @@ export default function PemantauWorkspace() {
                 </div>
 
                 {/* 2-PANEL LAYOUT: PANEL KIRI (Daftar Sticky) & PANEL KANAN (Detail Permohonan Alami) */}
-                <div className="flex flex-col lg:flex-row items-start gap-5 w-full">
+                <div className="flex flex-col lg:flex-row items-start gap-5 w-full font-sans">
 
                   {/* PANEL KIRI: 1-Column List of Permohonan (Sticky on Desktop) */}
                   <div className="w-full lg:w-96 shrink-0 bg-white border border-slate-200/90 rounded-md p-4 shadow-3xs flex flex-col gap-3 lg:sticky lg:top-20">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                      <h4 className="text-xs font-black text-slate-700 capitalize tracking-wider select-none flex items-center gap-2">
+                      <h4 className="text-[13px] font-normal text-slate-700 capitalize font-sans select-none flex items-center gap-2">
                         <span>📋 Permohonan</span>
-                        <span className="bg-emerald-50 text-[#008f78] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                        <span className="bg-emerald-50 text-[#008f78] text-[10px] font-semibold px-2 py-0.5 rounded-md border border-emerald-200">
                           {filteredPantauList.length}
                         </span>
                       </h4>
@@ -1007,8 +1003,11 @@ export default function PemantauWorkspace() {
 
                     <div className="flex-1 max-h-[calc(100vh-160px)] overflow-y-auto pr-1 flex flex-col gap-1.5 scrollbar-thin">
                       {paginatedPantau.length === 0 ? (
-                        <div className="py-8 text-center text-xs text-slate-400 font-medium italic select-none bg-slate-50 rounded-md border border-dashed border-slate-200">
-                          Tidak ada berkas permohonan yang sesuai kriteria.
+                        <div className="py-8 text-center select-none font-sans">
+                          <EmptyDataAnimation
+                            title="Hasil Pencarian Tidak Ditemukan"
+                            description="Tidak ada berkas permohonan yang sesuai dengan kriteria pencarian/filter."
+                          />
                         </div>
                       ) : (
                         paginatedPantau.map((p) => {
@@ -1036,7 +1035,7 @@ export default function PemantauWorkspace() {
                             <div
                               key={p.id}
                               onClick={() => setSelectedPermohonan(p)}
-                              className={`p-3.5 sm:p-4 rounded-md border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden select-none shrink-0 min-h-[76px] ${isSelected
+                              className={`p-3.5 sm:p-4 rounded-md border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden select-none shrink-0 min-h-[76px] font-sans ${isSelected
                                 ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
                                 : "bg-slate-50/70 border-slate-200/80 hover:border-slate-300 hover:bg-white"
                                 }`}
@@ -1046,7 +1045,7 @@ export default function PemantauWorkspace() {
                               )}
 
                               <div className="flex items-center justify-between gap-2 pl-1">
-                                <span className="text-xs font-bold text-slate-800 font-mono truncate">
+                                <span className="text-[13px] font-normal text-slate-800 font-mono truncate">
                                   {formatNop(p.nop)}
                                 </span>
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8px] font-extrabold border leading-none shrink-0 ${sc.badgeBg} ${sc.badgeText} ${sc.badgeBorder}`}>
@@ -1055,8 +1054,8 @@ export default function PemantauWorkspace() {
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between gap-2 pl-1 text-[10px]">
-                                <span className="font-semibold text-slate-600 capitalize truncate max-w-[130px]" title={p.namaWajibPajak}>
+                              <div className="flex items-center justify-between gap-2 pl-1 text-[13px]">
+                                <span className="text-[13px] font-normal text-slate-600 capitalize truncate max-w-[130px] font-sans" title={p.namaWajibPajak}>
                                   {p.namaWajibPajak?.toLowerCase()}
                                 </span>
                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -1086,16 +1085,15 @@ export default function PemantauWorkspace() {
                   <div className="flex-1 min-w-0 w-full bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-5 relative">
                     {selectedPermohonan ? (
                       <div className="flex flex-col gap-5 animate-fadeIn">
-
                         {/* Detail Header */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none font-sans">
                           <div className="flex items-center gap-2.5 flex-wrap">
-                            <h3 className="font-mono font-bold text-sm text-slate-800">
+                            <h3 className="font-mono text-[13px] font-normal text-slate-800 font-sans capitalize">
                               {selectedPermohonan.nomorPelayanan || selectedPermohonan.nomorPermohonan}
                             </h3>
                           </div>
 
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold capitalize shrink-0 select-none ${selectedPermohonan.status === "COMPLETED"
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-extrabold capitalize shrink-0 select-none ${selectedPermohonan.status === "COMPLETED"
                             ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                             : "bg-sky-100 text-sky-850 border border-sky-200"
                             }`}>
@@ -1189,13 +1187,13 @@ export default function PemantauWorkspace() {
                           const activeIndex = isAllCompleted ? 5 : 4;
 
                           return (
-                            <div className="bg-slate-50/90 p-4 rounded-md border border-slate-200/80 select-none flex flex-col gap-4 shadow-3xs">
+                            <div className="bg-slate-50/90 p-4 rounded-md border border-slate-200/80 select-none flex flex-col gap-4 shadow-3xs font-sans">
                               <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
-                                <h5 className="font-extrabold text-slate-700 capitalize tracking-wider text-[10px] flex items-center gap-1.5">
+                                <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
                                   <History className="w-3.5 h-3.5 text-[#00a389]" />
                                   Detail Penanggung Jawab & Riwayat Alur Berkas
                                 </h5>
-                                <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
                                   6 Tahapan Siklus
                                 </span>
                               </div>
@@ -1297,11 +1295,11 @@ export default function PemantauWorkspace() {
                         })()}
 
                         {/* Ringkasan Data Utama & Logistik Pengiriman */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs select-none">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs select-none font-sans">
 
                           {/* Card 1: Data Utama Wajib Pajak */}
                           <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5">
-                            <h5 className="font-extrabold text-slate-700 capitalize tracking-wider text-[10px] border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
+                            <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
                               <span>📄 Data Utama Permohonan</span>
                               <span className="text-[8px] font-bold text-[#008f78] bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md uppercase">
                                 {getAbbreviatedJenis(selectedPermohonan.jenisPermohonan || selectedBundle.jenisPermohonan)}
@@ -1328,7 +1326,7 @@ export default function PemantauWorkspace() {
 
                           {/* Card 2: Informasi Logistik Pengiriman */}
                           <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5">
-                            <h5 className="font-extrabold text-slate-700 capitalize tracking-wider text-[10px] border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
+                            <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
                               <span>🚚 Informasi Logistik Pengiriman</span>
                               <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md uppercase">
                                 TERKIRIM
@@ -1356,16 +1354,16 @@ export default function PemantauWorkspace() {
                         </div>
 
                         {/* Section Rincian Data Objek Pajak */}
-                        <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 select-none flex flex-col gap-3">
+                        <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 select-none flex flex-col gap-3 font-sans">
                           <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                            <h5 className="font-extrabold text-slate-700 capitalize tracking-wider text-[10px] flex items-center gap-1.5">
+                            <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
                               <Boxes className="w-3.5 h-3.5 text-[#00a389]" />
                               Rincian Objek Pajak (Data Lama & Data Baru / Pecahan)
                             </h5>
 
                             {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 1 && selectedPermohonan.status !== "COMPLETED" && (
                               <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                <span className="text-[9px] font-bold text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                                   {Object.values(checkedPecahanMap).filter(Boolean).length}/{selectedPermohonan.dataBaru.length} Terverifikasi
                                 </span>
                                 <button
@@ -1382,7 +1380,7 @@ export default function PemantauWorkspace() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                             {selectedPermohonan.namaPemilikLama && (
                               <div className="flex flex-col gap-1.5">
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans flex items-center gap-1">
                                   <span>🏛️ Data Objek Lama</span>
                                 </span>
                                 <div className="grid grid-cols-[100px_8px_1fr] gap-y-1.5 text-[11px] items-baseline bg-white p-3 rounded-md border border-slate-200/70 shadow-3xs">
@@ -1419,7 +1417,7 @@ export default function PemantauWorkspace() {
 
                             {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0 && (
                               <div className={`flex flex-col gap-1.5 ${!selectedPermohonan.namaPemilikLama ? 'col-span-full' : ''}`}>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans flex items-center justify-between">
                                   <span>✨ Data Objek Baru {selectedPermohonan.dataBaru.length > 1 ? `(${selectedPermohonan.dataBaru.length} Pecahan)` : ''}</span>
                                 </span>
 

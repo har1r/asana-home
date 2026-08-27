@@ -669,6 +669,30 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
             <MyTasksTab initialRole={initialRole} />
           )}
 
+          {activeTab === 'penginput' && (
+            <PenginputWorkspace />
+          )}
+
+          {activeTab === 'peneliti' && (
+            <PenelitiWorkspace />
+          )}
+
+          {activeTab === 'pengarsip' && (
+            <PengarsipWorkspace />
+          )}
+
+          {activeTab === 'pengirim' && (
+            <PengirimWorkspace />
+          )}
+
+          {activeTab === 'pemantau' && (
+            <PemantauWorkspace />
+          )}
+
+          {activeTab === 'supervisor' && (
+            <SupervisorWorkspace />
+          )}
+
           {activeTab === 'inbox' && (
             <InboxTab messages={messages} />
           )}

@@ -98,9 +98,15 @@ model Permohonan {
   // Data Lama
   namaPemilikLama      String?
   alamatPemilikLama    String?
+  blokPemilikLama      String?
+  rtPemilikLama        String?
+  rwPemilikLama        String?
   kecamatanPemilikLama String?
   desaPemilikLama      String?
   alamatObjekLama      String?
+  blokObjekLama        String?
+  rtObjekLama          String?
+  rwObjekLama          String?
   kecamatanObjekLama   String?
   desaObjekLama        String?
   luasTanahLama        Float?
@@ -127,9 +133,15 @@ model DataBaru {
   permohonanId         String     @db.ObjectId
   namaPemilikBaru      String
   alamatPemilikBaru    String
+  blokPemilikBaru      String?
+  rtPemilikBaru        String?
+  rwPemilikBaru        String?
   kecamatanPemilikBaru String
   desaPemilikBaru      String
   alamatObjekBaru      String
+  blokObjekBaru        String?
+  rtObjekBaru          String?
+  rwObjekBaru          String?
   kecamatanObjekBaru   String
   desaObjekBaru        String
   luasTanahBaru        Float

@@ -32,9 +32,15 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
   // Data Lama state
   const [namaPemilikLama, setNamaPemilikLama] = useState('');
   const [alamatPemilikLama, setAlamatPemilikLama] = useState('');
+  const [blokPemilikLama, setBlokPemilikLama] = useState('');
+  const [rtPemilikLama, setRtPemilikLama] = useState('');
+  const [rwPemilikLama, setRwPemilikLama] = useState('');
   const [kecamatanPemilikLama, setKecamatanPemilikLama] = useState('');
   const [desaPemilikLama, setDesaPemilikLama] = useState('');
   const [alamatObjekLama, setAlamatObjekLama] = useState('');
+  const [blokObjekLama, setBlokObjekLama] = useState('');
+  const [rtObjekLama, setRtObjekLama] = useState('');
+  const [rwObjekLama, setRwObjekLama] = useState('');
   const [kecamatanObjekLama, setKecamatanObjekLama] = useState('');
   const [desaObjekLama, setDesaObjekLama] = useState('');
   const [luasTanahLama, setLuasTanahLama] = useState('');
@@ -84,9 +90,15 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
     setNamaPemilikLama((editTarget.namaPemilikLama || '').toUpperCase());
     setAlamatPemilikLama((editTarget.alamatPemilikLama || '').toUpperCase());
+    setBlokPemilikLama((editTarget.blokPemilikLama || '').toUpperCase());
+    setRtPemilikLama((editTarget.rtPemilikLama || '').toUpperCase());
+    setRwPemilikLama((editTarget.rwPemilikLama || '').toUpperCase());
     setKecamatanPemilikLama((editTarget.kecamatanPemilikLama || '').toUpperCase());
     setDesaPemilikLama((editTarget.desaPemilikLama || '').toUpperCase());
     setAlamatObjekLama((editTarget.alamatObjekLama || '').toUpperCase());
+    setBlokObjekLama((editTarget.blokObjekLama || '').toUpperCase());
+    setRtObjekLama((editTarget.rtObjekLama || '').toUpperCase());
+    setRwObjekLama((editTarget.rwObjekLama || '').toUpperCase());
     setKecamatanObjekLama((editTarget.kecamatanObjekLama || '').toUpperCase());
     setDesaObjekLama((editTarget.desaObjekLama || '').toUpperCase());
     setLuasTanahLama(editTarget.luasTanahLama !== null && editTarget.luasTanahLama !== undefined ? String(editTarget.luasTanahLama) : '');
@@ -97,9 +109,15 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
       setDataBaru(editTarget.dataBaru.map((dbItem: any) => ({
         namaPemilikBaru: (dbItem.namaPemilikBaru || '').toUpperCase(),
         alamatPemilikBaru: (dbItem.alamatPemilikBaru || '').toUpperCase(),
+        blokPemilikBaru: (dbItem.blokPemilikBaru || '').toUpperCase(),
+        rtPemilikBaru: (dbItem.rtPemilikBaru || '').toUpperCase(),
+        rwPemilikBaru: (dbItem.rwPemilikBaru || '').toUpperCase(),
         kecamatanPemilikBaru: (dbItem.kecamatanPemilikBaru || '').toUpperCase(),
         desaPemilikBaru: (dbItem.desaPemilikBaru || '').toUpperCase(),
         alamatObjekBaru: (dbItem.alamatObjekBaru || '').toUpperCase(),
+        blokObjekBaru: (dbItem.blokObjekBaru || '').toUpperCase(),
+        rtObjekBaru: (dbItem.rtObjekBaru || '').toUpperCase(),
+        rwObjekBaru: (dbItem.rwObjekBaru || '').toUpperCase(),
         kecamatanObjekBaru: (dbItem.kecamatanObjekBaru || '').toUpperCase(),
         desaObjekBaru: (dbItem.desaObjekBaru || '').toUpperCase(),
         luasTanahBaru: dbItem.luasTanahBaru !== null && dbItem.luasTanahBaru !== undefined ? String(dbItem.luasTanahBaru) : '',
@@ -355,19 +373,25 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
   // Copy helpers with visual feedback
   const handleCopyPemilikFromLama = useCallback((idx: number) => {
     handleOwnerChange(idx, 'alamatPemilikBaru', alamatPemilikLama);
+    handleOwnerChange(idx, 'blokPemilikBaru', blokPemilikLama);
+    handleOwnerChange(idx, 'rtPemilikBaru', rtPemilikLama);
+    handleOwnerChange(idx, 'rwPemilikBaru', rwPemilikLama);
     handleOwnerChange(idx, 'kecamatanPemilikBaru', kecamatanPemilikLama);
     handleOwnerChange(idx, 'desaPemilikBaru', desaPemilikLama);
     setCopiedAlamatPemilikIdx(idx);
     setTimeout(() => setCopiedAlamatPemilikIdx(null), 1500);
-  }, [alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama, handleOwnerChange]);
+  }, [alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama, handleOwnerChange]);
 
   const handleCopyFromLama = useCallback((idx: number) => {
     handleOwnerChange(idx, 'alamatObjekBaru', alamatObjekLama);
+    handleOwnerChange(idx, 'blokObjekBaru', blokObjekLama);
+    handleOwnerChange(idx, 'rtObjekBaru', rtObjekLama);
+    handleOwnerChange(idx, 'rwObjekBaru', rwObjekLama);
     handleOwnerChange(idx, 'kecamatanObjekBaru', kecamatanObjekLama);
     handleOwnerChange(idx, 'desaObjekBaru', desaObjekLama);
     setCopiedAlamatObjekIdx(idx);
     setTimeout(() => setCopiedAlamatObjekIdx(null), 1500);
-  }, [alamatObjekLama, kecamatanObjekLama, desaObjekLama, handleOwnerChange]);
+  }, [alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, handleOwnerChange]);
 
   // Actions
   const handleAddOwner = useCallback(() => {
@@ -539,9 +563,15 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
       noWhatsapp,
       namaPemilikLama: needDataLama ? namaPemilikLama.toUpperCase() : null,
       alamatPemilikLama: needDataLama ? alamatPemilikLama.toUpperCase() : null,
+      blokPemilikLama: needDataLama && blokPemilikLama ? blokPemilikLama.toUpperCase() : null,
+      rtPemilikLama: needDataLama && rtPemilikLama ? rtPemilikLama.toUpperCase() : null,
+      rwPemilikLama: needDataLama && rwPemilikLama ? rwPemilikLama.toUpperCase() : null,
       kecamatanPemilikLama: needDataLama ? kecamatanPemilikLama.toUpperCase() : null,
       desaPemilikLama: needDataLama ? desaPemilikLama.toUpperCase() : null,
       alamatObjekLama: needDataLama ? alamatObjekLama.toUpperCase() : null,
+      blokObjekLama: needDataLama && blokObjekLama ? blokObjekLama.toUpperCase() : null,
+      rtObjekLama: needDataLama && rtObjekLama ? rtObjekLama.toUpperCase() : null,
+      rwObjekLama: needDataLama && rwObjekLama ? rwObjekLama.toUpperCase() : null,
       kecamatanObjekLama: needDataLama ? kecamatanObjekLama.toUpperCase() : null,
       desaObjekLama: needDataLama ? desaObjekLama.toUpperCase() : null,
       luasTanahLama: needDataLama && luasTanahLama !== '' ? Number(luasTanahLama) : null,
@@ -550,9 +580,15 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
       dataBaru: needDataBaru ? dataBaru.map(item => ({
         namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
         alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
+        blokPemilikBaru: item.blokPemilikBaru ? item.blokPemilikBaru.toUpperCase() : null,
+        rtPemilikBaru: item.rtPemilikBaru ? item.rtPemilikBaru.toUpperCase() : null,
+        rwPemilikBaru: item.rwPemilikBaru ? item.rwPemilikBaru.toUpperCase() : null,
         kecamatanPemilikBaru: item.kecamatanPemilikBaru.toUpperCase(),
         desaPemilikBaru: item.desaPemilikBaru.toUpperCase(),
         alamatObjekBaru: item.alamatObjekBaru.toUpperCase(),
+        blokObjekBaru: item.blokObjekBaru ? item.blokObjekBaru.toUpperCase() : null,
+        rtObjekBaru: item.rtObjekBaru ? item.rtObjekBaru.toUpperCase() : null,
+        rwObjekBaru: item.rwObjekBaru ? item.rwObjekBaru.toUpperCase() : null,
         kecamatanObjekBaru: item.kecamatanObjekBaru.toUpperCase(),
         desaObjekBaru: item.desaObjekBaru.toUpperCase(),
         luasTanahBaru: item.luasTanahBaru !== '' ? Number(item.luasTanahBaru) : null,
@@ -867,6 +903,44 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           {formErrors.alamatPemilikLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
                         </div>
 
+                        {/* Blok, RT, RW Pemilik Lama */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="A4"
+                              value={blokPemilikLama}
+                              onChange={(e) => setBlokPemilikLama(e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="001"
+                              value={rtPemilikLama}
+                              onChange={(e) => setRtPemilikLama(e.target.value)}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="005"
+                              value={rwPemilikLama}
+                              onChange={(e) => setRwPemilikLama(e.target.value)}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
+                        </div>
+
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
                           <input
@@ -907,6 +981,44 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                             className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
                           {formErrors.alamatObjekLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
+                        </div>
+
+                        {/* Blok, RT, RW Objek Lama */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
+                            <input
+                              type="text"
+                              placeholder="B2"
+                              value={blokObjekLama}
+                              onChange={(e) => setBlokObjekLama(e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
+                            <input
+                              type="text"
+                              placeholder="001"
+                              value={rtObjekLama}
+                              onChange={(e) => setRtObjekLama(e.target.value)}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
+                            <input
+                              type="text"
+                              placeholder="005"
+                              value={rwObjekLama}
+                              onChange={(e) => setRwObjekLama(e.target.value)}
+                              disabled={loading}
+                              className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                            />
+                          </div>
                         </div>
 
                         <div className="flex flex-col gap-1.5">
@@ -1091,6 +1203,44 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                 {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
                               </div>
 
+                              {/* Blok, RT, RW Pemilik Baru */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
+                                  <input
+                                    type="text"
+                                    placeholder="A4"
+                                    value={item.blokPemilikBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'blokPemilikBaru', e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
+                                  <input
+                                    type="text"
+                                    placeholder="001"
+                                    value={item.rtPemilikBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'rtPemilikBaru', e.target.value)}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
+                                  <input
+                                    type="text"
+                                    placeholder="005"
+                                    value={item.rwPemilikBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'rwPemilikBaru', e.target.value)}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
+                              </div>
+
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
                                 <input
@@ -1146,6 +1296,44 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                   )}
                                 </div>
                                 {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                              </div>
+
+                              {/* Blok, RT, RW Objek Baru */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
+                                  <input
+                                    type="text"
+                                    placeholder="B2"
+                                    value={item.blokObjekBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'blokObjekBaru', e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
+                                  <input
+                                    type="text"
+                                    placeholder="001"
+                                    value={item.rtObjekBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'rtObjekBaru', e.target.value)}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
+                                  <input
+                                    type="text"
+                                    placeholder="005"
+                                    value={item.rwObjekBaru || ''}
+                                    onChange={(e) => handleOwnerChange(idx, 'rwObjekBaru', e.target.value)}
+                                    disabled={loading}
+                                    className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                  />
+                                </div>
                               </div>
 
                               <div className="flex flex-col gap-1.5">

@@ -192,15 +192,38 @@ export const NOP_MAPPING: Record<string, { name: string, villages: Record<string
 export const createEmptyDataBaruItem = () => ({
   namaPemilikBaru: '',
   alamatPemilikBaru: '',
+  blokPemilikBaru: '',
+  rtPemilikBaru: '',
+  rwPemilikBaru: '',
   kecamatanPemilikBaru: '',
   desaPemilikBaru: '',
   alamatObjekBaru: '',
+  blokObjekBaru: '',
+  rtObjekBaru: '',
+  rwObjekBaru: '',
   kecamatanObjekBaru: '',
   desaObjekBaru: '',
   luasTanahBaru: '',
   luasBangunanBaru: '',
   sertifikatBaru: ''
 });
+
+export const formatAlamatLengkap = (opts: {
+  alamat?: string | null;
+  blok?: string | null;
+  rt?: string | null;
+  rw?: string | null;
+}): string => {
+  const parts: string[] = [];
+  if (opts.alamat?.trim()) parts.push(opts.alamat.trim());
+  if (opts.blok?.trim()) parts.push(`Blok ${opts.blok.trim()}`);
+  if (opts.rt?.trim() || opts.rw?.trim()) {
+    const rtStr = opts.rt?.trim() || '-';
+    const rwStr = opts.rw?.trim() || '-';
+    parts.push(`RT ${rtStr}/RW ${rwStr}`);
+  }
+  return parts.join(' ');
+};
 
 export const toTitleCase = (str?: string | null): string => {
   if (!str) return '';

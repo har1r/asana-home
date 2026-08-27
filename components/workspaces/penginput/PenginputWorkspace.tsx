@@ -18,22 +18,8 @@ import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { CreateForm } from '@/components/workspaces/shared/CreateForm';
 import { EditModal } from '@/components/workspaces/shared/EditModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
+import { EmptyDataAnimation } from '@/components/workspaces/shared/EmptyDataAnimation';
 import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
-
-
-const EmptyDataAnimation: React.FC = React.memo(() => {
-  return (
-    <div className="w-80 h-60 sm:w-[420px] sm:h-[300px] mx-auto flex items-center justify-center overflow-hidden select-none pointer-events-none">
-      <iframe
-        src="https://lottie.host/embed/3e579b32-f8c2-40f8-854f-d6375c7b361f/PpMBUyHb09.lottie"
-        className="w-full h-full border-0 pointer-events-none scale-110"
-        title="Empty Data Animation"
-      />
-    </div>
-  );
-});
-
-EmptyDataAnimation.displayName = 'EmptyDataAnimation';
 
 /** Skeleton presisi untuk List View PenginputWorkspace (tab=my-tasks) */
 export function PenginputListSkeleton() {
@@ -357,7 +343,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       className={`hover:bg-slate-50/90 transition-colors group cursor-pointer h-11 ${item.isPecahanRow ? 'border-l-3 border-l-emerald-500 bg-emerald-50/20' : ''
         }`}
     >
-      <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[13px]">
+      <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[12px]">
         {globalIndex}
       </td>
       <td className="py-2.5 px-2 text-center">
@@ -372,21 +358,21 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
           <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
         </button>
       </td>
-      <td className="py-2.5 px-4 text-slate-600 font-sans text-[13px] font-normal whitespace-nowrap capitalize">
+      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
         {tglInputStr}
       </td>
-      <td className="py-2.5 px-4 text-slate-600 text-[13px] font-normal font-sans whitespace-nowrap">
+      <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap">
         <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || sessionUserName || "Petugas Input"}>
-          <span className="truncate max-w-[140px] font-sans font-normal text-[13px]">{toTitleCase(item.penginput?.name || sessionUserName || "Petugas Input")}</span>
+          <span className="truncate max-w-[140px] font-sans font-normal text-[12px]">{toTitleCase(item.penginput?.name || sessionUserName || "Petugas Input")}</span>
         </div>
       </td>
-      <td className="py-2.5 px-4 text-slate-600 font-sans text-[13px] font-normal whitespace-nowrap capitalize">
+      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
         {tglNopelStr}
       </td>
       <td className="py-2.5 px-4 whitespace-nowrap font-sans">
         {tglSelesaiStr ? (
           <div className="flex items-center gap-1.5">
-            <span className={`text-[13px] font-sans font-normal capitalize px-2 py-0.5 rounded ${isItemOverdue
+            <span className={`text-[12px] font-sans font-normal capitalize px-2 py-0.5 rounded ${isItemOverdue
               ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
               : 'text-slate-600'
               }`}>
@@ -397,7 +383,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
         <div className="flex items-center gap-1.5">
-          <span className="text-[13px] font-normal font-sans text-slate-600 tracking-tight capitalize">
+          <span className="text-[12px] font-normal font-sans text-slate-600 tracking-tight capitalize">
             {highlightText(nomorVal, searchQuery)}
           </span>
           <button
@@ -415,7 +401,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <span className="text-[13px] font-normal font-sans text-slate-600 whitespace-nowrap capitalize">
+          <span className="text-[12px] font-normal font-sans text-slate-600 whitespace-nowrap capitalize">
             {highlightText(formattedNop, searchQuery)}
           </span>
           <button
@@ -433,7 +419,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <span className="text-[13px] font-normal text-slate-600 whitespace-nowrap font-sans">
+          <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap font-sans">
             {highlightText(toTitleCase(item.displayNamaWajibPajak), searchQuery)}
           </span>
           {item.isPecahanRow && (
@@ -456,7 +442,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 font-sans">
         <span
-          className="text-[13px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
+          className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
           title={item.jenisPermohonan.replace(/_/g, ' ')}
         >
           {abbreviatedJenis}
@@ -464,7 +450,7 @@ const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 text-center font-sans">
         <div className="flex items-center justify-center gap-1">
-          <span className={`px-2.5 py-0.5 text-[13px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+          <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
             {getStatusLabel(item.status)}
           </span>
         </div>
@@ -897,10 +883,10 @@ export default function PenginputWorkspace() {
       return base.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
     }
     if (sortBy === 'newest') {
-      return base.sort((a, b) => new Date(b.tanggalPermohonan || b.createdAt || 0).getTime() - new Date(a.tanggalPermohonan || a.createdAt || 0).getTime());
+      return base.sort((a, b) => new Date(b.tanggalNoPelayanan || b.tanggalPermohonan || b.createdAt || 0).getTime() - new Date(a.tanggalNoPelayanan || a.tanggalPermohonan || a.createdAt || 0).getTime());
     }
     if (sortBy === 'oldest') {
-      return base.sort((a, b) => new Date(a.tanggalPermohonan || a.createdAt || 0).getTime() - new Date(b.tanggalPermohonan || b.createdAt || 0).getTime());
+      return base.sort((a, b) => new Date(a.tanggalNoPelayanan || a.tanggalPermohonan || a.createdAt || 0).getTime() - new Date(b.tanggalNoPelayanan || b.tanggalPermohonan || b.createdAt || 0).getTime());
     }
     if (sortBy === 'a_z') {
       return base.sort((a, b) => (a.displayNamaWajibPajak || '').localeCompare(b.displayNamaWajibPajak || ''));
@@ -1207,8 +1193,8 @@ export default function PenginputWorkspace() {
                     <div className="absolute left-0 mt-1 w-52 bg-white rounded-md shadow-md border border-slate-200/90 py-1 z-30 animate-fadeIn font-sans">
                       {[
                         { id: 'last_modified', label: 'Terbaru Diperbarui' },
-                        { id: 'newest', label: 'Terbaru (Tgl. Input)' },
-                        { id: 'oldest', label: 'Terlama' },
+                        { id: 'newest', label: 'Terbaru (Tgl. Nopel)' },
+                        { id: 'oldest', label: 'Terlama (Tgl. Nopel)' },
                         { id: 'a_z', label: 'A - Z (Nama Pemohon)' }
                       ].map((opt) => (
                         <button
@@ -1316,19 +1302,14 @@ export default function PenginputWorkspace() {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-[13px] font-normal text-slate-600 font-sans">
+                      <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans">
                         {paginatedList.length === 0 ? (
                           <tr>
                             <td colSpan={12} className="py-10 text-center select-none font-sans">
-                              <div className="flex flex-col items-center justify-center mx-auto font-sans">
-                                <EmptyDataAnimation />
-                                <p className="text-[11px] font-bold text-slate-700 mt-1 font-sans">
-                                  {searchQuery ? 'Tidak ada permohonan yang sesuai' : 'Belum ada data permohonan'}
-                                </p>
-                                <p className="text-[11px] text-slate-400 font-bold max-w-sm mx-auto mt-1 font-sans">
-                                  {searchQuery ? 'Coba ubah kata kunci pencarian atau reset filter status.' : 'Klik "+ Tambah Entri Baru" di atas untuk memulai.'}
-                                </p>
-                              </div>
+                              <EmptyDataAnimation
+                                title={searchQuery ? 'Tidak ada permohonan yang sesuai' : 'Belum ada data permohonan'}
+                                description={searchQuery ? 'Coba ubah kata kunci pencarian atau reset filter status.' : 'Klik "+ Tambah Entri Baru" di atas untuk memulai.'}
+                              />
                             </td>
                           </tr>
                         ) : (

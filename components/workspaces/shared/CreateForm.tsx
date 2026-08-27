@@ -33,9 +33,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   // Data Lama state
   const [namaPemilikLama, setNamaPemilikLama] = useState('');
   const [alamatPemilikLama, setAlamatPemilikLama] = useState('');
+  const [blokPemilikLama, setBlokPemilikLama] = useState('');
+  const [rtPemilikLama, setRtPemilikLama] = useState('');
+  const [rwPemilikLama, setRwPemilikLama] = useState('');
   const [kecamatanPemilikLama, setKecamatanPemilikLama] = useState('');
   const [desaPemilikLama, setDesaPemilikLama] = useState('');
   const [alamatObjekLama, setAlamatObjekLama] = useState('');
+  const [blokObjekLama, setBlokObjekLama] = useState('');
+  const [rtObjekLama, setRtObjekLama] = useState('');
+  const [rwObjekLama, setRwObjekLama] = useState('');
   const [kecamatanObjekLama, setKecamatanObjekLama] = useState('');
   const [desaObjekLama, setDesaObjekLama] = useState('');
   const [luasTanahLama, setLuasTanahLama] = useState('');
@@ -104,9 +110,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
         if (initialData.namaPemilikLama) setNamaPemilikLama(initialData.namaPemilikLama.toUpperCase());
         if (initialData.alamatPemilikLama) setAlamatPemilikLama(initialData.alamatPemilikLama.toUpperCase());
+        if (initialData.blokPemilikLama) setBlokPemilikLama(initialData.blokPemilikLama.toUpperCase());
+        if (initialData.rtPemilikLama) setRtPemilikLama(initialData.rtPemilikLama.toUpperCase());
+        if (initialData.rwPemilikLama) setRwPemilikLama(initialData.rwPemilikLama.toUpperCase());
         if (initialData.kecamatanPemilikLama) setKecamatanPemilikLama(initialData.kecamatanPemilikLama.toUpperCase());
         if (initialData.desaPemilikLama) setDesaPemilikLama(initialData.desaPemilikLama.toUpperCase());
         if (initialData.alamatObjekLama) setAlamatObjekLama(initialData.alamatObjekLama.toUpperCase());
+        if (initialData.blokObjekLama) setBlokObjekLama(initialData.blokObjekLama.toUpperCase());
+        if (initialData.rtObjekLama) setRtObjekLama(initialData.rtObjekLama.toUpperCase());
+        if (initialData.rwObjekLama) setRwObjekLama(initialData.rwObjekLama.toUpperCase());
         if (initialData.kecamatanObjekLama) setKecamatanObjekLama(initialData.kecamatanObjekLama.toUpperCase());
         if (initialData.desaObjekLama) setDesaObjekLama(initialData.desaObjekLama.toUpperCase());
         setLuasTanahLama(initialData.luasTanahLama !== null && initialData.luasTanahLama !== undefined ? String(initialData.luasTanahLama) : '');
@@ -117,9 +129,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
           setDataBaru(initialData.dataBaru.map((item: any) => ({
             namaPemilikBaru: (item.namaPemilikBaru || '').toUpperCase(),
             alamatPemilikBaru: (item.alamatPemilikBaru || '').toUpperCase(),
+            blokPemilikBaru: (item.blokPemilikBaru || '').toUpperCase(),
+            rtPemilikBaru: (item.rtPemilikBaru || '').toUpperCase(),
+            rwPemilikBaru: (item.rwPemilikBaru || '').toUpperCase(),
             kecamatanPemilikBaru: (item.kecamatanPemilikBaru || '').toUpperCase(),
             desaPemilikBaru: (item.desaPemilikBaru || '').toUpperCase(),
             alamatObjekBaru: (item.alamatObjekBaru || '').toUpperCase(),
+            blokObjekBaru: (item.blokObjekBaru || '').toUpperCase(),
+            rtObjekBaru: (item.rtObjekBaru || '').toUpperCase(),
+            rwObjekBaru: (item.rwObjekBaru || '').toUpperCase(),
             kecamatanObjekBaru: (item.kecamatanObjekBaru || '').toUpperCase(),
             desaObjekBaru: (item.desaObjekBaru || '').toUpperCase(),
             luasTanahBaru: item.luasTanahBaru !== null && item.luasTanahBaru !== undefined ? String(item.luasTanahBaru) : '',
@@ -153,9 +171,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
         if (parsed.namaPemilikLama) setNamaPemilikLama(parsed.namaPemilikLama.toUpperCase());
         if (parsed.alamatPemilikLama) setAlamatPemilikLama(parsed.alamatPemilikLama.toUpperCase());
+        if (parsed.blokPemilikLama) setBlokPemilikLama(parsed.blokPemilikLama.toUpperCase());
+        if (parsed.rtPemilikLama) setRtPemilikLama(parsed.rtPemilikLama.toUpperCase());
+        if (parsed.rwPemilikLama) setRwPemilikLama(parsed.rwPemilikLama.toUpperCase());
         if (parsed.kecamatanPemilikLama) setKecamatanPemilikLama(parsed.kecamatanPemilikLama.toUpperCase());
         if (parsed.desaPemilikLama) setDesaPemilikLama(parsed.desaPemilikLama.toUpperCase());
         if (parsed.alamatObjekLama) setAlamatObjekLama(parsed.alamatObjekLama.toUpperCase());
+        if (parsed.blokObjekLama) setBlokObjekLama(parsed.blokObjekLama.toUpperCase());
+        if (parsed.rtObjekLama) setRtObjekLama(parsed.rtObjekLama.toUpperCase());
+        if (parsed.rwObjekLama) setRwObjekLama(parsed.rwObjekLama.toUpperCase());
         if (parsed.kecamatanObjekLama) setKecamatanObjekLama(parsed.kecamatanObjekLama.toUpperCase());
         if (parsed.desaObjekLama) setDesaObjekLama(parsed.desaObjekLama.toUpperCase());
         if (parsed.luasTanahLama) setLuasTanahLama(parsed.luasTanahLama);
@@ -166,9 +190,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
           setDataBaru(parsed.dataBaru.map((item: any) => ({
             namaPemilikBaru: (item.namaPemilikBaru || '').toUpperCase(),
             alamatPemilikBaru: (item.alamatPemilikBaru || '').toUpperCase(),
+            blokPemilikBaru: (item.blokPemilikBaru || '').toUpperCase(),
+            rtPemilikBaru: (item.rtPemilikBaru || '').toUpperCase(),
+            rwPemilikBaru: (item.rwPemilikBaru || '').toUpperCase(),
             kecamatanPemilikBaru: (item.kecamatanPemilikBaru || '').toUpperCase(),
             desaPemilikBaru: (item.desaPemilikBaru || '').toUpperCase(),
             alamatObjekBaru: (item.alamatObjekBaru || '').toUpperCase(),
+            blokObjekBaru: (item.blokObjekBaru || '').toUpperCase(),
+            rtObjekBaru: (item.rtObjekBaru || '').toUpperCase(),
+            rwObjekBaru: (item.rwObjekBaru || '').toUpperCase(),
             kecamatanObjekBaru: (item.kecamatanObjekBaru || '').toUpperCase(),
             desaObjekBaru: (item.desaObjekBaru || '').toUpperCase(),
             luasTanahBaru: item.luasTanahBaru,
@@ -200,9 +230,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         noWhatsapp,
         namaPemilikLama: namaPemilikLama.toUpperCase(),
         alamatPemilikLama: alamatPemilikLama.toUpperCase(),
+        blokPemilikLama: blokPemilikLama.toUpperCase(),
+        rtPemilikLama: rtPemilikLama.toUpperCase(),
+        rwPemilikLama: rwPemilikLama.toUpperCase(),
         kecamatanPemilikLama: kecamatanPemilikLama.toUpperCase(),
         desaPemilikLama: desaPemilikLama.toUpperCase(),
         alamatObjekLama: alamatObjekLama.toUpperCase(),
+        blokObjekLama: blokObjekLama.toUpperCase(),
+        rtObjekLama: rtObjekLama.toUpperCase(),
+        rwObjekLama: rwObjekLama.toUpperCase(),
         kecamatanObjekLama: kecamatanObjekLama.toUpperCase(),
         desaObjekLama: desaObjekLama.toUpperCase(),
         luasTanahLama,
@@ -211,9 +247,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         dataBaru: dataBaru.map(item => ({
           namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
           alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
+          blokPemilikBaru: item.blokPemilikBaru.toUpperCase(),
+          rtPemilikBaru: item.rtPemilikBaru.toUpperCase(),
+          rwPemilikBaru: item.rwPemilikBaru.toUpperCase(),
           kecamatanPemilikBaru: item.kecamatanPemilikBaru.toUpperCase(),
           desaPemilikBaru: item.desaPemilikBaru.toUpperCase(),
           alamatObjekBaru: item.alamatObjekBaru.toUpperCase(),
+          blokObjekBaru: item.blokObjekBaru.toUpperCase(),
+          rtObjekBaru: item.rtObjekBaru.toUpperCase(),
+          rwObjekBaru: item.rwObjekBaru.toUpperCase(),
           kecamatanObjekBaru: item.kecamatanObjekBaru.toUpperCase(),
           desaObjekBaru: item.desaObjekBaru.toUpperCase(),
           luasTanahBaru: item.luasTanahBaru,
@@ -227,8 +269,8 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     }
   }, [
     draftLoaded, jenisPermohonan, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, nop, noWhatsapp,
-    namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
+    namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama,
+    alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
     dataBaru
   ]);
 
@@ -432,19 +474,25 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   // Copy helpers with visual feedback
   const handleCopyPemilikFromLama = useCallback((idx: number) => {
     handleOwnerChange(idx, 'alamatPemilikBaru', alamatPemilikLama);
+    handleOwnerChange(idx, 'blokPemilikBaru', blokPemilikLama);
+    handleOwnerChange(idx, 'rtPemilikBaru', rtPemilikLama);
+    handleOwnerChange(idx, 'rwPemilikBaru', rwPemilikLama);
     handleOwnerChange(idx, 'kecamatanPemilikBaru', kecamatanPemilikLama);
     handleOwnerChange(idx, 'desaPemilikBaru', desaPemilikLama);
     setCopiedAlamatPemilikIdx(idx);
     setTimeout(() => setCopiedAlamatPemilikIdx(null), 1500);
-  }, [alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama, handleOwnerChange]);
+  }, [alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama, handleOwnerChange]);
 
   const handleCopyFromLama = useCallback((idx: number) => {
     handleOwnerChange(idx, 'alamatObjekBaru', alamatObjekLama);
+    handleOwnerChange(idx, 'blokObjekBaru', blokObjekLama);
+    handleOwnerChange(idx, 'rtObjekBaru', rtObjekLama);
+    handleOwnerChange(idx, 'rwObjekBaru', rwObjekLama);
     handleOwnerChange(idx, 'kecamatanObjekBaru', kecamatanObjekLama);
     handleOwnerChange(idx, 'desaObjekBaru', desaObjekLama);
     setCopiedAlamatObjekIdx(idx);
     setTimeout(() => setCopiedAlamatObjekIdx(null), 1500);
-  }, [alamatObjekLama, kecamatanObjekLama, desaObjekLama, handleOwnerChange]);
+  }, [alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, handleOwnerChange]);
 
   const formProgress = useMemo(() => {
     let total = 5;
@@ -653,9 +701,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       noWhatsapp,
       namaPemilikLama: needDataLama ? namaPemilikLama.toUpperCase() : null,
       alamatPemilikLama: needDataLama ? alamatPemilikLama.toUpperCase() : null,
+      blokPemilikLama: needDataLama && blokPemilikLama ? blokPemilikLama.toUpperCase() : null,
+      rtPemilikLama: needDataLama && rtPemilikLama ? rtPemilikLama.toUpperCase() : null,
+      rwPemilikLama: needDataLama && rwPemilikLama ? rwPemilikLama.toUpperCase() : null,
       kecamatanPemilikLama: needDataLama ? kecamatanPemilikLama.toUpperCase() : null,
       desaPemilikLama: needDataLama ? desaPemilikLama.toUpperCase() : null,
       alamatObjekLama: needDataLama ? alamatObjekLama.toUpperCase() : null,
+      blokObjekLama: needDataLama && blokObjekLama ? blokObjekLama.toUpperCase() : null,
+      rtObjekLama: needDataLama && rtObjekLama ? rtObjekLama.toUpperCase() : null,
+      rwObjekLama: needDataLama && rwObjekLama ? rwObjekLama.toUpperCase() : null,
       kecamatanObjekLama: needDataLama ? kecamatanObjekLama.toUpperCase() : null,
       desaObjekLama: needDataLama ? desaObjekLama.toUpperCase() : null,
       luasTanahLama: needDataLama && luasTanahLama !== '' ? Number(luasTanahLama) : null,
@@ -664,9 +718,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       dataBaru: needDataBaru ? dataBaru.map(item => ({
         namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
         alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
+        blokPemilikBaru: item.blokPemilikBaru ? item.blokPemilikBaru.toUpperCase() : null,
+        rtPemilikBaru: item.rtPemilikBaru ? item.rtPemilikBaru.toUpperCase() : null,
+        rwPemilikBaru: item.rwPemilikBaru ? item.rwPemilikBaru.toUpperCase() : null,
         kecamatanPemilikBaru: item.kecamatanPemilikBaru.toUpperCase(),
         desaPemilikBaru: item.desaPemilikBaru.toUpperCase(),
         alamatObjekBaru: item.alamatObjekBaru.toUpperCase(),
+        blokObjekBaru: item.blokObjekBaru ? item.blokObjekBaru.toUpperCase() : null,
+        rtObjekBaru: item.rtObjekBaru ? item.rtObjekBaru.toUpperCase() : null,
+        rwObjekBaru: item.rwObjekBaru ? item.rwObjekBaru.toUpperCase() : null,
         kecamatanObjekBaru: item.kecamatanObjekBaru.toUpperCase(),
         desaObjekBaru: item.desaObjekBaru.toUpperCase(),
         luasTanahBaru: item.luasTanahBaru !== '' ? Number(item.luasTanahBaru) : null,
@@ -968,6 +1028,44 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         {formErrors.alamatPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
                       </div>
 
+                      {/* Blok, RT, RW Pemilik Lama */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
+                          <input
+                            type="text"
+                            placeholder="A4"
+                            value={blokPemilikLama}
+                            onChange={(e) => setBlokPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
+                          <input
+                            type="text"
+                            placeholder="001"
+                            value={rtPemilikLama}
+                            onChange={(e) => setRtPemilikLama(e.target.value)}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
+                          <input
+                            type="text"
+                            placeholder="005"
+                            value={rwPemilikLama}
+                            onChange={(e) => setRwPemilikLama(e.target.value)}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
+                      </div>
+
                       {/* 3. Kecamatan pemilik */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
@@ -1014,6 +1112,44 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         />
                         {formErrors.alamatObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
+                      </div>
+
+                      {/* Blok, RT, RW Objek Lama */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
+                          <input
+                            type="text"
+                            placeholder="B2"
+                            value={blokObjekLama}
+                            onChange={(e) => setBlokObjekLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
+                          <input
+                            type="text"
+                            placeholder="001"
+                            value={rtObjekLama}
+                            onChange={(e) => setRtObjekLama(e.target.value)}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
+                          <input
+                            type="text"
+                            placeholder="005"
+                            value={rwObjekLama}
+                            onChange={(e) => setRwObjekLama(e.target.value)}
+                            disabled={loading}
+                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                          />
+                        </div>
                       </div>
 
                       {/* 7. Kecamatan objek */}
@@ -1207,6 +1343,44 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                               {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
                             </div>
 
+                            {/* Blok, RT, RW Pemilik Baru */}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
+                                <input
+                                  type="text"
+                                  placeholder="A4"
+                                  value={item.blokPemilikBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'blokPemilikBaru', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
+                                <input
+                                  type="text"
+                                  placeholder="001"
+                                  value={item.rtPemilikBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'rtPemilikBaru', e.target.value)}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
+                                <input
+                                  type="text"
+                                  placeholder="005"
+                                  value={item.rwPemilikBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'rwPemilikBaru', e.target.value)}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
+                            </div>
+
                             {/* 3. Kecamatan pemilik baru */}
                             <div className="flex flex-col gap-1.5">
                               <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
@@ -1268,6 +1442,44 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                 )}
                               </div>
                               {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                            </div>
+
+                            {/* Blok, RT, RW Objek Baru */}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="B2"
+                                  value={item.blokObjekBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'blokObjekBaru', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="001"
+                                  value={item.rtObjekBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'rtObjekBaru', e.target.value)}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="005"
+                                  value={item.rwObjekBaru || ''}
+                                  onChange={(e) => handleOwnerChange(idx, 'rwObjekBaru', e.target.value)}
+                                  disabled={loading}
+                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
+                                />
+                              </div>
                             </div>
 
                             {/* 7. Kecamatan Objek Baru */}

@@ -259,6 +259,23 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                   />
                 </div>
 
+                {(selectedRequest.blokPemilikLama || selectedRequest.rtPemilikLama || selectedRequest.rwPemilikLama) && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">Blok Pemilik</label>
+                      <input type="text" value={selectedRequest.blokPemilikLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RT Pemilik</label>
+                      <input type="text" value={selectedRequest.rtPemilikLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RW Pemilik</label>
+                      <input type="text" value={selectedRequest.rwPemilikLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-normal text-slate-500 capitalize font-sans pl-0.5">Kecamatan Pemilik</label>
@@ -290,6 +307,23 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                     className="w-full text-[13px] font-normal bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none capitalize font-sans"
                   />
                 </div>
+
+                {(selectedRequest.blokObjekLama || selectedRequest.rtObjekLama || selectedRequest.rwObjekLama) && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">Blok Objek</label>
+                      <input type="text" value={selectedRequest.blokObjekLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RT Objek</label>
+                      <input type="text" value={selectedRequest.rtObjekLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RW Objek</label>
+                      <input type="text" value={selectedRequest.rwObjekLama || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
@@ -415,6 +449,23 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                         />
                       </div>
 
+                      {(db.blokPemilikBaru || db.rtPemilikBaru || db.rwPemilikBaru) && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">Blok Pemilik</label>
+                            <input type="text" value={db.blokPemilikBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RT Pemilik</label>
+                            <input type="text" value={db.rtPemilikBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RW Pemilik</label>
+                            <input type="text" value={db.rwPemilikBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                        </div>
+                      )}
+
                       {/* 3. Kecamatan & Desa Pemilik */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
@@ -448,6 +499,23 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                           className="w-full text-[13px] font-normal bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-slate-800 shadow-3xs cursor-default outline-none capitalize font-sans"
                         />
                       </div>
+
+                      {(db.blokObjekBaru || db.rtObjekBaru || db.rwObjekBaru) && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">Blok Objek</label>
+                            <input type="text" value={db.blokObjekBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RT Objek</label>
+                            <input type="text" value={db.rtObjekBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[12px] font-normal text-slate-500 font-sans pl-0.5">RW Objek</label>
+                            <input type="text" value={db.rwObjekBaru || '-'} readOnly className="w-full text-[12px] bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 outline-none font-sans" />
+                          </div>
+                        </div>
+                      )}
 
                       {/* 5. Kecamatan & Desa Objek */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -528,7 +596,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
         <div className="px-5 py-3 border-t border-slate-200 bg-white flex items-center justify-end gap-3 select-none font-sans">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-normal text-[13px] rounded-lg shadow-3xs transition-all cursor-pointer font-sans"
+            className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] rounded-md shadow-3xs transition-all cursor-pointer font-sans capitalize"
           >
             Tutup
           </button>
