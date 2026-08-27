@@ -272,43 +272,43 @@ export async function getPemantauStats() {
   }
 
   try {
-    const antreanPemantauan = await prisma.permohonan.count({
-      where: {
-        status: "ARCHIVED",
-        bundle: {
-          manifest: {
-            status: "SENT"
+    const [antreanPemantauan, berkasSelesai, berkasFrozen] = await Promise.all([
+      prisma.permohonan.count({
+        where: {
+          status: "ARCHIVED",
+          bundle: {
+            manifest: {
+              status: "SENT"
+            }
           }
         }
-      }
-    });
-
-    const berkasSelesai = await prisma.permohonan.count({
-      where: {
-        status: "COMPLETED",
-        bundle: {
-          manifest: {
-            status: "SENT"
+      }),
+      prisma.permohonan.count({
+        where: {
+          status: "COMPLETED",
+          bundle: {
+            manifest: {
+              status: "SENT"
+            }
           }
         }
-      }
-    });
-
-    const berkasFrozen = await prisma.permohonan.count({
-      where: {
-        status: { in: ["ARCHIVED", "COMPLETED"] },
-        bundle: {
-          manifest: {
-            status: "SENT"
-          }
-        },
-        permintaanKoreksi: {
-          some: {
-            status: "PENDING_APPROVAL"
+      }),
+      prisma.permohonan.count({
+        where: {
+          status: { in: ["ARCHIVED", "COMPLETED"] },
+          bundle: {
+            manifest: {
+              status: "SENT"
+            }
+          },
+          permintaanKoreksi: {
+            some: {
+              status: "PENDING_APPROVAL"
+            }
           }
         }
-      }
-    });
+      })
+    ]);
 
     return {
       success: true,

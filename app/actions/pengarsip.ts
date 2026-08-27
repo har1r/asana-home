@@ -22,37 +22,41 @@ export async function getDigitizationBundles() {
   }
 
   try {
-    // Fetch ALL bundles for Pengarsip workspace
-    const list = await prisma.bundle.findMany({
-      include: {
-        permohonan: {
-          include: {
-            penginput: { select: { id: true, name: true, email: true } },
-            dataBaru: true,
-            arsipDigital: {
-              include: {
-                pengarsip: { select: { name: true } }
+    // Fetch bundles and allPermohonan in parallel using Promise.all
+    const [list, allPermohonan] = await Promise.all([
+      prisma.bundle.findMany({
+        include: {
+          permohonan: {
+            include: {
+              penginput: { select: { id: true, name: true, email: true } },
+              dataBaru: true,
+              arsipDigital: {
+                include: {
+                  pengarsip: { select: { name: true } }
+                },
+                orderBy: { versi: "desc" }
               },
-              orderBy: { versi: "desc" }
-            },
-            permintaanKoreksi: {
-              where: { status: "PENDING_APPROVAL" }
+              permintaanKoreksi: {
+                where: { status: "PENDING_APPROVAL" }
+              }
             }
-          }
+          },
+          peneliti: { select: { name: true } }
         },
-        peneliti: { select: { name: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-
-    // Fetch ALL permohonan across system for overall system KPI metrics
-    const allPermohonan = await prisma.permohonan.findMany({
-      include: {
-        dataBaru: true,
-        arsipDigital: true,
-        permintaanKoreksi: true
-      }
-    });
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.permohonan.findMany({
+        select: {
+          id: true,
+          status: true,
+          jenisPermohonan: true,
+          bundleId: true,
+          dataBaru: { select: { id: true } },
+          arsipDigital: { select: { id: true, status: true } },
+          permintaanKoreksi: { select: { id: true, status: true } }
+        }
+      })
+    ]);
 
     return { success: true, list, allPermohonan };
   } catch (error: any) {

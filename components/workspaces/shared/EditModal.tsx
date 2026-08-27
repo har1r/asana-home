@@ -2,228 +2,24 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Edit, AlertTriangle, CheckCircle, Phone, Trash2, Plus, Check } from 'lucide-react';
+import { X, Trash2, Plus, Check, Edit, AlertTriangle, CheckCircle, Phone } from 'lucide-react';
 import { updatePermohonan } from '@/app/actions/penginput';
 import { ActionStatusModal } from './ActionStatusModal';
+import {
+  JENIS_OPTIONS,
+  SERVICES_NEED_DATA_LAMA,
+  SERVICES_NEED_DATA_BARU,
+  KECAMATAN_DATA,
+  NOP_MAPPING,
+  createEmptyDataBaruItem,
+  formatNop
+} from './constants';
 
 interface EditModalProps {
   editTarget: any;
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const JENIS_OPTIONS = [
-  { value: 'MUTASI_SEBAGIAN', label: 'MUTASI SEBAGIAN' },
-  { value: 'MUTASI_HABIS_UPDATE', label: 'MUTASI HABIS UPDATE' },
-  { value: 'MUTASI_HABIS_REGULER', label: 'MUTASI HABIS REGULER' },
-  { value: 'OBJEK_PAJAK_BARU', label: 'OBJEK PAJAK BARU' },
-  { value: 'PEMBETULAN', label: 'PEMBETULAN' },
-  { value: 'PENGAKTIFAN', label: 'PENGAKTIFAN' }
-] as const;
-
-const SERVICES_NEED_DATA_LAMA = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'PENGAKTIFAN'
-];
-
-const SERVICES_NEED_DATA_BARU = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'OBJEK_PAJAK_BARU'
-];
-
-// Data Kecamatan dan Desa di wilayah kerja objek pajak (Kabupaten Tangerang)
-const KECAMATAN_DATA: Record<string, string[]> = {
-  'PAKUHAJI': [
-    "KALIBARU",
-    "SURYA BAHARI",
-    "SUKAWALI",
-    "KRAMAT",
-    "KOHOD",
-    "GAGA",
-    "KIARA PAYUNG",
-    "BUARAN BAMBU",
-    "PAKU ALAM",
-    "BUARAN MANGGA",
-    "PAKUHAJI",
-    "BUNISARI",
-    "LAKSANA",
-    "RAWABONI",
-  ],
-  'KOSAMBI': [
-    "SALEMBARAN JAYA",
-    "SALEMBARAN JATI",
-    "KOSAMBI BARAT",
-    "KOSAMBI TIMUR",
-    "DADAP",
-    "JATIMULYA",
-    "CENGKLONG",
-    "BLIMBING",
-    "RAWA BURUNG",
-    "RAWA RENGAS",
-  ],
-  'TELUKNAGA': [
-    "BOJONG RENGED",
-    "KEBON CAU",
-    "TELUKNAGA",
-    "BABAKAN ASEM",
-    "KAMP MELAYU T",
-    "KAMP MELAYU B",
-    "KAMPUNG BESAR",
-    "LEMO",
-    "TEGAL ANGUS",
-    "PANGKALAN",
-    "TANJUNG BURUNG",
-    "TANJUNG PASIR",
-    "MUARA",
-  ],
-  'SEPATAN TIMUR': [
-    "KEDAUNG BARAT",
-    "LEBAK WANGI",
-    "TANAH MERAH",
-    "JATI MULYA",
-    "GEMPOLSARI",
-    "SANGIANG",
-    "PONDOK KELOR",
-    "KAMPUNG KELOR",
-  ],
-  'SEPATAN': [
-    "MEKARJAYA",
-    "KARET",
-    "LEBAK WANGI",
-    "KEDAUNG BARAT",
-    "PONDOK JAYA",
-    "SEPATAN",
-    "PISANGAN JAYA",
-    "SARAKAN",
-    "TANAH MERAH",
-    "JATI MULYA",
-    "GEMPOLSARI",
-    "SANGIANG",
-    "KAYU AGUNG",
-    "KAYU BONGKOK",
-    "KAMPUNG KELOR"
-  ],
-};
-
-const NOP_MAPPING: Record<string, { name: string, villages: Record<string, string> }> = {
-  '150': {
-    name: 'SEPATAN',
-    villages: {
-      '001': 'MEKARJAYA',
-      '002': 'KARET',
-      '003': 'LEBAK WANGI',
-      '004': 'KEDAUNG BARAT',
-      '005': 'PONDOK JAYA',
-      '006': 'SEPATAN',
-      '007': 'PISANGAN JAYA',
-      '008': 'SARAKAN',
-      '009': 'TANAH MERAH',
-      '010': 'JATI MULYA',
-      '011': 'GEMPOLSARI',
-      '012': 'SANGIANG',
-      '013': 'KAYU AGUNG',
-      '014': 'KAYU BONGKOK',
-      '023': 'KAMPUNG KELOR',
-    }
-  },
-  '151': {
-    name: 'PAKUHAJI',
-    villages: {
-      '001': 'KALIBARU',
-      '002': 'SURYA BAHARI',
-      '003': 'SUKAWALI',
-      '004': 'KRAMAT',
-      '005': 'KOHOD',
-      '006': 'GAGA',
-      '007': 'KIARA PAYUNG',
-      '008': 'BUARAN BAMBU',
-      '009': 'PAKU ALAM',
-      '010': 'BUARAN MANGGA',
-      '011': 'PAKUHAJI',
-      '012': 'BUNISARI',
-      '013': 'LAKSANA',
-      '014': 'RAWABONI',
-    }
-  },
-  '152': {
-    name: 'SEPATAN TIMUR',
-    villages: {
-      '001': 'KEDAUNG BARAT',
-      '002': 'LEBAK WANGI',
-      '003': 'TANAH MERAH',
-      '004': 'JATI MULYA',
-      '005': 'GEMPOLSARI',
-      '006': 'SANGIANG',
-      '007': 'PONDOK KELOR',
-      '008': 'KAMPUNG KELOR',
-    }
-  },
-  '160': {
-    name: 'TELUKNAGA',
-    villages: {
-      '002': 'BOJONG RENGED',
-      '004': 'KEBON CAU',
-      '005': 'TELUKNAGA',
-      '006': 'BABAKAN ASEM',
-      '015': 'KAMP MELAYU T',
-      '016': 'KAMP MELAYU B',
-      '017': 'KAMPUNG BESAR',
-      '018': 'LEMO',
-      '019': 'TEGAL ANGUS',
-      '020': 'PANGKALAN',
-      '021': 'TANJUNG BURUNG',
-      '022': 'TANJUNG PASIR',
-      '023': 'MUARA',
-    }
-  },
-  '161': {
-    name: 'KOSAMBI',
-    villages: {
-      '001': 'SALEMBARAN JAYA',
-      '002': 'SALEMBARAN JATI',
-      '003': 'KOSAMBI BARAT',
-      '004': 'KOSAMBI TIMUR',
-      '005': 'DADAP',
-      '006': 'JATIMULYA',
-      '007': 'CENGKLONG',
-      '008': 'BLIMBING',
-      '009': 'RAWA BURUNG',
-      '010': 'RAWA RENGAS',
-    }
-  }
-};
-
-const createEmptyDataBaruItem = () => ({
-  namaPemilikBaru: '',
-  alamatPemilikBaru: '',
-  kecamatanPemilikBaru: '',
-  desaPemilikBaru: '',
-  alamatObjekBaru: '',
-  kecamatanObjekBaru: '',
-  desaObjekBaru: '',
-  luasTanahBaru: '',
-  luasBangunanBaru: '',
-  sertifikatBaru: ''
-});
-
-const formatNop = (nop: string) => {
-  if (!nop) return '';
-  const cleanNop = nop.replace(/[^0-9]/g, '');
-  if (cleanNop.length === 17) {
-    const padded = cleanNop + '0';
-    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
-  }
-  if (cleanNop.length === 18) {
-    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
-  }
-  return nop;
-};
 
 export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onClose, onSuccess }) => {
   const [jenisPermohonan, setJenisPermohonan] = useState<string>('MUTASI_SEBAGIAN');
@@ -462,6 +258,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
   // Clear field errors in real-time as user types/corrects inputs
   useEffect(() => {
     setFormErrors(prev => {
+      if (Object.keys(prev).length === 0) return prev;
       const copy = { ...prev };
       let changed = false;
 
@@ -835,16 +632,16 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-xl overflow-hidden border border-slate-200/90 flex flex-col animate-scaleUp">
 
         {/* Header - Aligned with Sidebar & Header clean UI design system */}
-        <div className="bg-[#f8fafc] px-6 py-4 flex items-center justify-between gap-4 select-none border-b border-slate-200/80">
+        <div className="bg-white px-5 py-4 flex items-center justify-between gap-4 select-none border-b border-slate-200/80 font-sans">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="bg-[#00a389]/10 border border-[#00a389]/20 p-2 rounded-xl shrink-0 flex items-center justify-center">
+            <div className="bg-[#00a389]/10 border border-[#00a389]/20 p-2 rounded-lg shrink-0 flex items-center justify-center">
               <Edit className="w-4 h-4 text-[#00a389]" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1">
+              <span className="text-[13px] font-normal text-slate-500 capitalize leading-none mb-1 font-sans">
                 Edit Permohonan
               </span>
-              <span className="text-sm font-black text-slate-800 font-mono tracking-tight truncate leading-none">
+              <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate leading-none">
                 {editTarget.nomorPelayanan || editTarget.nomorPermohonan}
               </span>
             </div>
@@ -878,14 +675,14 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                       onClick={() => {
                         if (stepNum < currentStep || isCompleted) setCurrentStep(stepNum);
                       }}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-xs font-extrabold ${isActive
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${isActive
                           ? 'bg-[#00a389] text-white shadow-3xs'
                           : isCompleted
                             ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
                             : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
                         }`}
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
                         }`}>
                         {isCompleted ? '✓' : stepNum}
                       </span>
@@ -921,17 +718,17 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 1: DATA UTAMA */}
               {currentStepLabel === 'Data Utama' && (
-                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">
                         Jenis Layanan Permohonan <span className="text-rose-500">*</span>
                       </label>
                       <select
                         value={jenisPermohonan}
                         onChange={(e) => setJenisPermohonan(e.target.value)}
                         disabled={loading}
-                        className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer"
+                        className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer capitalize font-sans"
                       >
                         {JENIS_OPTIONS.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -940,23 +737,22 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor Pelayanan <span className="text-rose-500">*</span></label>
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Nomor Pelayanan <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         id="edit_nomorPelayanan"
                         value={nomorPelayanan}
-                        onChange={(e) => setNomorPelayanan(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase' }}
+                        onChange={(e) => setNomorPelayanan(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nomorPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nomorPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.nomorPelayanan && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.nomorPelayanan}</span>}
+                      {formErrors.nomorPelayanan && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nomorPelayanan}</span>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide flex items-center justify-between">
+                      <label className="text-[13px] font-normal text-slate-700 capitalize flex items-center justify-between font-sans">
                         <span>Nomor Objek Pajak (NOP) <span className="text-rose-500">*</span></span>
-                        <span className={`text-[10px] font-mono font-bold pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                        <span className={`text-xs font-mono font-normal pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
                           {nop.replace(/[^\d]/g, '').length}/18 digit
                           {nop.replace(/[^\d]/g, '').length === 18 && ' ✓'}
                         </span>
@@ -980,17 +776,17 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           setNop(fmt);
                         }}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 font-sans tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nop ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 font-mono tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nop ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.nop && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.nop}</span>}
+                      {formErrors.nop && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nop}</span>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor WhatsApp WP <span className="text-rose-500">*</span></label>
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Nomor WhatsApp WP <span className="text-rose-500">*</span></label>
                       <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${
                         formErrors.noWhatsapp ? 'border-rose-500' : 'border-slate-200/90'
                       }`}>
-                        <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 select-none flex items-center gap-1 shrink-0">
+                        <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
                           <Phone className="w-3.5 h-3.5 text-slate-400" />
                           <span>+62</span>
                         </span>
@@ -1001,36 +797,36 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           value={noWhatsapp.startsWith('62') ? noWhatsapp.slice(2) : noWhatsapp}
                           onChange={handleWhatsappChange}
                           disabled={loading}
-                          className="w-full px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none bg-transparent"
+                          className="w-full px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none bg-transparent font-sans"
                         />
                       </div>
-                      {formErrors.noWhatsapp && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.noWhatsapp}</span>}
+                      {formErrors.noWhatsapp && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.noWhatsapp}</span>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Nopel <span className="text-rose-500">*</span></label>
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Tanggal Nopel <span className="text-rose-500">*</span></label>
                       <input
                         type="date"
                         id="edit_tanggalNoPelayanan"
                         value={tanggalNoPelayanan}
                         onChange={(e) => setTanggalNoPelayanan(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalNoPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalNoPelayanan ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.tanggalNoPelayanan && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.tanggalNoPelayanan}</span>}
+                      {formErrors.tanggalNoPelayanan && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalNoPelayanan}</span>}
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Selesai <span className="text-rose-500">*</span></label>
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Tanggal Selesai <span className="text-rose-500">*</span></label>
                       <input
                         type="date"
                         id="edit_tanggalPenyelesaian"
                         value={tanggalPenyelesaian}
                         onChange={(e) => setTanggalPenyelesaian(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalPenyelesaian ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalPenyelesaian ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.tanggalPenyelesaian && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.tanggalPenyelesaian}</span>}
+                      {formErrors.tanggalPenyelesaian && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalPenyelesaian}</span>}
                     </div>
                   </div>
                 </div>
@@ -1038,88 +834,83 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 2: DATA LAMA */}
               {currentStepLabel === 'Data Lama (Asal)' && needDataLama && (
-                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {/* 1. Nama pemilik lama (Full Width) */}
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-rose-500">*</span></label>
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Nama Pemilik <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         id="edit_namaPemilikLama"
                         value={namaPemilikLama}
-                        onChange={(e) => setNamaPemilikLama(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase' }}
+                        onChange={(e) => setNamaPemilikLama(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.namaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.namaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.namaPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.namaPemilikLama}</span>}
+                      {formErrors.namaPemilikLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.namaPemilikLama}</span>}
                     </div>
 
-                    {/* KELOMPOK ALAMAT, KECAMATAN, DESA (Symmetry side-by-side) */}
+                    {/* KELOMPOK ALAMAT, KECAMATAN, DESA */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
                       {/* Kiri: Pemilik */}
                       <div className="flex flex-col gap-5">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Alamat Pemilik <span className="text-rose-500">*</span></label>
                           <input
                             type="text"
                             id="edit_alamatPemilikLama"
                             value={alamatPemilikLama}
-                            onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
+                            onChange={(e) => setAlamatPemilikLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          {formErrors.alamatPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.alamatPemilikLama}</span>}
+                          {formErrors.alamatPemilikLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
                           <input
                             type="text"
                             id="edit_kecamatanPemilikLama"
                             value={kecamatanPemilikLama}
-                            onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
+                            onChange={(e) => setKecamatanPemilikLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.kecamatanPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.kecamatanPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          {formErrors.kecamatanPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanPemilikLama}</span>}
+                          {formErrors.kecamatanPemilikLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanPemilikLama}</span>}
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Pemilik <span className="text-rose-500">*</span></label>
                           <input
                             type="text"
                             id="edit_desaPemilikLama"
                             value={desaPemilikLama}
-                            onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
+                            onChange={(e) => setDesaPemilikLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.desaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.desaPemilikLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          {formErrors.desaPemilikLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.desaPemilikLama}</span>}
+                          {formErrors.desaPemilikLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaPemilikLama}</span>}
                         </div>
                       </div>
 
                       {/* Kanan: Objek */}
                       <div className="flex flex-col gap-5">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek Pajak <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Alamat Objek Pajak <span className="text-rose-500">*</span></label>
                           <input
                             type="text"
                             id="edit_alamatObjekLama"
                             value={alamatObjekLama}
-                            onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
+                            onChange={(e) => setAlamatObjekLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          {formErrors.alamatObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.alamatObjekLama}</span>}
+                          {formErrors.alamatObjekLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Objek <span className="text-rose-500">*</span></label>
                           <select
                             id="edit_kecamatanObjekLama"
                             value={kecamatanObjekLama}
@@ -1128,24 +919,24 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                               setDesaObjekLama('');
                             }}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors.kecamatanObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors.kecamatanObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           >
                             <option value="">Pilih Kecamatan Objek</option>
                             {Object.keys(KECAMATAN_DATA).map(kec => (
                               <option key={kec} value={kec}>{kec}</option>
                             ))}
                           </select>
-                          {formErrors.kecamatanObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanObjekLama}</span>}
+                          {formErrors.kecamatanObjekLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanObjekLama}</span>}
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Objek <span className="text-rose-500">*</span></label>
                           <select
                             id="edit_desaObjekLama"
                             value={desaObjekLama}
                             onChange={(e) => setDesaObjekLama(e.target.value)}
                             disabled={loading || !kecamatanObjekLama}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors.desaObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors.desaObjekLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           >
                             <option value="">
                               {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
@@ -1154,14 +945,14 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                               <option key={desa} value={desa}>{desa}</option>
                             ))}
                           </select>
-                          {formErrors.desaObjekLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.desaObjekLama}</span>}
+                          {formErrors.desaObjekLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaObjekLama}</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2 font-sans">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah Asal <span className="text-rose-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Luas Tanah Asal <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <input
                             type="number"
@@ -1169,17 +960,17 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                             value={luasTanahLama}
                             onChange={(e) => setLuasTanahLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasTanahLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasTanahLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                          <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                             m²
                           </span>
                         </div>
-                        {formErrors.luasTanahLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.luasTanahLama}</span>}
+                        {formErrors.luasTanahLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasTanahLama}</span>}
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan Asal <span className="text-rose-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Luas Bangunan Asal <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <input
                             type="number"
@@ -1187,29 +978,28 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                             value={luasBangunanLama}
                             onChange={(e) => setLuasBangunanLama(e.target.value)}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasBangunanLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasBangunanLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                           />
-                          <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                          <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                             m²
                           </span>
                         </div>
-                        {formErrors.luasBangunanLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.luasBangunanLama}</span>}
+                        {formErrors.luasBangunanLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasBangunanLama}</span>}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
+                    <div className="flex flex-col gap-1.5 sm:col-span-2 font-sans">
+                      <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         id="edit_sertifikatLama"
                         placeholder="Contoh: SHM NO. 12345"
                         value={sertifikatLama}
-                        onChange={(e) => setSertifikatLama(e.target.value.toUpperCase())}
-                        style={{ textTransform: 'uppercase' }}
+                        onChange={(e) => setSertifikatLama(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.sertifikatLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.sertifikatLama ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                       />
-                      {formErrors.sertifikatLama && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors.sertifikatLama}</span>}
+                      {formErrors.sertifikatLama && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.sertifikatLama}</span>}
                     </div>
                   </div>
                 </div>
@@ -1217,21 +1007,21 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
               {/* STEP 3: DATA BARU */}
               {currentStepLabel === 'Data Baru' && needDataBaru && (
-                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+                <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
                   {jenisPermohonan === 'MUTASI_SEBAGIAN' && (
                     <div className="flex justify-end select-none mb-1">
                       <button
                         type="button"
                         onClick={handleAddOwner}
                         disabled={loading}
-                        className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                        className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 font-sans"
                       >
                         <Plus className="w-4 h-4 stroke-[3]" /> Tambah Pemilik Baru
                       </button>
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-6 font-sans">
                     {dataBaru.map((item, idx) => (
                       <div
                         key={idx}
@@ -1242,7 +1032,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                       >
                         {dataBaru.length > 1 && (
                           <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
-                            <span className="text-xs font-bold text-[#00a389] tracking-wide">Pemilik Baru #{idx + 1}</span>
+                            <span className="text-[13px] font-normal text-[#00a389] capitalize font-sans">Pemilik Baru #{idx + 1}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveOwner(idx)}
@@ -1254,43 +1044,41 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          {/* 1. Nama pemilik baru (Full Width) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
+                          {/* 1. Nama pemilik baru */}
                           <div className="flex flex-col gap-1.5 sm:col-span-2">
-                            <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-rose-500">*</span></label>
+                            <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Nama Pemilik <span className="text-rose-500">*</span></label>
                             <input
                               type="text"
                               id={`edit_dataBaru.${idx}.namaPemilikBaru`}
                               value={item.namaPemilikBaru}
-                              onChange={(e) => handleOwnerChange(idx, 'namaPemilikBaru', e.target.value.toUpperCase())}
-                              style={{ textTransform: 'uppercase' }}
+                              onChange={(e) => handleOwnerChange(idx, 'namaPemilikBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                             />
-                            {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
+                            {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
                           </div>
 
-                          {/* KELOMPOK ALAMAT, KECAMATAN, DESA BARU (Symmetry side-by-side) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                          {/* KELOMPOK ALAMAT BARU */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2 font-sans">
                             {/* Kiri: Pemilik Baru */}
                             <div className="flex flex-col gap-5">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Alamat Pemilik <span className="text-rose-500">*</span></label>
                                 <div className="relative">
                                   <input
                                     type="text"
                                     id={`edit_dataBaru.${idx}.alamatPemilikBaru`}
                                     value={item.alamatPemilikBaru}
-                                    onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
-                                    style={{ textTransform: 'uppercase' }}
+                                    onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value)}
                                     disabled={loading}
-                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                   />
                                   {needDataLama && (
                                     <button
                                       type="button"
                                       onClick={() => handleCopyPemilikFromLama(idx)}
-                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatPemilikIdx === idx
+                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatPemilikIdx === idx
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                         : 'text-[#00a389] bg-emerald-50 hover:bg-emerald-100 border-emerald-200/60'
                                         }`}
@@ -1300,57 +1088,54 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                     </button>
                                   )}
                                 </div>
-                                {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
                               </div>
 
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   id={`edit_dataBaru.${idx}.kecamatanPemilikBaru`}
                                   value={item.kecamatanPemilikBaru}
-                                  onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
+                                  onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
                               </div>
 
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Pemilik <span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   id={`edit_dataBaru.${idx}.desaPemilikBaru`}
                                   value={item.desaPemilikBaru}
-                                  onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
+                                  onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
                               </div>
                             </div>
 
                             {/* Kanan: Objek Baru */}
                             <div className="flex flex-col gap-5">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Alamat Objek <span className="text-rose-500">*</span></label>
                                 <div className="relative">
                                   <input
                                     type="text"
                                     id={`edit_dataBaru.${idx}.alamatObjekBaru`}
                                     value={item.alamatObjekBaru}
-                                    onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
-                                    style={{ textTransform: 'uppercase' }}
+                                    onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value)}
                                     disabled={loading}
-                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                    className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                   />
                                   {needDataLama && (
                                     <button
                                       type="button"
                                       onClick={() => handleCopyFromLama(idx)}
-                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatObjekIdx === idx
+                                      className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatObjekIdx === idx
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                         : 'text-[#00a389] bg-emerald-50 hover:bg-emerald-100 border-emerald-200/60'
                                         }`}
@@ -1360,11 +1145,11 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                     </button>
                                   )}
                                 </div>
-                                {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
                               </div>
 
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Objek <span className="text-rose-500">*</span></label>
                                 <select
                                   id={`edit_dataBaru.${idx}.kecamatanObjekBaru`}
                                   value={item.kecamatanObjekBaru}
@@ -1373,24 +1158,24 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                     handleOwnerChange(idx, 'desaObjekBaru', '');
                                   }}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 >
                                   <option value="">Pilih Kecamatan Objek</option>
                                   {Object.keys(KECAMATAN_DATA).map(kec => (
                                     <option key={kec} value={kec}>{kec}</option>
                                   ))}
                                 </select>
-                                {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
                               </div>
 
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-rose-500">*</span></label>
+                                <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Objek <span className="text-rose-500">*</span></label>
                                 <select
                                   id={`edit_dataBaru.${idx}.desaObjekBaru`}
                                   value={item.desaObjekBaru}
                                   onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
                                   disabled={loading || !item.kecamatanObjekBaru}
-                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 >
                                   <option value="">
                                     {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
@@ -1399,14 +1184,14 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                     <option key={desa} value={desa}>{desa}</option>
                                   ))}
                                 </select>
-                                {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
+                                {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
                               </div>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2 font-sans">
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah <span className="text-rose-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Luas Tanah <span className="text-rose-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1414,17 +1199,17 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                   value={item.luasTanahBaru}
                                   onChange={(e) => handleOwnerChange(idx, 'luasTanahBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                                <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                                   m²
                                 </span>
                               </div>
-                              {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan <span className="text-rose-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Luas Bangunan <span className="text-rose-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1432,29 +1217,28 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                                   value={item.luasBangunanBaru}
                                   onChange={(e) => handleOwnerChange(idx, 'luasBangunanBaru', e.target.value)}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                                 />
-                                <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                                <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                                   m²
                                 </span>
                               </div>
-                              {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-1.5 sm:col-span-2">
-                            <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
+                          <div className="flex flex-col gap-1.5 sm:col-span-2 font-sans">
+                            <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">No/Jenis Sertifikat <span className="text-rose-500">*</span></label>
                             <input
                               type="text"
                               id={`edit_dataBaru.${idx}.sertifikatBaru`}
                               placeholder="Contoh: SHM NO. 12345"
                               value={item.sertifikatBaru}
-                              onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value.toUpperCase())}
-                              style={{ textTransform: 'uppercase' }}
+                              onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
+                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200/90'}`}
                             />
-                            {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-[11px] text-rose-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
+                            {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-xs text-rose-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
                           </div>
                         </div>
                       </div>
@@ -1466,28 +1250,28 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
             </div>
 
             {/* Stepper Footer Action Buttons */}
-            <div className="flex items-center justify-between pt-3.5 mt-1 border-t border-slate-200/80 select-none">
+            <div className="flex items-center justify-between pt-3.5 mt-1 border-t border-slate-200/80 select-none font-sans">
               <div>
                 {/* Visual feedback of completion */}
                 {formProgress.filled === formProgress.total ? (
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                  <span className="text-[13px] font-normal text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1 font-sans">
                     ✓ 100% Lengkap
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1 font-mono">
+                  <span className="text-[13px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2.5 py-1 rounded-lg flex items-center gap-1 font-mono">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00a389] inline-block" />
                     {formProgress.percentage}% Terisi ({formProgress.filled}/{formProgress.total})
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 font-sans">
                 {/* Back Button */}
                 {currentStep > 1 && (
                   <button
                     type="button"
                     onClick={handlePrevStep}
                     disabled={loading}
-                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-all cursor-pointer shadow-3xs"
+                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-normal text-[13px] rounded-lg transition-all cursor-pointer shadow-3xs font-sans"
                   >
                     Kembali
                   </button>
@@ -1499,7 +1283,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                     type="button"
                     onClick={onClose}
                     disabled={loading}
-                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 font-bold text-xs rounded-lg transition-all cursor-pointer shadow-3xs"
+                    className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 font-normal text-[13px] rounded-lg transition-all cursor-pointer shadow-3xs font-sans"
                   >
                     Batal
                   </button>
@@ -1510,7 +1294,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-extrabold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
+                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-normal text-[13px] rounded-lg shadow-xs transition-all cursor-pointer font-sans"
                   >
                     Lanjut
                   </button>
@@ -1518,7 +1302,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-extrabold text-xs rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center disabled:opacity-50 gap-1.5"
+                    className="px-6 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-normal text-[13px] rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center disabled:opacity-50 gap-1.5 font-sans"
                   >
                     {loading ? (
                       <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />

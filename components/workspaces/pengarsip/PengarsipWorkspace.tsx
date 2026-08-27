@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
@@ -34,6 +34,7 @@ import {
   Calendar,
   User,
 } from "lucide-react";
+import { formatNop, toTitleCase } from "@/components/workspaces/shared/constants";
 import {
   getDigitizationBundles,
   getBundleDetails,
@@ -210,19 +211,6 @@ export function PengarsipArsipSkeleton() {
   );
 }
 
-const formatNop = (nop: string) => {
-  if (!nop) return '';
-  const cleanNop = nop.replace(/[^0-9]/g, '');
-  if (cleanNop.length === 17) {
-    const padded = cleanNop + '0';
-    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
-  }
-  if (cleanNop.length === 18) {
-    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
-  }
-  return nop;
-};
-
 const getAbbreviatedJenis = (jenis: string) => {
   switch (jenis) {
     case "OBJEK_PAJAK_BARU": return "OPB";
@@ -368,22 +356,22 @@ export default function PengarsipWorkspace() {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
 
-  // Search & Filter State
-  const [searchBundleQuery, setSearchBundleQuery] = useState<string>("");
+  // Search & Pagination States for Bundles Queue
+  const [searchBundleQuery, setSearchBundleQuery] = useState("");
+  const deferredSearchBundleQuery = useDeferredValue(searchBundleQuery);
   const [isBundleSearchFocused, setIsBundleSearchFocused] = useState<boolean>(false);
   const [filterBundleJenisLayanan, setFilterBundleJenisLayanan] = useState<string>("ALL");
   const [filterBundleStatus, setFilterBundleStatus] = useState<string>("ALL");
+  const [currentBundlePage, setCurrentBundlePage] = useState(1);
+  const [itemsPerBundlePage, setItemsPerBundlePage] = useState(8);
 
-  const [searchArsipQuery, setSearchArsipQuery] = useState<string>("");
+  // Search & Pagination States for Digitalization Table
+  const [searchArsipQuery, setSearchArsipQuery] = useState("");
+  const deferredSearchArsipQuery = useDeferredValue(searchArsipQuery);
   const [isArsipSearchFocused, setIsArsipSearchFocused] = useState<boolean>(false);
   const [arsipDisplayMode, setArsipDisplayMode] = useState<'berkas' | 'pemohon'>('berkas');
   const [filterArsipJenisLayanan, setFilterArsipJenisLayanan] = useState<string>("ALL");
   const searchArsipInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Pagination State
-  const [currentBundlePage, setCurrentBundlePage] = useState<number>(1);
-  const [itemsPerBundlePage, setItemsPerBundlePage] = useState<number>(8);
-
   const [currentArsipPage, setCurrentArsipPage] = useState<number>(1);
   const [itemsPerArsipPage, setItemsPerArsipPage] = useState<number>(10);
 
@@ -709,13 +697,14 @@ export default function PengarsipWorkspace() {
     return { totalPemohon, sudahTerupload, belumDiupload, perluReupload };
   }, [allPermohonanList, bundlesList, checkPermohonanNeedsReupload]);
 
-  // Filter Bundles List
+  // Filter Bundles List (Memoized & Deferred)
   const filteredBundlesList = useMemo(() => {
+    const q = deferredSearchBundleQuery.toLowerCase().trim();
     return bundlesList.filter((b) => {
       const matchSearch =
-        searchBundleQuery === "" ||
-        b.nomorBundle.toLowerCase().includes(searchBundleQuery.toLowerCase()) ||
-        (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(searchBundleQuery.toLowerCase()));
+        !q ||
+        b.nomorBundle.toLowerCase().includes(q) ||
+        (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(q));
 
       const matchJenis =
         filterBundleJenisLayanan === "ALL" || b.jenisPermohonan === filterBundleJenisLayanan;
@@ -729,7 +718,7 @@ export default function PengarsipWorkspace() {
 
       return matchSearch && matchJenis && matchStatus;
     });
-  }, [bundlesList, searchBundleQuery, filterBundleJenisLayanan, filterBundleStatus, bundleHasReupload]);
+  }, [bundlesList, deferredSearchBundleQuery, filterBundleJenisLayanan, filterBundleStatus, bundleHasReupload]);
 
   // Process Arsip List according to Display Mode (berkas vs pemohon)
   const processedArsipList = useMemo(() => {

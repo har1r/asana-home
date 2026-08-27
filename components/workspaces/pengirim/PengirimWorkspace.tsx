@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   FileText,
@@ -40,6 +40,7 @@ import {
   CircleArrowLeft,
   Copy
 } from "lucide-react";
+import { formatNop, toTitleCase } from "@/components/workspaces/shared/constants";
 import {
   getEligibleBundles,
   getManifests,
@@ -174,18 +175,7 @@ export function PengirimKelolaSkeleton() {
   );
 }
 
-const formatNop = (nop: string) => {
-  if (!nop) return '';
-  const cleanNop = nop.replace(/[^0-9]/g, '');
-  if (cleanNop.length === 17) {
-    const padded = cleanNop + '0';
-    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
-  }
-  if (cleanNop.length === 18) {
-    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
-  }
-  return nop;
-};
+
 
 const getAbbreviatedJenis = (jenis: string) => {
   switch (jenis) {
@@ -337,6 +327,7 @@ export default function PengirimWorkspace() {
 
   // States for search and loaders
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterManifestStatus, setFilterManifestStatus] = useState<string>("ALL");
   const [loading, setLoading] = useState(false);

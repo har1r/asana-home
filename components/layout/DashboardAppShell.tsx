@@ -656,7 +656,7 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
         <Header />
 
         {/* --- MAIN TAB INTERFACE CONTROLLER --- */}
-        <div id="tab-content-container" className="flex-1 px-4 sm:px-6 md:px-8 py-6 w-full pb-16 transition-all duration-300 animate-fadeIn">
+        <div id="tab-content-container" className="flex-1 px-4 sm:px-5 md:px-5 py-6 w-full pb-16 transition-all duration-300 animate-fadeIn">
 
 
 

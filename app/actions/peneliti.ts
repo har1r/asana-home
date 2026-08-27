@@ -133,14 +133,15 @@ export async function mintaRevisi(permohonanId: string, catatan: string) {
       };
     });
 
-    // Send In-App Notification to the responsible Penginput (outside transaction)
+    // Send In-App Notification & WhatsApp Notification in parallel (outside transaction scope)
     const notifPesan = `Permohonan Anda (${result.nomorPelayanan || result.nomorPermohonan}) dikembalikan untuk revisi. Catatan Peneliti: "${catatan}"`;
-    await createInAppNotification(result.penginputId, 'Permohonan Perlu Revisi', notifPesan, { permohonanId });
-
-    // Kirim notifikasi WhatsApp ke Wajib Pajak di luar transaction scope
     const readableJenis = result.jenisPermohonan.replace(/_/g, ' ');
     const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${result.nomorPermohonan} memerlukan kelengkapan berkas. Harap segera hubungi petugas untuk informasi lebih lanjut.`;
-    await sendWhatsApp(result.noWhatsapp, whatsappMessage);
+
+    await Promise.allSettled([
+      createInAppNotification(result.penginputId, 'Permohonan Perlu Revisi', notifPesan, { permohonanId }),
+      sendWhatsApp(result.noWhatsapp, whatsappMessage)
+    ]);
 
     revalidatePath('/');
     return { success: true, permohonan: result.updatedPermohonan };
@@ -466,15 +467,17 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
       throw new Error('Bundle dalam manifest atau status lain tidak dapat dikoreksi oleh Peneliti.');
     });
 
-    // Notify Supervisor (outside transaction)
+    // Notify Supervisor in background (outside transaction)
     if (result.success && result.status === 'PENDING_APPROVAL' && result.request) {
       const notifTitle = 'Persetujuan Koreksi';
       const notifPesan = `Peneliti mengajukan koreksi untuk mengeluarkan Permohonan ${result.nomorPelayanan} dari Bundle ${result.nomorBundle}. Alasan: "${alasan}"`;
-      await notifyAllUsersOfRole('SUPERVISOR', notifTitle, notifPesan, {
-        koreksiId: result.request.id,
-        permohonanId,
-        bundleId
-      });
+      await Promise.allSettled([
+        notifyAllUsersOfRole('SUPERVISOR', notifTitle, notifPesan, {
+          koreksiId: result.request.id,
+          permohonanId,
+          bundleId
+        })
+      ]);
     }
 
     revalidatePath('/');
@@ -534,10 +537,12 @@ export async function lockBundle(bundleId: string) {
       return { success: true, bundle: updatedBundle, nomorBundle: bundle.nomorBundle };
     });
 
-    // Send In-App Notification to all active PENGARSIP users (outside transaction)
+    // Send In-App Notification to all active PENGARSIP users in background (outside transaction)
     if (result.success && result.bundle) {
       const notifPesan = `Bundle Baru ${result.nomorBundle} telah dikunci oleh Peneliti dan siap untuk didigitalisasi.`;
-      await notifyAllUsersOfRole('PENGARSIP', 'Bundle Siap Didigitalisasi', notifPesan, { bundleId });
+      await Promise.allSettled([
+        notifyAllUsersOfRole('PENGARSIP', 'Bundle Siap Didigitalisasi', notifPesan, { bundleId })
+      ]);
     }
 
     revalidatePath('/');
@@ -575,30 +580,39 @@ export async function getPenelitiStats() {
   }
 
   try {
-    const draftCount = await prisma.bundle.count({ where: { status: 'DRAFT' } });
-    const lockedCount = await prisma.bundle.count({ where: { status: 'LOCKED' } });
-    const inManifestCount = await prisma.bundle.count({ where: { status: 'IN_MANIFEST' } });
+    const [bundleGroup, allSubmitted, pendingCorrectionCount] = await Promise.all([
+      prisma.bundle.groupBy({
+        by: ['status'],
+        _count: { id: true },
+        where: {
+          status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'] }
+        }
+      }),
+      prisma.permohonan.findMany({
+        where: { status: 'SUBMITTED' },
+        select: { bundleId: true }
+      }),
+      prisma.permintaanKoreksi.count({
+        where: { status: 'PENDING_APPROVAL' }
+      })
+    ]);
 
-    // For submitted but unbundled permohonan
-    const allSubmitted = await prisma.permohonan.findMany({
-      where: { status: 'SUBMITTED' },
-      select: { bundleId: true }
-    });
+    let draftCount = 0;
+    let lockedCount = 0;
+    let inManifestCount = 0;
+    let voidCount = 0;
+    let totalCount = 0;
+
+    for (const bg of bundleGroup) {
+      const cnt = bg._count.id;
+      totalCount += cnt;
+      if (bg.status === 'DRAFT') draftCount = cnt;
+      else if (bg.status === 'LOCKED') lockedCount = cnt;
+      else if (bg.status === 'IN_MANIFEST') inManifestCount = cnt;
+      else if (bg.status === 'VOID') voidCount = cnt;
+    }
+
     const unbundledCount = allSubmitted.filter(p => !p.bundleId).length;
-
-    const voidCount = await prisma.bundle.count({ where: { status: 'VOID' } });
-
-    // Total bundles (including VOID)
-    const totalCount = await prisma.bundle.count({
-      where: {
-        status: { in: ['DRAFT', 'LOCKED', 'IN_MANIFEST', 'VOID'] }
-      }
-    });
-
-    // Pending correction requests count
-    const pendingCorrectionCount = await prisma.permintaanKoreksi.count({
-      where: { status: 'PENDING_APPROVAL' }
-    });
 
     return {
       success: true,

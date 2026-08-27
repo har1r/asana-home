@@ -8,6 +8,7 @@ import { notifyAllUsersOfRole } from '@/lib/notifications';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { getGlobalBerandaStats as getGlobalBerandaStatsFromBeranda } from './beranda';
+import { randomInt } from 'crypto';
 
 /* ============================================================================
  * BAGIAN 1: SKEMA VALIDASI ZOD & SANITASI INPUT DATA
@@ -121,11 +122,10 @@ const permohonanSchema = z.object({
 async function generateUniqueNomorPermohonan(): Promise<string> {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   let nomor = '';
-  let isUnique = false;
   let attempts = 0;
 
-  while (!isUnique && attempts < 10) {
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+  while (attempts < 10) {
+    const randomDigits = randomInt(1000, 10000);
     nomor = `PMH-${dateStr}-${randomDigits}`;
 
     const existing = await prisma.permohonan.findUnique({
@@ -134,11 +134,11 @@ async function generateUniqueNomorPermohonan(): Promise<string> {
     });
 
     if (!existing) {
-      isUnique = true;
+      return nomor;
     }
     attempts++;
   }
-  return nomor;
+  return `PMH-${dateStr}-${randomInt(1000, 10000)}`;
 }
 
 
@@ -235,28 +235,27 @@ export async function createPermohonan(rawInput: any) {
       }
     });
 
-    // 1. Kirim notifikasi WhatsApp ke Pemohon
+    // Jalankan efek samping (WhatsApp, Notifikasi In-App, Audit Log) secara paralel
     const readableJenis = validated.jenisPermohonan.replace(/_/g, ' ');
     const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${nomorPermohonan} telah berhasil diajukan dan sedang dalam proses verifikasi.`;
-    await sendWhatsApp(validated.noWhatsapp, whatsappMessage);
-
-    // 2. Kirim Notifikasi In-App ke seluruh pengguna ber-role PENELITI
     const notifTitle = 'Permohonan Baru Diajukan';
     const notifPesan = `Permohonan ${readableJenis} nomor ${validated.nomorPelayanan || nomorPermohonan} telah diinput dan siap diajukan untuk diteliti.`;
-    await notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: permohonan.id });
 
-    // 3. Rekam Audit Log
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'PERMOHONAN',
-        entityId: permohonan.id,
-        aksi: 'Membuat Permohonan Baru PBB',
-        statusSebelum: null,
-        statusSesudah: 'SUBMITTED',
-        pelakuId: session.user.id,
-        metadata: { nomorPermohonan, jenisPermohonan: validated.jenisPermohonan }
-      }
-    });
+    await Promise.allSettled([
+      sendWhatsApp(validated.noWhatsapp, whatsappMessage),
+      notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: permohonan.id }),
+      prisma.auditLog.create({
+        data: {
+          entityType: 'PERMOHONAN',
+          entityId: permohonan.id,
+          aksi: 'Membuat Permohonan Baru PBB',
+          statusSebelum: null,
+          statusSesudah: 'SUBMITTED',
+          pelakuId: session.user.id,
+          metadata: { nomorPermohonan, jenisPermohonan: validated.jenisPermohonan }
+        }
+      })
+    ]);
 
     revalidatePath('/');
     return { success: true, permohonan };
@@ -445,28 +444,27 @@ export async function resubmitPermohonan(id: string) {
       data: { status: 'SUBMITTED' }
     });
 
-    // 1. Kirim notifikasi WhatsApp ke Pemohon
+    // Jalankan efek samping (WhatsApp, Notifikasi In-App, Audit Log) secara paralel
     const readableJenis = existing.jenisPermohonan.replace(/_/g, ' ');
     const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${existing.nomorPermohonan} telah berhasil diterima dan sedang dalam proses verifikasi.`;
-    await sendWhatsApp(existing.noWhatsapp, whatsappMessage);
-
-    // 2. Kirim Notifikasi In-App ke seluruh pengguna ber-role PENELITI
     const notifTitle = 'Resubmit Permohonan';
     const notifPesan = `Permohonan ${readableJenis} nomor ${existing.nomorPelayanan || existing.nomorPermohonan} telah diperbaiki oleh Penginput dan siap diverifikasi kembali.`;
-    await notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: id });
 
-    // 3. Rekam Audit Log
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'PERMOHONAN',
-        entityId: id,
-        aksi: 'Resubmit Permohonan Hasil Revisi',
-        statusSebelum: 'REVISION',
-        statusSesudah: 'SUBMITTED',
-        pelakuId: session.user.id,
-        metadata: { nomorPermohonan: existing.nomorPermohonan }
-      }
-    });
+    await Promise.allSettled([
+      sendWhatsApp(existing.noWhatsapp, whatsappMessage),
+      notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: id }),
+      prisma.auditLog.create({
+        data: {
+          entityType: 'PERMOHONAN',
+          entityId: id,
+          aksi: 'Resubmit Permohonan Hasil Revisi',
+          statusSebelum: 'REVISION',
+          statusSesudah: 'SUBMITTED',
+          pelakuId: session.user.id,
+          metadata: { nomorPermohonan: existing.nomorPermohonan }
+        }
+      })
+    ]);
 
     revalidatePath('/');
     return { success: true, permohonan };
@@ -494,18 +492,9 @@ export async function getPenginputPermohonan() {
   }
 
   try {
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email || '' }
-    });
-
-    const targetUserId = currentUser ? currentUser.id : session.user.id;
-
     const list = await prisma.permohonan.findMany({
       where: {
-        OR: [
-          { penginputId: targetUserId },
-          { penginputId: session.user.id }
-        ]
+        penginputId: session.user.id
       },
       include: {
         dataBaru: true,
@@ -647,36 +636,41 @@ export async function getPermohonanStats() {
   }
 
   try {
-    const total = await prisma.permohonan.count();
-    const submitted = await prisma.permohonan.count({
-      where: { status: 'SUBMITTED' }
+    const groupedStats = await prisma.permohonan.groupBy({
+      by: ['status'],
+      _count: {
+        _all: true
+      }
     });
-    const revision = await prisma.permohonan.count({
-      where: { status: 'REVISION' }
-    });
-    const bundled = await prisma.permohonan.count({
-      where: { status: 'BUNDLED' }
-    });
-    const archived = await prisma.permohonan.count({
-      where: { status: 'ARCHIVED' }
-    });
-    const completed = await prisma.permohonan.count({
-      where: { status: 'COMPLETED' }
-    });
-    const rejected = await prisma.permohonan.count({
-      where: { status: 'REJECTED' }
-    });
+
+    let total = 0;
+    const statsMap: Record<string, number> = {
+      SUBMITTED: 0,
+      REVISION: 0,
+      BUNDLED: 0,
+      ARCHIVED: 0,
+      COMPLETED: 0,
+      REJECTED: 0
+    };
+
+    for (const group of groupedStats) {
+      const count = group._count._all;
+      total += count;
+      if (group.status) {
+        statsMap[group.status] = count;
+      }
+    }
 
     return {
       success: true,
       stats: {
         total,
-        submitted,
-        revision,
-        bundled,
-        archived,
-        completed,
-        rejected
+        submitted: statsMap.SUBMITTED,
+        revision: statsMap.REVISION,
+        bundled: statsMap.BUNDLED,
+        archived: statsMap.ARCHIVED,
+        completed: statsMap.COMPLETED,
+        rejected: statsMap.REJECTED
       }
     };
   } catch (error: any) {

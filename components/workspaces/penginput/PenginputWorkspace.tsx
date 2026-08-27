@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-  Plus, Search, Edit, RefreshCw,
-  AlertTriangle, X, CheckCircle, FileText, Calendar,
-  Trash2, ChevronLeft, ChevronRight, ChevronDown, Check, Lock,
-  FileSpreadsheet, Star, Copy, ArrowRight
+  Plus, Search, Edit, RefreshCw, X, FileText,
+  ChevronLeft, ChevronRight, ChevronDown, Check, Star, Copy
 } from 'lucide-react';
 import { useSession } from "next-auth/react";
 import {
@@ -17,9 +15,10 @@ import {
 import { useDashboard } from '@/context/DashboardContext';
 import { SkeletonBox, SkeletonText, SkeletonBadge } from '@/components/skeletons/SkeletonBase';
 import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
-import { EditModal } from '@/components/workspaces/shared/EditModal';
 import { CreateForm } from '@/components/workspaces/shared/CreateForm';
+import { EditModal } from '@/components/workspaces/shared/EditModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
+import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
 
 
 const EmptyDataAnimation: React.FC = React.memo(() => {
@@ -211,79 +210,23 @@ const JENIS_OPTIONS = [
   { value: 'PENGAKTIFAN', label: 'Pengaktifan' }
 ] as const;
 
-const formatNop = (nop: string) => {
-  if (!nop) return '';
-  const cleanNop = nop.replace(/[^0-9]/g, '');
-  if (cleanNop.length === 17) {
-    const padded = cleanNop + '0';
-    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
-  }
-  if (cleanNop.length === 18) {
-    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
-  }
-  return nop;
+
+
+const JENIS_ABBR_MAP: Record<string, string> = {
+  OBJEK_PAJAK_BARU: 'OPB',
+  MUTASI_SEBAGIAN: 'MS',
+  MUTASI_HABIS_REGULER: 'MHR',
+  MUTASI_HABIS_UPDATE: 'MHU',
+  PEMBETULAN: 'PBT',
+  PENGAKTIFAN: 'AKT'
 };
 
-const getAbbreviatedJenis = (jenis: string) => {
-  switch (jenis) {
-    case 'OBJEK_PAJAK_BARU':
-      return 'OPB';
-    case 'MUTASI_SEBAGIAN':
-      return 'MS';
-    case 'MUTASI_HABIS_REGULER':
-      return 'MHR';
-    case 'MUTASI_HABIS_UPDATE':
-      return 'MHU';
-    case 'PEMBETULAN':
-      return 'PBT';
-    case 'PENGAKTIFAN':
-      return 'AKT';
-    default:
-      return jenis;
-  }
-};
+const getAbbreviatedJenis = (jenis: string) => JENIS_ABBR_MAP[jenis] || jenis;
 
-const SERVICES_NEED_DATA_LAMA = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'PENGAKTIFAN'
-];
-
-const SERVICES_NEED_DATA_BARU = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'OBJEK_PAJAK_BARU'
-];
-
-const createEmptyDataBaruItem = () => ({
-  namaPemilikBaru: '',
-  alamatPemilikBaru: '',
-  kecamatanPemilikBaru: '',
-  desaPemilikBaru: '',
-  alamatObjekBaru: '',
-  kecamatanObjekBaru: '',
-  desaObjekBaru: '',
-  luasTanahBaru: '',
-  luasBangunanBaru: '',
-  sertifikatBaru: ''
-});
-
-const toTitleCase = (str: string) =>
-  str
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
-
+const PECAHAN_REGEX = /\s*\(?Pecahan\s*\d+\)?/gi;
 const cleanPecahanSuffix = (name?: string | null): string => {
   if (!name) return '';
-  return name
-    .replace(/\s*\(Pecahan\s*\d+\)/gi, '')
-    .replace(/\s*Pecahan\s*\d+/gi, '')
-    .trim();
+  return name.replace(PECAHAN_REGEX, '').trim();
 };
 
 const STATUS_LABEL_MAP: Record<string, string> = {
@@ -324,7 +267,8 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 const highlightText = (text: string, search: string) => {
-  if (!search.trim()) return <span>{text}</span>;
+  if (!text) return <span></span>;
+  if (!search || !search.trim()) return <span>{text}</span>;
   const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   const regex = new RegExp(`(${escapedSearch})`, 'gi');
   const parts = text.split(regex);
@@ -352,6 +296,235 @@ const isOverdue = (dateStr: string | null | undefined, status: string): boolean 
   return new Date(dateStr) < new Date();
 };
 
+interface PenginputTableRowProps {
+  item: any;
+  globalIndex: number;
+  searchQuery: string;
+  copiedText: string | null;
+  sessionUserName?: string | null;
+  loading: boolean;
+  onSelect: (item: any) => void;
+  onToggleFavorite: (id: string) => void;
+  onCopy: (e: React.MouseEvent, text: string) => void;
+  onEdit: (item: any) => void;
+  onDuplicate: (item: any) => void;
+  onResubmit: (id: string) => void;
+}
+
+const PenginputTableRow: React.FC<PenginputTableRowProps> = React.memo(({
+  item,
+  globalIndex,
+  searchQuery,
+  copiedText,
+  sessionUserName,
+  loading,
+  onSelect,
+  onToggleFavorite,
+  onCopy,
+  onEdit,
+  onDuplicate,
+  onResubmit,
+}) => {
+  const isFavorite = item.isFavorite;
+
+  const tglInputStr = useMemo(() => {
+    return item.createdAt
+      ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '—';
+  }, [item.createdAt]);
+
+  const tglNopelStr = useMemo(() => {
+    return new Date(item.tanggalPermohonan || item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }, [item.tanggalPermohonan, item.createdAt]);
+
+  const tglSelesaiStr = useMemo(() => {
+    return item.tanggalPenyelesaian
+      ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+      : null;
+  }, [item.tanggalPenyelesaian]);
+
+  const isItemOverdue = useMemo(() => {
+    return isOverdue(item.tanggalPenyelesaian, item.status);
+  }, [item.tanggalPenyelesaian, item.status]);
+
+  const nomorVal = item.nomorPelayanan || item.nomorPermohonan;
+  const formattedNop = useMemo(() => formatNop(item.nop), [item.nop]);
+  const abbreviatedJenis = useMemo(() => getAbbreviatedJenis(item.jenisPermohonan), [item.jenisPermohonan]);
+
+  return (
+    <tr
+      onClick={() => onSelect(item)}
+      className={`hover:bg-slate-50/90 transition-colors group cursor-pointer h-11 ${item.isPecahanRow ? 'border-l-3 border-l-emerald-500 bg-emerald-50/20' : ''
+        }`}
+    >
+      <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[13px]">
+        {globalIndex}
+      </td>
+      <td className="py-2.5 px-2 text-center">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(item.id);
+          }}
+          className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+          title={isFavorite ? "Hapus dari Favorit" : "Tambah ke Favorit"}
+        >
+          <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
+        </button>
+      </td>
+      <td className="py-2.5 px-4 text-slate-600 font-sans text-[13px] font-normal whitespace-nowrap capitalize">
+        {tglInputStr}
+      </td>
+      <td className="py-2.5 px-4 text-slate-600 text-[13px] font-normal font-sans whitespace-nowrap">
+        <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || sessionUserName || "Petugas Input"}>
+          <span className="truncate max-w-[140px] font-sans font-normal text-[13px]">{toTitleCase(item.penginput?.name || sessionUserName || "Petugas Input")}</span>
+        </div>
+      </td>
+      <td className="py-2.5 px-4 text-slate-600 font-sans text-[13px] font-normal whitespace-nowrap capitalize">
+        {tglNopelStr}
+      </td>
+      <td className="py-2.5 px-4 whitespace-nowrap font-sans">
+        {tglSelesaiStr ? (
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[13px] font-sans font-normal capitalize px-2 py-0.5 rounded ${isItemOverdue
+              ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
+              : 'text-slate-600'
+              }`}>
+              {tglSelesaiStr}
+            </span>
+          </div>
+        ) : "-"}
+      </td>
+      <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[13px] font-normal font-sans text-slate-600 tracking-tight capitalize">
+            {highlightText(nomorVal, searchQuery)}
+          </span>
+          <button
+            onClick={(e) => onCopy(e, nomorVal)}
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            title="Salin Nomor"
+          >
+            {copiedText === nomorVal ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </button>
+        </div>
+      </td>
+      <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[13px] font-normal font-sans text-slate-600 whitespace-nowrap capitalize">
+            {highlightText(formattedNop, searchQuery)}
+          </span>
+          <button
+            onClick={(e) => onCopy(e, item.nop)}
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            title="Salin NOP"
+          >
+            {copiedText === item.nop ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </button>
+        </div>
+      </td>
+      <td className="py-2.5 px-4 group/cell relative font-sans">
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[13px] font-normal text-slate-600 whitespace-nowrap font-sans">
+            {highlightText(toTitleCase(item.displayNamaWajibPajak), searchQuery)}
+          </span>
+          {item.isPecahanRow && (
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+              #{item.pecahanIndex}/{item.totalPecahan}
+            </span>
+          )}
+          <button
+            onClick={(e) => onCopy(e, item.displayNamaWajibPajak)}
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            title="Salin Nama Pemohon"
+          >
+            {copiedText === item.displayNamaWajibPajak ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </button>
+        </div>
+      </td>
+      <td className="py-2.5 px-4 font-sans">
+        <span
+          className="text-[13px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
+          title={item.jenisPermohonan.replace(/_/g, ' ')}
+        >
+          {abbreviatedJenis}
+        </span>
+      </td>
+      <td className="py-2.5 px-4 text-center font-sans">
+        <div className="flex items-center justify-center gap-1">
+          <span className={`px-2.5 py-0.5 text-[13px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+            {getStatusLabel(item.status)}
+          </span>
+        </div>
+      </td>
+      <td className="py-2.5 px-4 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(item);
+            }}
+            className="p-1.5 rounded-md text-slate-400 hover:text-[#00a389] hover:bg-[#e6f6f4] transition-colors cursor-pointer"
+            title="Lihat Detail"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(item);
+            }}
+            className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+            title="Edit Berkas"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(item);
+            }}
+            className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+            title="Duplikasi Berkas"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+
+          {item.status === 'REVISION' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onResubmit(item.id);
+              }}
+              disabled={loading}
+              className="p-1.5 rounded-md text-amber-600 hover:bg-amber-100/60 transition-colors cursor-pointer"
+              title="Kirim Ulang Revisi"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+PenginputTableRow.displayName = 'PenginputTableRow';
+
 export default function PenginputWorkspace() {
   const { data: session } = useSession();
   const { showConfirm, refreshFavorites } = useDashboard();
@@ -359,15 +532,17 @@ export default function PenginputWorkspace() {
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Search & Filter State
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
+
+  // Sorting State ('last_modified' | 'newest' | 'oldest' | 'a_z')
+  const [sortBy, setSortBy] = useState<'last_modified' | 'newest' | 'oldest' | 'a_z'>('last_modified');
+  const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
 
   // Next.js Router & Query Params sync for ?tab=my-tasks&view=create
   const searchParams = useSearchParams();
@@ -399,10 +574,6 @@ export default function PenginputWorkspace() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  // Inline Table Header Filter States
-  const [isJenisFilterOpen, setIsJenisFilterOpen] = useState(false);
-  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const handleCopy = useCallback((e: React.MouseEvent, text: string) => {
@@ -474,13 +645,13 @@ export default function PenginputWorkspace() {
     try {
       const res = await togglePermohonanFavorite(id);
       if (!res.success) {
-        setError(res.error || 'Gagal mengubah status favorit.');
+        console.error(res.error || 'Gagal mengubah status favorit.');
         setList(originalList); // Revert
       } else {
         refreshFavorites();
       }
     } catch (err) {
-      setError('Gagal mengubah status favorit.');
+      console.error('Gagal mengubah status favorit.', err);
       setList(originalList); // Revert
     }
   }, [refreshFavorites]);
@@ -545,28 +716,7 @@ export default function PenginputWorkspace() {
 
 
 
-  // Status chips count memoization
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      ALL: list.length,
-      FAVORITE: 0,
-      SUBMITTED: 0,
-      REVISION: 0,
-      BUNDLED: 0,
-      ARCHIVED: 0,
-      COMPLETED: 0,
-      REJECTED: 0
-    };
-    list.forEach(item => {
-      if (counts[item.status] !== undefined) {
-        counts[item.status]++;
-      }
-      if (item.isFavorite) {
-        counts.FAVORITE++;
-      }
-    });
-    return counts;
-  }, [list]);
+
 
   // Display Mode Switcher State ('berkas' | 'pemohon')
   const [displayMode, setDisplayMode] = useState<'berkas' | 'pemohon'>(() => {
@@ -600,10 +750,49 @@ export default function PenginputWorkspace() {
     });
   }, [list, displayMode]);
 
+  // Single-pass KPI counts calculation for modeBaseList metrics
+  const kpiCounts = useMemo(() => {
+    const total = modeBaseList.length;
+    let submitted = 0;
+    let revision = 0;
+    let bundled = 0;
+    let archived = 0;
+    let completed = 0;
+    let rejected = 0;
+
+    for (let i = 0; i < total; i++) {
+      const s = modeBaseList[i].status;
+      if (s === 'SUBMITTED' || s === 'DRAFT') submitted++;
+      else if (s === 'REVISION') revision++;
+      else if (s === 'BUNDLED') bundled++;
+      else if (s === 'ARCHIVED') archived++;
+      else if (s === 'COMPLETED') completed++;
+      else if (s === 'REJECTED') rejected++;
+    }
+
+    const calcPct = (count: number) => (total > 0 ? `${((count / total) * 100).toFixed(0)}%` : '0%');
+
+    return {
+      total,
+      submitted,
+      submittedPct: calcPct(submitted),
+      revision,
+      revisionPct: calcPct(revision),
+      bundled,
+      bundledPct: calcPct(bundled),
+      archived,
+      archivedPct: calcPct(archived),
+      completed,
+      completedPct: calcPct(completed),
+      rejected,
+      rejectedPct: calcPct(rejected),
+    };
+  }, [modeBaseList]);
+
   // Search filter
   const filteredList = useMemo(() => {
     return list.filter((item) => {
-      const q = searchQuery.toLowerCase().trim();
+      const q = deferredSearchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         item.namaWajibPajak.toLowerCase().includes(q) ||
@@ -638,7 +827,7 @@ export default function PenginputWorkspace() {
 
       return matchesSearch && matchesStatus && matchesJenis && matchesDate;
     });
-  }, [list, searchQuery, filterStatus, filterJenisLayanan, startDate, endDate]);
+  }, [list, deferredSearchQuery, filterStatus, filterJenisLayanan, startDate, endDate]);
 
   // Memoized counts per jenisPermohonan for horizontal filter pills
   const jenisCounts = useMemo(() => {
@@ -701,16 +890,34 @@ export default function PenginputWorkspace() {
     });
   }, [filteredList, displayMode]);
 
+  // Sort displayList according to sortBy selection
+  const sortedDisplayList = useMemo(() => {
+    const base = [...displayList];
+    if (sortBy === 'last_modified') {
+      return base.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
+    }
+    if (sortBy === 'newest') {
+      return base.sort((a, b) => new Date(b.tanggalPermohonan || b.createdAt || 0).getTime() - new Date(a.tanggalPermohonan || a.createdAt || 0).getTime());
+    }
+    if (sortBy === 'oldest') {
+      return base.sort((a, b) => new Date(a.tanggalPermohonan || a.createdAt || 0).getTime() - new Date(b.tanggalPermohonan || b.createdAt || 0).getTime());
+    }
+    if (sortBy === 'a_z') {
+      return base.sort((a, b) => (a.displayNamaWajibPajak || '').localeCompare(b.displayNamaWajibPajak || ''));
+    }
+    return base;
+  }, [displayList, sortBy]);
+
   // Pagination logic
-  const totalPages = Math.ceil(displayList.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedDisplayList.length / itemsPerPage);
   const activePage = currentPage > totalPages ? 1 : currentPage;
 
   const paginatedList = useMemo(() => {
-    return displayList.slice(
+    return sortedDisplayList.slice(
       (activePage - 1) * itemsPerPage,
       activePage * itemsPerPage
     );
-  }, [displayList, activePage, itemsPerPage]);
+  }, [sortedDisplayList, activePage, itemsPerPage]);
 
   return (
     <div id="penginput-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-6">
@@ -734,17 +941,17 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('ALL'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'ALL'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize truncate">
-                      {displayMode === 'pemohon' ? 'Total Pemohon' : 'Total Nopel'}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans truncate">
+                      Total
                     </span>
-                    <span className="text-lg font-black font-mono text-slate-900">{modeBaseList.length}</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">{kpiCounts.total}</span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'ALL'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'ALL'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
@@ -756,21 +963,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('SUBMITTED'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'SUBMITTED'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Diajukan</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'SUBMITTED' || i.status === 'DRAFT').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Diajukan</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.submitted}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'SUBMITTED'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'SUBMITTED'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'SUBMITTED' || i.status === 'DRAFT').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.submittedPct}
                   </span>
                 </div>
 
@@ -778,21 +985,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('REVISION'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'REVISION'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Revisi</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'REVISION').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Revisi</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.revision}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'REVISION'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'REVISION'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'REVISION').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.revisionPct}
                   </span>
                 </div>
 
@@ -800,21 +1007,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('BUNDLED'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'BUNDLED'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Terbundel</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'BUNDLED').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Terbundel</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.bundled}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'BUNDLED'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'BUNDLED'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'BUNDLED').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.bundledPct}
                   </span>
                 </div>
 
@@ -822,21 +1029,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('ARCHIVED'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'ARCHIVED'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Diarsipkan</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'ARCHIVED').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Diarsipkan</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.archived}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'ARCHIVED'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'ARCHIVED'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'ARCHIVED').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.archivedPct}
                   </span>
                 </div>
 
@@ -844,21 +1051,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('COMPLETED'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'COMPLETED'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Selesai</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'COMPLETED').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Selesai</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.completed}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'COMPLETED'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'COMPLETED'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'COMPLETED').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.completedPct}
                   </span>
                 </div>
 
@@ -866,21 +1073,21 @@ export default function PenginputWorkspace() {
                 <div
                   onClick={() => { setFilterStatus('REJECTED'); setCurrentPage(1); }}
                   className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterStatus === 'REJECTED'
-                    ? 'bg-slate-100/90 text-slate-900 font-bold'
+                    ? 'bg-slate-100/90 text-slate-900 font-semibold'
                     : 'hover:bg-slate-50 text-slate-600'
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] font-bold text-slate-500 capitalize">Ditolak</span>
-                    <span className="text-lg font-black font-mono text-slate-900">
-                      {modeBaseList.filter(i => i.status === 'REJECTED').length}
+                    <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Ditolak</span>
+                    <span className="text-lg font-bold font-mono text-slate-800">
+                      {kpiCounts.rejected}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'REJECTED'
+                  <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterStatus === 'REJECTED'
                     ? 'bg-[#00a389] text-white border-[#00a389]'
                     : 'bg-slate-100 text-slate-500 border-slate-200/80'
                     }`}>
-                    {modeBaseList.length > 0 ? `${((modeBaseList.filter(i => i.status === 'REJECTED').length / modeBaseList.length) * 100).toFixed(0)}%` : '0%'}
+                    {kpiCounts.rejectedPct}
                   </span>
                 </div>
               </div>
@@ -897,9 +1104,7 @@ export default function PenginputWorkspace() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs"
+                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-[13px] font-normal text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
                     placeholder="Cari No. Pelayanan, NOP, Nama Pemohon..."
                   />
                   {searchQuery ? (
@@ -919,37 +1124,13 @@ export default function PenginputWorkspace() {
                   )}
                 </div>
 
-                {/* Right Side: Mode Switcher + Action Buttons */}
+                {/* Right Side: Action Buttons */}
                 <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                  {/* Mode Switcher */}
-                  <div className="bg-slate-200/70 p-1 rounded-md flex items-center gap-1 border border-slate-300/60 text-xs font-extrabold select-none h-10">
-                    <button
-                      onClick={() => handleSwitchDisplayMode('berkas')}
-                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
-                        ? 'bg-white text-slate-900 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
-                    >
-                      <span>Nopel</span>
-                    </button>
-                    <button
-                      onClick={() => handleSwitchDisplayMode('pemohon')}
-                      className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
-                        ? 'bg-white text-slate-900 shadow-xs font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
-                    >
-                      <span>Pemohon</span>
-                    </button>
-                  </div>
-
                   <button
                     onClick={() => switchViewMode('form')}
-                    className="h-10 px-4 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                    className="h-10 px-4 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0 font-sans"
                   >
-                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Tambah</span>
                   </button>
 
@@ -985,19 +1166,92 @@ export default function PenginputWorkspace() {
                         setFilterJenisLayanan(chip.id);
                         setCurrentPage(1);
                       }}
-                      className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 ${isActive
+                      className={`h-7 px-2.5 rounded-md text-[13px] font-normal font-sans transition-all cursor-pointer shrink-0 border flex items-center gap-1.5 ${isActive
                         ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
                         : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300'
                         }`}
                     >
                       <span>{chip.label}</span>
-                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                         }`}>
                         {count}
                       </span>
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* TOOLBAR OUTSIDE TABLE: DROPDOWN URUTKAN (KIRI) & TAB NOPEL/PEMOHON (KANAN) */}
+            <div className="flex items-center justify-between mb-1 select-none font-sans">
+              {/* Left Side: Urutkan Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className="flex items-center gap-1.5 text-[13px] font-normal text-slate-600 transition-colors cursor-pointer py-1 rounded-md"
+                  title="Urutkan Data Tabel"
+                >
+                  <span>
+                    Urutkan
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180 text-slate-800' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu Popover */}
+                {isSortOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setIsSortOpen(false)}
+                    />
+                    <div className="absolute left-0 mt-1 w-52 bg-white rounded-md shadow-md border border-slate-200/90 py-1 z-30 animate-fadeIn font-sans">
+                      {[
+                        { id: 'last_modified', label: 'Terbaru Diperbarui' },
+                        { id: 'newest', label: 'Terbaru (Tgl. Input)' },
+                        { id: 'oldest', label: 'Terlama' },
+                        { id: 'a_z', label: 'A - Z (Nama Pemohon)' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            setSortBy(opt.id as any);
+                            setIsSortOpen(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2 text-[13px] transition-colors cursor-pointer flex items-center justify-between font-sans text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-normal`}
+                        >
+                          <span>{opt.label}</span>
+                          {sortBy === opt.id && (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Right Side: Tab Mode Switcher (Nopel & Pemohon) */}
+              <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
+                <button
+                  onClick={() => handleSwitchDisplayMode('berkas')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
+                >
+                  <span>Nopel</span>
+                </button>
+                <button
+                  onClick={() => handleSwitchDisplayMode('pemohon')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'pemohon'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                >
+                  <span>Pemohon</span>
+                </button>
               </div>
             </div>
 
@@ -1010,24 +1264,59 @@ export default function PenginputWorkspace() {
                   <div className="overflow-x-auto scrollbar-thin flex-1 flex flex-col">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-400 capitalize tracking-wider text-left border-b border-slate-200/90 select-none font-sans">
-                          <th className="py-3 px-4 text-center w-12 min-w-[48px]">No</th>
-                          <th className="py-3 px-2 text-center select-none w-10 min-w-[40px]">⭐</th>
+                        <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans">
+                          <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                            <span>No</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                            <span>⭐</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
 
-                          {/* Clean Standard Table Headers */}
-                          <th className="py-3 px-4 min-w-[110px]">Tgl. Input</th>
-                          <th className="py-3 px-4 min-w-[140px]">Petugas Input</th>
-                          <th className="py-3 px-4 min-w-[130px]">Tgl. Nopel</th>
-                          <th className="py-3 px-4 min-w-[110px]">Tgl. Selesai</th>
-                          <th className="py-3 px-4 min-w-[160px]">No. Pelayanan</th>
-                          <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">Nomor Objek Pajak</th>
-                          <th className="py-3 px-4 min-w-[150px]">Nama Pemohon</th>
-                          <th className="py-3 px-4 min-w-[130px]">Jenis Layanan</th>
-                          <th className="py-3 px-4 text-center min-w-[130px]">Status</th>
-                          <th className="py-3 px-4 text-center min-w-[110px]">Aksi</th>
+                          {/* Clean Standard Table Headers with Centered Partial-Height Vertical Dividers */}
+                          <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                            <span>Tgl. Input</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                            <span>Petugas Input</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[130px] relative font-normal text-slate-600">
+                            <span>Tgl. Nopel</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                            <span>Tgl. Selesai</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[160px] relative font-normal text-slate-600">
+                            <span>No. Pelayanan</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
+                            <span>Nomor Objek Pajak</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                            <span>Nama Pemohon</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 min-w-[130px] relative font-normal text-slate-600">
+                            <span>Jenis Layanan</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 text-center min-w-[130px] relative font-normal text-slate-600">
+                            <span>Status</span>
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                          </th>
+                          <th className="py-3 px-4 text-center min-w-[110px] font-normal text-slate-600">
+                            <span>Aksi</span>
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-[11px] font-bold font-sans">
+                      <tbody className="divide-y divide-slate-100 text-[13px] font-normal text-slate-600 font-sans">
                         {paginatedList.length === 0 ? (
                           <tr>
                             <td colSpan={12} className="py-10 text-center select-none font-sans">
@@ -1043,182 +1332,23 @@ export default function PenginputWorkspace() {
                             </td>
                           </tr>
                         ) : (
-                          paginatedList.map((item, idx) => {
-                            const globalIndex = (activePage - 1) * itemsPerPage + idx + 1;
-                            const isFavorite = item.isFavorite;
-
-                            return (
-                              <tr
-                                key={item.uniqueRowKey || item.id}
-                                onClick={() => setSelectedRequest(item)}
-                                className={`hover:bg-slate-50/90 transition-colors group cursor-pointer h-11 ${item.isPecahanRow ? 'border-l-3 border-l-emerald-500 bg-emerald-50/20' : ''
-                                  }`}
-                              >
-                                <td className="py-2.5 px-4 text-center font-bold text-slate-400 font-sans text-[11px]">
-                                  {globalIndex}
-                                </td>
-                                <td className="py-2.5 px-2 text-center">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleFavorite(item.id);
-                                    }}
-                                    className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                    title={isFavorite ? "Hapus dari Favorit" : "Tambah ke Favorit"}
-                                  >
-                                    <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
-                                  </button>
-                                </td>
-                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
-                                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '—'}
-                                </td>
-                                <td className="py-2.5 px-4 text-slate-700 text-[11px] font-bold font-sans whitespace-nowrap">
-                                  <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || session?.user?.name || "Petugas Input"}>
-                                    <span className="truncate max-w-[130px] uppercase font-sans">{item.penginput?.name || session?.user?.name || "Petugas Input"}</span>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 text-slate-600 font-sans text-[11px] font-bold whitespace-nowrap uppercase">
-                                  {new Date(item.tanggalPermohonan || item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
-                                </td>
-                                <td className="py-2.5 px-4 whitespace-nowrap font-sans">
-                                  {item.tanggalPenyelesaian ? (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className={`text-[11px] font-sans font-bold uppercase px-2 py-0.5 rounded ${isOverdue(item.tanggalPenyelesaian, item.status)
-                                        ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                                        : 'text-slate-600'
-                                        }`}>
-                                        {new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
-                                      </span>
-                                    </div>
-                                  ) : "-"}
-                                </td>
-                                <td className="py-2.5 px-4 min-w-[140px] group/cell relative font-sans">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[11px] font-bold text-slate-700 font-sans tracking-tight uppercase">
-                                      {highlightText(item.nomorPelayanan || item.nomorPermohonan, searchQuery)}
-                                    </span>
-                                    <button
-                                      onClick={(e) => handleCopy(e, item.nomorPelayanan || item.nomorPermohonan)}
-                                      className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                      title="Salin Nomor"
-                                    >
-                                      {copiedText === (item.nomorPelayanan || item.nomorPermohonan) ? (
-                                        <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                      ) : (
-                                        <Copy className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-[11px] font-bold text-slate-700 font-sans whitespace-nowrap uppercase">
-                                      {highlightText(formatNop(item.nop), searchQuery)}
-                                    </span>
-                                    <button
-                                      onClick={(e) => handleCopy(e, item.nop)}
-                                      className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                      title="Salin NOP"
-                                    >
-                                      {copiedText === item.nop ? (
-                                        <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                      ) : (
-                                        <Copy className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 group/cell relative font-sans">
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap uppercase font-sans">
-                                      {highlightText(item.displayNamaWajibPajak, searchQuery)}
-                                    </span>
-                                    {item.isPecahanRow && (
-                                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
-                                        #{item.pecahanIndex}/{item.totalPecahan}
-                                      </span>
-                                    )}
-                                    <button
-                                      onClick={(e) => handleCopy(e, item.displayNamaWajibPajak)}
-                                      className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
-                                      title="Salin Nama Pemohon"
-                                    >
-                                      {copiedText === item.displayNamaWajibPajak ? (
-                                        <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
-                                      ) : (
-                                        <Copy className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 font-sans">
-                                  <span
-                                    className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded uppercase font-sans tracking-wide"
-                                    title={item.jenisPermohonan.replace(/_/g, ' ')}
-                                  >
-                                    {getAbbreviatedJenis(item.jenisPermohonan)}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 px-4 text-center font-sans">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full border uppercase font-sans ${getStatusBadgeClass(item.status)}`}>
-                                      {getStatusLabel(item.status)}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedRequest(item);
-                                      }}
-                                      className="p-1.5 rounded-md text-slate-400 hover:text-[#00a389] hover:bg-[#e6f6f4] transition-colors cursor-pointer"
-                                      title="Lihat Detail"
-                                    >
-                                      <FileText className="w-4 h-4" />
-                                    </button>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditTarget(item);
-                                      }}
-                                      className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                                      title="Edit Berkas"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </button>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDuplicateTarget(item);
-                                      }}
-                                      className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
-                                      title="Duplikasi Berkas"
-                                    >
-                                      <Copy className="w-4 h-4" />
-                                    </button>
-
-                                    {item.status === 'REVISION' && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleResubmit(item.id);
-                                        }}
-                                        disabled={loading}
-                                        className="p-1.5 rounded-md text-amber-600 hover:bg-amber-100/60 transition-colors cursor-pointer"
-                                        title="Kirim Ulang Revisi"
-                                      >
-                                        <RefreshCw className="w-4 h-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
+                          paginatedList.map((item, idx) => (
+                            <PenginputTableRow
+                              key={item.uniqueRowKey || item.id}
+                              item={item}
+                              globalIndex={(activePage - 1) * itemsPerPage + idx + 1}
+                              searchQuery={deferredSearchQuery}
+                              copiedText={copiedText}
+                              sessionUserName={session?.user?.name}
+                              loading={loading}
+                              onSelect={setSelectedRequest}
+                              onToggleFavorite={handleToggleFavorite}
+                              onCopy={handleCopy}
+                              onEdit={setEditTarget}
+                              onDuplicate={setDuplicateTarget}
+                              onResubmit={handleResubmit}
+                            />
+                          ))
                         )}
                       </tbody>
                     </table>

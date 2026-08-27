@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -27,6 +27,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from '@/components/skeletons/SkeletonBase';
+import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
 
 /** Skeleton komponen dasar KPI Strip & Tabs untuk PenelitiWorkspace */
 function PenelitiBaseHeaderSkeleton() {
@@ -256,19 +257,6 @@ const getInitials = (name?: string | null): string => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-const formatNop = (nop: string) => {
-  if (!nop) return '';
-  const cleanNop = nop.replace(/[^0-9]/g, '');
-  if (cleanNop.length === 17) {
-    const padded = cleanNop + '0';
-    return `${padded.slice(0, 2)}.${padded.slice(2, 4)}.${padded.slice(4, 7)}.${padded.slice(7, 10)}.${padded.slice(10, 13)}-${padded.slice(13, 17)}.${padded.slice(17)}`;
-  }
-  if (cleanNop.length === 18) {
-    return `${cleanNop.slice(0, 2)}.${cleanNop.slice(2, 4)}.${cleanNop.slice(4, 7)}.${cleanNop.slice(7, 10)}.${cleanNop.slice(10, 13)}-${cleanNop.slice(13, 17)}.${cleanNop.slice(17)}`;
-  }
-  return nop;
-};
-
 const getAbbreviatedJenis = (jenis: string) => {
   switch (jenis) {
     case 'OBJEK_PAJAK_BARU':
@@ -484,12 +472,6 @@ const isOverdue = (dateStr: string | null | undefined, status: string): boolean 
   return new Date(dateStr) < new Date();
 };
 
-const toTitleCase = (str: string) =>
-  str
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase());
-
 const STATUS_LABEL_MAP: Record<string, string> = {
   SUBMITTED: 'Diajukan',
   REVISION: 'Revisi',
@@ -666,6 +648,7 @@ export default function PenelitiWorkspace() {
 
   // Search, Filter & Pagination States for Bundles Queue
   const [searchBundleQuery, setSearchBundleQuery] = useState('');
+  const deferredSearchBundleQuery = useDeferredValue(searchBundleQuery);
   const [isBundleSearchFocused, setIsBundleSearchFocused] = useState(false);
   const [currentBundlePage, setCurrentBundlePage] = useState(1);
   const [itemsPerBundlePage, setItemsPerBundlePage] = useState(8);
@@ -725,16 +708,17 @@ export default function PenelitiWorkspace() {
     return counts;
   }, [bundlesList]);
 
-  // Filter Bundles Client-side
+  // Filter Bundles Client-side (Memoized & Deferred)
   const filteredBundlesList = useMemo(() => {
+    const q = deferredSearchBundleQuery.toLowerCase().trim();
     return bundlesList.filter((b) => {
-      const matchesSearch = b.nomorBundle.toLowerCase().includes(searchBundleQuery.toLowerCase()) ||
-        (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(searchBundleQuery.toLowerCase()));
+      const matchesSearch = !q || b.nomorBundle.toLowerCase().includes(q) ||
+        (b.jenisPermohonan && b.jenisPermohonan.toLowerCase().includes(q));
       const matchesStatus = filterBundleStatus === 'ALL' || b.status === filterBundleStatus;
       const matchesJenis = filterBundleJenisLayanan === 'ALL' || b.jenisPermohonan === filterBundleJenisLayanan;
       return matchesSearch && matchesStatus && matchesJenis;
     });
-  }, [bundlesList, searchBundleQuery, filterBundleStatus, filterBundleJenisLayanan]);
+  }, [bundlesList, deferredSearchBundleQuery, filterBundleStatus, filterBundleJenisLayanan]);
 
   // Pagination computed variables for Bundles
   const totalBundlePages = Math.ceil(filteredBundlesList.length / itemsPerBundlePage);
@@ -1065,20 +1049,24 @@ export default function PenelitiWorkspace() {
     return counts;
   }, [submittedModeBaseList]);
 
-  // Filter Submitted Queue Client-side
-  const filteredSubmittedList = submittedList.filter((item) => {
-    const q = searchSubmittedQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      item.namaWajibPajak.toLowerCase().includes(q) ||
-      item.nop.includes(q) ||
-      (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(q)) ||
-      (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)));
+  const deferredSearchSubmittedQuery = useDeferredValue(searchSubmittedQuery);
 
-    const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
+  // Filter Submitted Queue Client-side (Memoized & Deferred)
+  const filteredSubmittedList = useMemo(() => {
+    const q = deferredSearchSubmittedQuery.toLowerCase().trim();
+    return submittedList.filter((item) => {
+      const matchesSearch =
+        !q ||
+        item.namaWajibPajak.toLowerCase().includes(q) ||
+        item.nop.includes(q) ||
+        (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(q)) ||
+        (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)));
 
-    return matchesSearch && matchesJenis;
-  });
+      const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
+
+      return matchesSearch && matchesJenis;
+    });
+  }, [submittedList, deferredSearchSubmittedQuery, filterJenisLayanan]);
 
   // Expandable rows state for Mode Nopel inline expansion
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -1229,14 +1217,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 1: Total Bundle */}
             <div
               onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Total Bundle</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundlesList.length}</span>
+                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Bundle</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundlesList.length}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -1245,14 +1233,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 2: Draf */}
             <div
               onClick={() => { setFilterBundleStatus('DRAFT'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Draf (Aktif)</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.DRAFT}</span>
+                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Draf (Aktif)</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.DRAFT}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.DRAFT / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1261,14 +1249,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 3: Terkunci */}
             <div
               onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Terkunci</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.LOCKED}</span>
+                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Terkunci</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.LOCKED}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.LOCKED / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1277,14 +1265,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 4: Dimanifest */}
             <div
               onClick={() => { setFilterBundleStatus('IN_MANIFEST'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Dimanifest</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.IN_MANIFEST}</span>
+                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Dimanifest</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.IN_MANIFEST}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.IN_MANIFEST / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1293,14 +1281,14 @@ export default function PenelitiWorkspace() {
             {/* Metric 5: Dibatalkan / Void */}
             <div
               onClick={() => { setFilterBundleStatus('VOID'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-600'
+              className={`p-3 px-3.5 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-500 capitalize">Dibatalkan</span>
-                <span className="text-xl font-black font-mono text-slate-900">{bundleStatusCounts.VOID}</span>
+                <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Dibatalkan</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.VOID}</span>
               </div>
-              <span className={`text-xs font-black font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-md border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.VOID / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1313,7 +1301,7 @@ export default function PenelitiWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchStep('bundle')}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'bundle'
+            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'bundle'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1323,7 +1311,7 @@ export default function PenelitiWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchStep('list')}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'list'
+            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'list'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1333,7 +1321,7 @@ export default function PenelitiWorkspace() {
           <button
             type="button"
             onClick={() => handleSwitchStep('print')}
-            className={`py-2 px-3 rounded-md text-xs font-bold text-center transition-all cursor-pointer ${viewMode === 'print'
+            className={`py-2 px-3 rounded-md text-xs font-semibold text-center transition-all cursor-pointer ${viewMode === 'print'
               ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
@@ -1835,9 +1823,9 @@ export default function PenelitiWorkspace() {
                   <button
                     onClick={handleCreateBundle}
                     disabled={loading}
-                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs rounded-lg shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                    className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-semibold text-xs rounded-lg shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Buat</span>
                   </button>
 

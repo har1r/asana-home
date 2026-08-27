@@ -2,215 +2,23 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ChevronLeft, AlertTriangle, CheckCircle, Phone, Plus, Trash2, Check } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Check, AlertTriangle, CheckCircle, Phone } from 'lucide-react';
 import { createPermohonan } from '@/app/actions/penginput';
 import { ActionStatusModal } from './ActionStatusModal';
+import {
+  JENIS_OPTIONS,
+  SERVICES_NEED_DATA_LAMA,
+  SERVICES_NEED_DATA_BARU,
+  KECAMATAN_DATA,
+  NOP_MAPPING,
+  createEmptyDataBaruItem
+} from './constants';
 
 interface CreateFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   initialData?: any;
 }
-
-const JENIS_OPTIONS = [
-  { value: 'MUTASI_SEBAGIAN', label: 'MUTASI SEBAGIAN' },
-  { value: 'MUTASI_HABIS_UPDATE', label: 'MUTASI HABIS UPDATE' },
-  { value: 'MUTASI_HABIS_REGULER', label: 'MUTASI HABIS REGULER' },
-  { value: 'OBJEK_PAJAK_BARU', label: 'OBJEK PAJAK BARU' },
-  { value: 'PEMBETULAN', label: 'PEMBETULAN' },
-  { value: 'PENGAKTIFAN', label: 'PENGAKTIFAN' }
-] as const;
-
-const SERVICES_NEED_DATA_LAMA = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'PENGAKTIFAN'
-];
-
-const SERVICES_NEED_DATA_BARU = [
-  'MUTASI_SEBAGIAN',
-  'MUTASI_HABIS_UPDATE',
-  'MUTASI_HABIS_REGULER',
-  'PEMBETULAN',
-  'OBJEK_PAJAK_BARU'
-];
-
-// Data Kecamatan dan Desa di wilayah kerja objek pajak (Kabupaten Tangerang)
-const KECAMATAN_DATA: Record<string, string[]> = {
-  'PAKUHAJI': [
-    "KALIBARU",
-    "SURYA BAHARI",
-    "SUKAWALI",
-    "KRAMAT",
-    "KOHOD",
-    "GAGA",
-    "KIARA PAYUNG",
-    "BUARAN BAMBU",
-    "PAKU ALAM",
-    "BUARAN MANGGA",
-    "PAKUHAJI",
-    "BUNISARI",
-    "LAKSANA",
-    "RAWABONI",
-  ],
-  'KOSAMBI': [
-    "SALEMBARAN JAYA",
-    "SALEMBARAN JATI",
-    "KOSAMBI BARAT",
-    "KOSAMBI TIMUR",
-    "DADAP",
-    "JATIMULYA",
-    "CENGKLONG",
-    "BLIMBING",
-    "RAWA BURUNG",
-    "RAWA RENGAS",
-  ],
-  'TELUKNAGA': [
-    "BOJONG RENGED",
-    "KEBON CAU",
-    "TELUKNAGA",
-    "BABAKAN ASEM",
-    "KAMP MELAYU T",
-    "KAMP MELAYU B",
-    "KAMPUNG BESAR",
-    "LEMO",
-    "TEGAL ANGUS",
-    "PANGKALAN",
-    "TANJUNG BURUNG",
-    "TANJUNG PASIR",
-    "MUARA",
-  ],
-  'SEPATAN TIMUR': [
-    "KEDAUNG BARAT",
-    "LEBAK WANGI",
-    "TANAH MERAH",
-    "JATI MULYA",
-    "GEMPOLSARI",
-    "SANGIANG",
-    "PONDOK KELOR",
-    "KAMPUNG KELOR",
-  ],
-  'SEPATAN': [
-    "MEKARJAYA",
-    "KARET",
-    "LEBAK WANGI",
-    "KEDAUNG BARAT",
-    "PONDOK JAYA",
-    "SEPATAN",
-    "PISANGAN JAYA",
-    "SARAKAN",
-    "TANAH MERAH",
-    "JATI MULYA",
-    "GEMPOLSARI",
-    "SANGIANG",
-    "KAYU AGUNG",
-    "KAYU BONGKOK",
-    "KAMPUNG KELOR"
-  ],
-};
-
-const NOP_MAPPING: Record<string, { name: string, villages: Record<string, string> }> = {
-  '150': {
-    name: 'SEPATAN',
-    villages: {
-      '001': 'MEKARJAYA',
-      '002': 'KARET',
-      '003': 'LEBAK WANGI',
-      '004': 'KEDAUNG BARAT',
-      '005': 'PONDOK JAYA',
-      '006': 'SEPATAN',
-      '007': 'PISANGAN JAYA',
-      '008': 'SARAKAN',
-      '009': 'TANAH MERAH',
-      '010': 'JATI MULYA',
-      '011': 'GEMPOLSARI',
-      '012': 'SANGIANG',
-      '013': 'KAYU AGUNG',
-      '014': 'KAYU BONGKOK',
-      '023': 'KAMPUNG KELOR',
-    }
-  },
-  '151': {
-    name: 'PAKUHAJI',
-    villages: {
-      '001': 'KALIBARU',
-      '002': 'SURYA BAHARI',
-      '003': 'SUKAWALI',
-      '004': 'KRAMAT',
-      '005': 'KOHOD',
-      '006': 'GAGA',
-      '007': 'KIARA PAYUNG',
-      '008': 'BUARAN BAMBU',
-      '009': 'PAKU ALAM',
-      '010': 'BUARAN MANGGA',
-      '011': 'PAKUHAJI',
-      '012': 'BUNISARI',
-      '013': 'LAKSANA',
-      '014': 'RAWABONI',
-    }
-  },
-  '152': {
-    name: 'SEPATAN TIMUR',
-    villages: {
-      '001': 'KEDAUNG BARAT',
-      '002': 'LEBAK WANGI',
-      '003': 'TANAH MERAH',
-      '004': 'JATI MULYA',
-      '005': 'GEMPOLSARI',
-      '006': 'SANGIANG',
-      '007': 'PONDOK KELOR',
-      '008': 'KAMPUNG KELOR',
-    }
-  },
-  '160': {
-    name: 'TELUKNAGA',
-    villages: {
-      '002': 'BOJONG RENGED',
-      '004': 'KEBON CAU',
-      '005': 'TELUKNAGA',
-      '006': 'BABAKAN ASEM',
-      '015': 'KAMP MELAYU T',
-      '016': 'KAMP MELAYU B',
-      '017': 'KAMPUNG BESAR',
-      '018': 'LEMO',
-      '019': 'TEGAL ANGUS',
-      '020': 'PANGKALAN',
-      '021': 'TANJUNG BURUNG',
-      '022': 'TANJUNG PASIR',
-      '023': 'MUARA',
-    }
-  },
-  '161': {
-    name: 'KOSAMBI',
-    villages: {
-      '001': 'SALEMBARAN JAYA',
-      '002': 'SALEMBARAN JATI',
-      '003': 'KOSAMBI BARAT',
-      '004': 'KOSAMBI TIMUR',
-      '005': 'DADAP',
-      '006': 'JATIMULYA',
-      '007': 'CENGKLONG',
-      '008': 'BLIMBING',
-      '009': 'RAWA BURUNG',
-      '010': 'RAWA RENGAS',
-    }
-  }
-};
-
-const createEmptyDataBaruItem = () => ({
-  namaPemilikBaru: '',
-  alamatPemilikBaru: '',
-  kecamatanPemilikBaru: '',
-  desaPemilikBaru: '',
-  alamatObjekBaru: '',
-  kecamatanObjekBaru: '',
-  desaObjekBaru: '',
-  luasTanahBaru: '',
-  luasBangunanBaru: '',
-  sertifikatBaru: ''
-});
 
 export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, onCancel, initialData }) => {
   const [jenisPermohonan, setJenisPermohonan] = useState<string>('MUTASI_SEBAGIAN');
@@ -508,7 +316,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     if (needDataBaru && dataBaru.length === 0) {
       setDataBaru([createEmptyDataBaruItem()]);
     }
-  }, [needDataBaru, dataBaru, draftLoaded]);
+  }, [needDataBaru, dataBaru.length, draftLoaded]);
 
   // Auto-clear field errors as soon as user types valid inputs
   useEffect(() => {
@@ -939,7 +747,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             <button
               type="button"
               onClick={onCancel}
-              className="h-10 px-3.5 rounded-md border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer shadow-3xs flex items-center gap-2 shrink-0"
+              className="h-10 px-3.5 rounded-md border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-2 shrink-0"
             >
               <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
               <span>Kembali</span>
@@ -967,14 +775,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       onClick={() => {
                         if (stepNum < currentStep) setCurrentStep(stepNum);
                       }}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-xs font-extrabold ${isActive
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${isActive
                           ? 'bg-[#00a389] text-white shadow-3xs'
                           : isCompleted
                             ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
                             : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
                         }`}
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
                         }`}>
                         {isCompleted ? '✓' : stepNum}
                       </span>
@@ -1008,17 +816,17 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
             {/* STEP 1: DATA UTAMA */}
             {currentStepLabel === 'Data Utama' && (
-              <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+              <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">
                       Jenis Layanan Permohonan <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={jenisPermohonan}
                       onChange={(e) => setJenisPermohonan(e.target.value)}
                       disabled={loading}
-                      className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer"
+                      className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans"
                     >
                       {JENIS_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1027,7 +835,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor Pelayanan <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor Pelayanan <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       id="nomorPelayanan"
@@ -1035,15 +843,15 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       onChange={(e) => setNomorPelayanan(e.target.value.toUpperCase())}
                       style={{ textTransform: 'uppercase' }}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nomorPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nomorPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                     />
-                    {formErrors.nomorPelayanan && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.nomorPelayanan}</span>}
+                    {formErrors.nomorPelayanan && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nomorPelayanan}</span>}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide flex items-center justify-between">
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide flex items-center justify-between font-sans">
                       <span>Nomor Objek Pajak (NOP) <span className="text-red-500">*</span></span>
-                      <span className={`text-[10px] font-mono font-bold pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                      <span className={`text-xs font-mono font-normal pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
                         {nop.replace(/[^\d]/g, '').length}/18 digit
                         {nop.replace(/[^\d]/g, '').length === 18 && ' ✓'}
                       </span>
@@ -1067,16 +875,16 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         setNop(fmt);
                       }}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-xs font-bold text-slate-900 font-mono tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.nop ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 font-mono tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nop ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                     />
-                    {formErrors.nop && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.nop}</span>}
+                    {formErrors.nop && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nop}</span>}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Nomor WhatsApp WP <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor WhatsApp WP <span className="text-red-500">*</span></label>
                     <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${formErrors.noWhatsapp ? 'border-red-500' : 'border-slate-200/90'
                       }`}>
-                      <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 select-none flex items-center gap-1 shrink-0">
+                      <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
                         <span>+62</span>
                       </span>
@@ -1087,36 +895,36 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         value={noWhatsapp.startsWith('62') ? noWhatsapp.slice(2) : noWhatsapp}
                         onChange={handleWhatsappChange}
                         disabled={loading}
-                        className="w-full px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none bg-transparent"
+                        className="w-full px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none bg-transparent font-sans"
                       />
                     </div>
-                    {formErrors.noWhatsapp && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.noWhatsapp}</span>}
+                    {formErrors.noWhatsapp && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.noWhatsapp}</span>}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Pelayanan <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Tanggal Pelayanan <span className="text-red-500">*</span></label>
                     <input
                       type="date"
                       id="tanggalNoPelayanan"
                       value={tanggalNoPelayanan}
                       onChange={(e) => setTanggalNoPelayanan(e.target.value)}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalNoPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalNoPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                     />
-                    {formErrors.tanggalNoPelayanan && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.tanggalNoPelayanan}</span>}
+                    {formErrors.tanggalNoPelayanan && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalNoPelayanan}</span>}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Tanggal Selesai <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Tanggal Selesai <span className="text-red-500">*</span></label>
                     <input
                       type="date"
                       id="tanggalPenyelesaian"
                       value={tanggalPenyelesaian}
                       onChange={(e) => setTanggalPenyelesaian(e.target.value)}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.tanggalPenyelesaian ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalPenyelesaian ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                     />
-                    {formErrors.tanggalPenyelesaian && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.tanggalPenyelesaian}</span>}
+                    {formErrors.tanggalPenyelesaian && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalPenyelesaian}</span>}
                   </div>
                 </div>
               </div>
@@ -1124,11 +932,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
             {/* STEP 2: DATA LAMA */}
             {currentStepLabel === 'Data Lama (Asal)' && needDataLama && (
-              <div className="flex flex-col gap-5 bg-transparent animate-fadeIn">
+              <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {/* 1. Nama pemilik lama (Full Width) */}
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       id="namaPemilikLama"
@@ -1136,18 +944,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       onChange={(e) => setNamaPemilikLama(e.target.value.toUpperCase())}
                       style={{ textTransform: 'uppercase' }}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.namaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.namaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                     />
-                    {formErrors.namaPemilikLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.namaPemilikLama}</span>}
+                    {formErrors.namaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.namaPemilikLama}</span>}
                   </div>
 
-                  {/* KELOMPOK ALAMAT, KECAMATAN, DESA (Symmetry side-by-side on desktop, sequential on mobile) */}
+                  {/* KELOMPOK ALAMAT, KECAMATAN, DESA */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
                     {/* Kiri: Pemilik */}
                     <div className="flex flex-col gap-5">
                       {/* 2. Alamat pemilik lama */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           id="alamatPemilikLama"
@@ -1155,14 +963,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
                           style={{ textTransform: 'uppercase' }}
                           disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         />
-                        {formErrors.alamatPemilikLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.alamatPemilikLama}</span>}
+                        {formErrors.alamatPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
                       </div>
 
                       {/* 3. Kecamatan pemilik */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           id="kecamatanPemilikLama"
@@ -1170,14 +978,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
                           style={{ textTransform: 'uppercase' }}
                           disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.kecamatanPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.kecamatanPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         />
-                        {formErrors.kecamatanPemilikLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanPemilikLama}</span>}
+                        {formErrors.kecamatanPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanPemilikLama}</span>}
                       </div>
 
                       {/* 4. Desa pemilik */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           id="desaPemilikLama"
@@ -1185,9 +993,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
                           style={{ textTransform: 'uppercase' }}
                           disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.desaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.desaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         />
-                        {formErrors.desaPemilikLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.desaPemilikLama}</span>}
+                        {formErrors.desaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaPemilikLama}</span>}
                       </div>
                     </div>
 
@@ -1195,7 +1003,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     <div className="flex flex-col gap-5">
                       {/* 5. Alamat objek pajak */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek Pajak <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Pajak <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           id="alamatObjekLama"
@@ -1203,14 +1011,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
                           style={{ textTransform: 'uppercase' }}
                           disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.alamatObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         />
-                        {formErrors.alamatObjekLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.alamatObjekLama}</span>}
+                        {formErrors.alamatObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
                       </div>
 
                       {/* 7. Kecamatan objek */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
                         <select
                           id="kecamatanObjekLama"
                           value={kecamatanObjekLama}
@@ -1219,25 +1027,25 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             setDesaObjekLama(''); // Reset desa
                           }}
                           disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors.kecamatanObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors.kecamatanObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         >
                           <option value="">Pilih Kecamatan Objek</option>
                           {Object.keys(KECAMATAN_DATA).map(kec => (
                             <option key={kec} value={kec}>{kec}</option>
                           ))}
                         </select>
-                        {formErrors.kecamatanObjekLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.kecamatanObjekLama}</span>}
+                        {formErrors.kecamatanObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanObjekLama}</span>}
                       </div>
 
                       {/* 8. Desa objek */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-red-500">*</span></label>
+                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek <span className="text-red-500">*</span></label>
                         <select
                           id="desaObjekLama"
                           value={desaObjekLama}
                           onChange={(e) => setDesaObjekLama(e.target.value)}
                           disabled={loading || !kecamatanObjekLama}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors.desaObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors.desaObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                         >
                           <option value="">
                             {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
@@ -1246,14 +1054,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             <option key={desa} value={desa}>{desa}</option>
                           ))}
                         </select>
-                        {formErrors.desaObjekLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.desaObjekLama}</span>}
+                        {formErrors.desaObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaObjekLama}</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* 9. Luas tanah asal (Kiri) */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah Asal <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah Asal <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <input
                         type="number"
@@ -1261,18 +1069,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         value={luasTanahLama}
                         onChange={(e) => setLuasTanahLama(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasTanahLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasTanahLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                       />
-                      <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                      <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                         m²
                       </span>
                     </div>
-                    {formErrors.luasTanahLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.luasTanahLama}</span>}
+                    {formErrors.luasTanahLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasTanahLama}</span>}
                   </div>
 
                   {/* 10. Luas bangunan asal (Kanan) */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan Asal <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan Asal <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <input
                         type="number"
@@ -1280,18 +1088,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         value={luasBangunanLama}
                         onChange={(e) => setLuasBangunanLama(e.target.value)}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.luasBangunanLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasBangunanLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                       />
-                      <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                      <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                         m²
                       </span>
                     </div>
-                    {formErrors.luasBangunanLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.luasBangunanLama}</span>}
+                    {formErrors.luasBangunanLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasBangunanLama}</span>}
                   </div>
 
-                  {/* 6. Nomor/Jenis sertifikat lama (Full Width, Paling Akhir) */}
+                  {/* 6. Nomor/Jenis sertifikat lama */}
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
+                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <input
                         type="text"
@@ -1301,11 +1109,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         onChange={(e) => setSertifikatLama(e.target.value.toUpperCase())}
                         style={{ textTransform: 'uppercase' }}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors.sertifikatLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.sertifikatLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                       />
-
                     </div>
-                    {formErrors.sertifikatLama && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors.sertifikatLama}</span>}
+                    {formErrors.sertifikatLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.sertifikatLama}</span>}
                   </div>
                 </div>
               </div>
@@ -1313,21 +1120,21 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
             {/* STEP 3: DATA BARU */}
             {currentStepLabel === 'Data Baru' && needDataBaru && (
-              <div className="flex flex-col gap-4 bg-transparent animate-fadeIn">
+              <div className="flex flex-col gap-4 bg-transparent animate-fadeIn font-sans">
                 {jenisPermohonan === 'MUTASI_SEBAGIAN' && (
                   <div className="flex justify-end select-none mb-1">
                     <button
                       type="button"
                       onClick={handleAddOwner}
                       disabled={loading}
-                      className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                      className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 font-sans"
                     >
                       <Plus className="w-4 h-4 stroke-[3]" /> Tambah Pemilik Baru
                     </button>
                   </div>
                 )}
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-6 font-sans">
                   {dataBaru.map((item, idx) => (
                     <div
                       key={idx}
@@ -1338,7 +1145,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     >
                       {dataBaru.length > 1 && (
                         <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
-                          <span className="text-xs font-extrabold text-[#008f78] tracking-wide">Pemilik Baru #{idx + 1}</span>
+                          <span className="text-[13px] font-normal text-[#008f78] tracking-wide font-sans">Pemilik Baru #{idx + 1}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveOwner(idx)}
@@ -1350,10 +1157,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {/* 1. Nama pemilik baru (Full Width) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
+                        {/* 1. Nama pemilik baru */}
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Nama Pemilik <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             id={`dataBaru.${idx}.namaPemilikBaru`}
@@ -1361,18 +1168,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             onChange={(e) => handleOwnerChange(idx, 'namaPemilikBaru', e.target.value.toUpperCase())}
                             style={{ textTransform: 'uppercase' }}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                           />
-                          {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
+                          {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
                         </div>
 
-                        {/* KELOMPOK ALAMAT, KECAMATAN, DESA BARU (Symmetry side-by-side on desktop, sequential on mobile) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                        {/* KELOMPOK ALAMAT BARU */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2 font-sans">
                           {/* Kiri: Pemilik Baru */}
                           <div className="flex flex-col gap-5">
                             {/* 2. Alamat pemilik baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Pemilik <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik <span className="text-red-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="text"
@@ -1381,13 +1188,13 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
                                   style={{ textTransform: 'uppercase' }}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                                 />
                                 {needDataLama && (
                                   <button
                                     type="button"
                                     onClick={() => handleCopyPemilikFromLama(idx)}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatPemilikIdx === idx
+                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatPemilikIdx === idx
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200/60'
                                       }`}
@@ -1397,12 +1204,12 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   </button>
                                 )}
                               </div>
-                              {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
                             </div>
 
                             {/* 3. Kecamatan pemilik baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Pemilik <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 id={`dataBaru.${idx}.kecamatanPemilikBaru`}
@@ -1410,14 +1217,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                 onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
                                 style={{ textTransform: 'uppercase' }}
                                 disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                               />
-                              {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
                             </div>
 
                             {/* 4. Desa pemilik baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Pemilik <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
                               <input
                                 type="text"
                                 id={`dataBaru.${idx}.desaPemilikBaru`}
@@ -1425,9 +1232,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                 onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
                                 style={{ textTransform: 'uppercase' }}
                                 disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                               />
-                              {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
                             </div>
                           </div>
 
@@ -1435,7 +1242,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                           <div className="flex flex-col gap-5">
                             {/* 5. Alamat objek baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Alamat Objek <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek <span className="text-red-500">*</span></label>
                               <div className="relative">
                                 <input
                                   type="text"
@@ -1444,13 +1251,13 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
                                   style={{ textTransform: 'uppercase' }}
                                   disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                                 />
                                 {needDataLama && (
                                   <button
                                     type="button"
                                     onClick={() => handleCopyFromLama(idx)}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer select-none border ${copiedAlamatObjekIdx === idx
+                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatObjekIdx === idx
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200/60'
                                       }`}
@@ -1460,12 +1267,12 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   </button>
                                 )}
                               </div>
-                              {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
                             </div>
 
                             {/* 7. Kecamatan Objek Baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Kecamatan Objek <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
                               <select
                                 id={`dataBaru.${idx}.kecamatanObjekBaru`}
                                 value={item.kecamatanObjekBaru}
@@ -1474,25 +1281,25 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   handleOwnerChange(idx, 'desaObjekBaru', ''); // Reset desa
                                 }}
                                 disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                               >
                                 <option value="">Pilih Kecamatan Objek</option>
                                 {Object.keys(KECAMATAN_DATA).map(kec => (
                                   <option key={kec} value={kec}>{kec}</option>
                                 ))}
                               </select>
-                              {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
                             </div>
 
                             {/* 8. Desa Objek Baru */}
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-xs font-bold text-slate-700 tracking-wide">Desa Objek <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek <span className="text-red-500">*</span></label>
                               <select
                                 id={`dataBaru.${idx}.desaObjekBaru`}
                                 value={item.desaObjekBaru}
                                 onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
                                 disabled={loading || !item.kecamatanObjekBaru}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                               >
                                 <option value="">
                                   {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
@@ -1501,14 +1308,14 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                                   <option key={desa} value={desa}>{desa}</option>
                                 ))}
                               </select>
-                              {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
+                              {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
                             </div>
                           </div>
                         </div>
 
                         {/* 9. Luas Tanah */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Tanah <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah <span className="text-red-500">*</span></label>
                           <div className="relative">
                             <input
                               type="number"
@@ -1516,18 +1323,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                               value={item.luasTanahBaru}
                               onChange={(e) => handleOwnerChange(idx, 'luasTanahBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                             />
-                            <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                               m²
                             </span>
                           </div>
-                          {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
+                          {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
                         </div>
 
                         {/* 10. Luas Bangunan */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">Luas Bangunan <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan <span className="text-red-500">*</span></label>
                           <div className="relative">
                             <input
                               type="number"
@@ -1535,18 +1342,18 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                               value={item.luasBangunanBaru}
                               onChange={(e) => handleOwnerChange(idx, 'luasBangunanBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                             />
-                            <span className="text-slate-500 text-xs font-bold absolute right-3.5 top-1/2 -translate-y-1/2 select-none">
+                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
                               m²
                             </span>
                           </div>
-                          {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
+                          {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
                         </div>
 
-                        {/* 6. Nomor/Jenis Sertifikat Baru (Full Width, Paling Akhir) */}
+                        {/* 6. Nomor/Jenis Sertifikat Baru */}
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
-                          <label className="text-xs font-bold text-slate-700 tracking-wide">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
                           <div className="relative">
                             <input
                               type="text"
@@ -1556,11 +1363,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                               onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value.toUpperCase())}
                               style={{ textTransform: 'uppercase' }}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
                             />
-
                           </div>
-                          {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-[11px] text-red-600 font-bold pl-1 mt-0.5">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
+                          {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
                         </div>
                       </div>
                     </div>
@@ -1570,7 +1376,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             )}
 
             {/* Stepper Footer Action Buttons */}
-            <div className="flex items-center justify-end pt-4 border-t border-slate-100 select-none">
+            <div className="flex items-center justify-end pt-4 border-t border-slate-100 select-none font-sans">
               <div className="flex items-center gap-3">
                 {/* Back Step Button */}
                 {currentStep > 1 && (
@@ -1578,7 +1384,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     type="button"
                     onClick={handlePrevStep}
                     disabled={loading}
-                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-normal text-[13px] rounded-lg transition-colors cursor-pointer font-sans"
                   >
                     Kembali
                   </button>
@@ -1596,7 +1402,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       }
                       onCancel();
                     }}
-                    className="px-4 py-2 text-slate-500 hover:text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    className="px-4 py-2 text-slate-500 hover:text-slate-700 font-normal text-[13px] transition-colors cursor-pointer font-sans"
                   >
                     Batal
                   </button>
@@ -1607,7 +1413,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-bold text-xs rounded-lg shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] rounded-lg shadow-xs hover:shadow-sm transition-all cursor-pointer font-sans"
                   >
                     Lanjut
                   </button>
@@ -1615,7 +1421,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-[#00a389] hover:bg-[#008f78] text-white font-bold text-xs capitalize tracking-wider py-2.5 px-6 rounded-lg shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] capitalize tracking-wider py-2.5 px-6 rounded-lg shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
                   >
                     {loading ? (
                       <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
