@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredVa
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Plus, Search, Edit, RefreshCw, X, FileText,
-  ChevronLeft, ChevronRight, ChevronDown, Check, Star, Copy
+  ChevronLeft, ChevronRight, ChevronDown, Check, Star, Copy, AlertTriangle
 } from 'lucide-react';
 import { useSession } from "next-auth/react";
 import {
@@ -19,6 +19,7 @@ import { CreateForm } from '@/components/workspaces/shared/CreateForm';
 import { EditModal } from '@/components/workspaces/shared/EditModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
 import { EmptyDataAnimation } from '@/components/workspaces/shared/EmptyDataAnimation';
+import { RevisionAlertBanner } from '@/components/workspaces/shared/RevisionAlertBanner';
 import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
 
 /** Skeleton presisi untuk List View PenginputWorkspace (tab=my-tasks) */
@@ -525,6 +526,7 @@ export default function PenginputWorkspace() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
+  const [isRevisionBannerDismissed, setIsRevisionBannerDismissed] = useState<boolean>(false);
 
   // Sorting State ('last_modified' | 'newest' | 'oldest' | 'a_z')
   const [sortBy, setSortBy] = useState<'last_modified' | 'newest' | 'oldest' | 'a_z'>('last_modified');
@@ -915,6 +917,14 @@ export default function PenginputWorkspace() {
       {/* Hide content while skeleton is showing on first load */}
       <div className={`flex flex-col gap-6 ${listLoading ? 'hidden' : ''}`}>
 
+        {/* Reusable Revision Alert Banner */}
+        <RevisionAlertBanner
+          count={kpiCounts.revision}
+          onAction={() => {
+            setFilterStatus('REVISION');
+            setCurrentPage(1);
+          }}
+        />
 
         {/* ==================== VIEW MODE: LIST (2-Column Split Panel) ==================== */}
         {viewMode === 'list' && (

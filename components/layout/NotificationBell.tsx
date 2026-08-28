@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, CheckCheck, X } from 'lucide-react';
+import { Bell, CheckCheck, X, AlertTriangle, Info } from 'lucide-react';
 import { getUnreadNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/app/actions/notifications';
 import { useSession } from 'next-auth/react';
 
@@ -203,7 +203,7 @@ export default function NotificationBell() {
               top: `${panelPos.top}px`,
               left: `${panelPos.left}px`,
             }}
-            className="w-80 bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-[100000] overflow-hidden animate-scaleUp"
+            className="w-80 bg-white rounded-md shadow-2xl border border-slate-200/90 z-[100000] overflow-hidden animate-scaleUp"
           >
             {/* Header Panel */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-slate-50/50">
@@ -228,37 +228,81 @@ export default function NotificationBell() {
             </div>
 
             {/* Notification List */}
-            <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+            <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 font-sans">
               {notifications.length === 0 ? (
                 <div className="p-6 text-center text-xs text-gray-400 font-medium">
                   Tidak ada notifikasi baru
                 </div>
               ) : (
-                notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className="p-3.5 hover:bg-slate-50 transition-colors flex items-start justify-between gap-3 group"
-                  >
-                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                      <span className="text-xs font-bold text-gray-800 truncate">
-                        {notif.judul}
-                      </span>
-                      <p className="text-[11px] text-gray-600 font-medium leading-normal line-clamp-2">
-                        {notif.pesan}
-                      </p>
-                      <span className="text-[10px] text-gray-400 font-semibold mt-1">
-                        {formatTime(notif.createdAt)}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleMarkRead(notif.id)}
-                      className="p-1 text-gray-300 hover:text-emerald-600 transition-colors shrink-0 rounded-lg hover:bg-emerald-50 cursor-pointer"
-                      title="Tandai sudah dibaca"
+                notifications.map((notif) => {
+                  const isRevision = 
+                    notif.judul?.toLowerCase().includes('revisi') || 
+                    notif.pesan?.toLowerCase().includes('revisi') || 
+                    notif.pesan?.toLowerCase().includes('dikembalikan');
+
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`p-3.5 transition-colors flex items-start justify-between gap-3 group select-none ${
+                        isRevision 
+                          ? 'bg-rose-50/70 border-l-4 border-l-rose-500 hover:bg-rose-50' 
+                          : 'bg-white hover:bg-slate-50'
+                      }`}
                     >
-                      <CheckCheck className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
+                      {/* Icon Indicator (Left) */}
+                      <div className={`p-2 rounded-md shrink-0 mt-0.5 ${
+                        isRevision 
+                          ? 'bg-rose-100 text-rose-600 border border-rose-200/80' 
+                          : 'bg-slate-100 text-slate-500 border border-slate-200/60'
+                      }`}>
+                        {isRevision ? (
+                          <AlertTriangle className="w-4 h-4 text-rose-600" />
+                        ) : (
+                          <Info className="w-4 h-4 text-slate-500" />
+                        )}
+                      </div>
+
+                      {/* Text Content */}
+                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-xs font-bold truncate ${
+                            isRevision ? 'text-rose-950' : 'text-slate-800'
+                          }`}>
+                            {notif.judul}
+                          </span>
+                          {isRevision && (
+                            <span className="px-1.5 py-0.25 bg-rose-100 text-rose-700 border border-rose-200 text-[9px] font-bold rounded-md shrink-0 font-mono">
+                              Revisi
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-[11px] font-medium leading-normal line-clamp-2 ${
+                          isRevision ? 'text-rose-900/80' : 'text-slate-600'
+                        }`}>
+                          {notif.pesan}
+                        </p>
+                        <span className={`text-[10px] font-semibold mt-1 ${
+                          isRevision ? 'text-rose-400' : 'text-slate-400'
+                        }`}>
+                          {formatTime(notif.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Mark Read Action Button */}
+                      <button
+                        onClick={() => handleMarkRead(notif.id)}
+                        className={`p-1.5 transition-colors shrink-0 rounded-md cursor-pointer ${
+                          isRevision
+                            ? 'text-rose-300 hover:text-rose-600 hover:bg-rose-100'
+                            : 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                        title="Tandai sudah dibaca"
+                      >
+                        <CheckCheck className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

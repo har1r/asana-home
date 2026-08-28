@@ -8,7 +8,7 @@ import {
   ArrowRight, FolderMinus, Plus, Search, AlertCircle,
   CheckCircle, Clock, X, AlertTriangle, Star,
   FileSpreadsheet, Filter, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  User, Hash, ListFilter, RefreshCw, Copy,
+  User, Hash, ListFilter, RefreshCw, Copy, RotateCcw, MoreVertical, Eye,
   Folder, FolderLock, Unlock, Send, Slash, FolderOpen, Users
 } from 'lucide-react';
 import {
@@ -20,7 +20,8 @@ import {
   removePermohonanFromBundle,
   lockBundle,
   getPendingKoreksiForPermohonan,
-  resetEmptyBundleType
+  resetEmptyBundleType,
+  resubmitPermohonanPeneliti
 } from '@/app/actions/peneliti';
 import { togglePermohonanFavorite } from '@/app/actions/penginput';
 import { useDashboard } from '@/context/DashboardContext';
@@ -29,6 +30,7 @@ import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusMo
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonProgressBar } from '@/components/skeletons/SkeletonBase';
 import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
 import { EmptyDataAnimation } from '@/components/workspaces/shared/EmptyDataAnimation';
+import { RevisionAlertBanner } from '@/components/workspaces/shared/RevisionAlertBanner';
 
 /** Skeleton komponen dasar KPI Strip & Tabs untuk PenelitiWorkspace */
 function PenelitiBaseHeaderSkeleton() {
@@ -550,12 +552,17 @@ export default function PenelitiWorkspace() {
     }
   }, [viewParam]);
 
-  // Helper to switch view/step and update URL query param
+  // Helper to switch view/step seamlessly without triggering full RSC server re-render
   const handleSwitchStep = useCallback((mode: 'bundle' | 'list' | 'print') => {
     setViewMode(mode);
     const viewQuery = mode === 'list' ? 'queue' : mode;
-    router.push(`/?tab=peneliti&view=${viewQuery}`, { scroll: false });
-  }, [router]);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'peneliti');
+      url.searchParams.set('view', viewQuery);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
 
   // Lists
   const [submittedList, setSubmittedList] = useState<any[]>([]);
@@ -574,6 +581,7 @@ export default function PenelitiWorkspace() {
   const [searchSubmittedQuery, setSearchSubmittedQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterJenisLayanan, setFilterJenisLayanan] = useState<string>('ALL');
+  const [filterRevisionSource, setFilterRevisionSource] = useState<'ALL' | 'PENGARSIP'>('ALL');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'last_modified' | 'newest' | 'oldest' | 'a_z'>('last_modified');
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -651,7 +659,7 @@ export default function PenelitiWorkspace() {
   // Reset pagination when search or filters change
   useEffect(() => {
     setCurrentSubmittedPage(1);
-  }, [searchSubmittedQuery, filterJenisLayanan, itemsPerSubmittedPage]);
+  }, [searchSubmittedQuery, filterJenisLayanan, filterRevisionSource, itemsPerSubmittedPage]);
 
   // Search, Filter & Pagination States for Bundles Queue
   const [searchBundleQuery, setSearchBundleQuery] = useState('');
@@ -741,6 +749,10 @@ export default function PenelitiWorkspace() {
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) {
       setIsRefreshing(true);
+      setFilterBundleStatus('ALL');
+      setFilterRevisionSource('ALL');
+      setSearchSubmittedQuery('');
+      setViewMode('bundle');
     } else {
       setListLoading(true);
     }
@@ -940,6 +952,50 @@ export default function PenelitiWorkspace() {
     }
   };
 
+  // Active Action Menu Dropdown State (Row 3-Dots Menu)
+  const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
+
+  // Close 3-dots dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (activeActionMenuId && !(e.target as HTMLElement).closest('.action-dropdown-container')) {
+        setActiveActionMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeActionMenuId]);
+
+  // Resubmit Permohonan Action (Peneliti)
+  const handleResubmitPermohonan = async (permohonanId: string) => {
+    setActiveActionMenuId(null);
+    setStatusModalTitle('Meresubmit Berkas');
+    setStatusModalMessage('Sedang meneliti ulang dan memperbarui status permohonan...');
+    setStatusModalStatus('loading');
+    setStatusModalOpen(true);
+    setLoading(true);
+
+    try {
+      const res: any = await resubmitPermohonanPeneliti(permohonanId);
+      if (res.success) {
+        setStatusModalTitle('Resubmit Berhasil');
+        setStatusModalMessage(res.message || 'Permohonan berhasil diteliti ulang!');
+        setStatusModalStatus('success');
+        await fetchData();
+      } else {
+        setStatusModalTitle('Gagal Resubmit');
+        setStatusModalMessage(res.error || 'Gagal melakukan resubmit permohonan.');
+        setStatusModalStatus('error');
+      }
+    } catch (e: any) {
+      setStatusModalTitle('Terjadi Kesalahan');
+      setStatusModalMessage(e.message || 'Kesalahan sistem.');
+      setStatusModalStatus('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Lock Bundle Action
   const handleLockBundle = () => {
     if (!selectedBundle) return;
@@ -1061,17 +1117,23 @@ export default function PenelitiWorkspace() {
   // Filter & Sort Submitted Queue Client-side (Memoized & Deferred)
   const filteredSubmittedList = useMemo(() => {
     const q = deferredSearchSubmittedQuery.toLowerCase().trim();
+    const isFilteringPengarsip = filterRevisionSource === 'PENGARSIP';
+
     const list = submittedList.filter((item) => {
-      const matchesSearch =
-        !q ||
+      const matchesRevision = isFilteringPengarsip
+        ? item.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED')
+        : true;
+
+      const matchesSearch = !q || (
         item.namaWajibPajak.toLowerCase().includes(q) ||
         item.nop.includes(q) ||
         (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(q)) ||
-        (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)));
+        (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)))
+      );
 
       const matchesJenis = filterJenisLayanan === 'ALL' || item.jenisPermohonan === filterJenisLayanan;
 
-      return matchesSearch && matchesJenis;
+      return matchesRevision && matchesSearch && matchesJenis;
     });
 
     return list.sort((a, b) => {
@@ -1095,7 +1157,7 @@ export default function PenelitiWorkspace() {
       const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [submittedList, deferredSearchSubmittedQuery, filterJenisLayanan, sortBy]);
+  }, [submittedList, deferredSearchSubmittedQuery, filterJenisLayanan, filterRevisionSource, sortBy]);
 
   // Expandable rows state for Mode Nopel inline expansion
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -1223,6 +1285,10 @@ export default function PenelitiWorkspace() {
     });
   }, [selectedBundle?.permohonan, displayMode, expandedRows]);
 
+  const returnedFromPengarsipCount = useMemo(() => {
+    return submittedList.filter(i => i.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED')).length;
+  }, [submittedList]);
+
   const currentActiveCount = useMemo(() => {
     if (viewMode === 'bundle') return filteredBundlesList.length;
     if (viewMode === 'list') return filteredSubmittedList.length;
@@ -1240,20 +1306,54 @@ export default function PenelitiWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? 'hidden' : ''}`}>
 
-        {/* TIER 1: UNIFIED KPI STATS STRIP (Focus Permanently on Bundle Status) */}
+        {/* Alert Banner jika ada permohonan berstatus REVISION */}
+        <RevisionAlertBanner
+          count={submittedList.filter(i => i.status === 'REVISION').length}
+          titlePrefix="Perhatian, "
+          titleText="Berkas Dalam Revisi Penginput"
+          descriptionText="berkas permohonan sedang dikembalikan ke Penginput untuk dilakukan perbaikan data."
+          actionLabel="Filter Berkas Revisi"
+          onAction={() => {
+            setSearchSubmittedQuery('REVISION');
+          }}
+        />
+
+        {/* Alert Banner jika ada berkas yang dikembalikan dari Pengarsip */}
+        <RevisionAlertBanner
+          count={submittedList.filter(i => i.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED')).length}
+          titlePrefix="Perhatian, "
+          titleText="Berkas Dikembalikan Pengarsip"
+          descriptionText="berkas permohonan dikembalikan dari Pengarsip (disetujui Supervisor) untuk diteliti/dibundel ulang."
+          actionLabel="Lihat Berkas Pengembalian"
+          onAction={() => {
+            setFilterRevisionSource('PENGARSIP');
+            handleSwitchStep('list');
+          }}
+        />
+
+        {/* TIER 1: UNIFIED KPI STATS STRIP (Focus Permanently on Bundle Status & Revisi Pengarsip) */}
         <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Metric 1: Total Bundle */}
             <div
-              onClick={() => { setFilterBundleStatus('ALL'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              onClick={() => {
+                setFilterRevisionSource('ALL');
+                setFilterBundleStatus('ALL');
+                setCurrentBundlePage(1);
+                handleSwitchStep('bundle');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'ALL'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Bundle</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundlesList.length}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'ALL'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 100%
               </span>
@@ -1261,15 +1361,24 @@ export default function PenelitiWorkspace() {
 
             {/* Metric 2: Draf */}
             <div
-              onClick={() => { setFilterBundleStatus('DRAFT'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'DRAFT' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              onClick={() => {
+                setFilterRevisionSource('ALL');
+                setFilterBundleStatus('DRAFT');
+                setCurrentBundlePage(1);
+                handleSwitchStep('bundle');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'DRAFT'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Draf (Aktif)</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.DRAFT}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'DRAFT' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'DRAFT'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.DRAFT / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1277,15 +1386,24 @@ export default function PenelitiWorkspace() {
 
             {/* Metric 3: Terkunci */}
             <div
-              onClick={() => { setFilterBundleStatus('LOCKED'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'LOCKED' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              onClick={() => {
+                setFilterRevisionSource('ALL');
+                setFilterBundleStatus('LOCKED');
+                setCurrentBundlePage(1);
+                handleSwitchStep('bundle');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'LOCKED'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Terkunci</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.LOCKED}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'LOCKED' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'LOCKED'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.LOCKED / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1293,15 +1411,24 @@ export default function PenelitiWorkspace() {
 
             {/* Metric 4: Dimanifest */}
             <div
-              onClick={() => { setFilterBundleStatus('IN_MANIFEST'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              onClick={() => {
+                setFilterRevisionSource('ALL');
+                setFilterBundleStatus('IN_MANIFEST');
+                setCurrentBundlePage(1);
+                handleSwitchStep('bundle');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'IN_MANIFEST'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dimanifest</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.IN_MANIFEST}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'IN_MANIFEST' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'IN_MANIFEST'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.IN_MANIFEST / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
               </span>
@@ -1309,17 +1436,53 @@ export default function PenelitiWorkspace() {
 
             {/* Metric 5: Dibatalkan / Void */}
             <div
-              onClick={() => { setFilterBundleStatus('VOID'); setCurrentBundlePage(1); handleSwitchStep('bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterBundleStatus === 'VOID' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
+              onClick={() => {
+                setFilterRevisionSource('ALL');
+                setFilterBundleStatus('VOID');
+                setCurrentBundlePage(1);
+                handleSwitchStep('bundle');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'VOID'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
                 }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dibatalkan</span>
                 <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.VOID}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterBundleStatus === 'VOID' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource !== 'PENGARSIP' && filterBundleStatus === 'VOID'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
                 }`}>
                 {bundlesList.length > 0 ? `${((bundleStatusCounts.VOID / bundlesList.length) * 100).toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+
+            {/* Metric 6: Revisi Pengarsip */}
+            <div
+              onClick={() => {
+                setFilterRevisionSource('PENGARSIP');
+                setFilterJenisLayanan('ALL');
+                setCurrentSubmittedPage(1);
+                handleSwitchStep('list');
+              }}
+              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterRevisionSource === 'PENGARSIP'
+                ? 'bg-slate-100/90 text-slate-900 font-semibold'
+                : 'hover:bg-slate-50 text-slate-600'
+                }`}
+            >
+              <div className="flex flex-col gap-0.5 font-sans">
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">
+                  Revisi Pengarsip
+                </span>
+                <span className="text-lg font-bold font-mono text-slate-800">{returnedFromPengarsipCount}</span>
+              </div>
+              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterRevisionSource === 'PENGARSIP'
+                ? 'bg-[#00a389] text-white border-[#00a389]'
+                : 'bg-slate-100 text-slate-500 border-slate-200/80'
+                }`}>
+                {returnedFromPengarsipCount > 0 ? `${returnedFromPengarsipCount}` : '0'}
               </span>
             </div>
           </div>
@@ -1733,6 +1896,33 @@ export default function PenelitiWorkspace() {
                                 <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap capitalize font-sans">
                                   {highlightText(toTitleCase(item.displayNamaWajibPajak), searchSubmittedQuery)}
                                 </span>
+                                {item.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED') && (() => {
+                                  const lastKoreksi = item.permintaanKoreksi.find((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED');
+                                  const pengarsipName = lastKoreksi?.pengaju?.name || 'Pengarsip';
+                                  const catatanText = lastKoreksi?.catatanPengaju || 'Perlu penataan ulang berkas.';
+
+                                  return (
+                                    <div className="relative inline-block group/locktooltip shrink-0">
+                                      <span className="p-1 rounded-md bg-slate-100/90 text-slate-600 border border-slate-200/90 shrink-0 inline-flex items-center justify-center cursor-help transition-all hover:bg-slate-200/90">
+                                        <Lock className="w-3 h-3 text-slate-500 shrink-0" />
+                                      </span>
+
+                                      {/* Custom Floating Tailwind Tooltip */}
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/locktooltip:flex flex-col gap-1.5 w-64 p-3 bg-white border border-slate-200/90 rounded-md shadow-xl z-50 animate-fadeIn pointer-events-none text-left font-sans">
+                                        <div className="flex items-center gap-1.5 pb-1 border-b border-slate-100">
+                                          <span className="text-[11px] font-bold text-slate-800 font-sans truncate">
+                                            Dikembalikan oleh {pengarsipName}
+                                          </span>
+                                        </div>
+                                        <div className="bg-slate-50 border border-slate-100 rounded p-2 text-[11px] text-slate-600 font-normal leading-relaxed break-words max-h-28 overflow-y-auto font-sans">
+                                          "{catatanText}"
+                                        </div>
+                                        {/* Little Arrow Indicator */}
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-b border-r border-slate-200 rotate-45" />
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 {item.isPecahanRow && (
                                   <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
                                     #{item.pecahanIndex}/{item.totalPecahan}
@@ -1767,30 +1957,64 @@ export default function PenelitiWorkspace() {
                               </div>
                             </td>
                             <td className="py-2.5 px-4 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="relative inline-block text-left action-dropdown-container">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleAddToBundle(item.id);
+                                    setActiveActionMenuId(activeActionMenuId === item.id ? null : item.id);
                                   }}
-                                  disabled={loading || !selectedBundle || selectedBundle.status !== 'DRAFT'}
-                                  className="h-8 px-2.5 bg-[#00a389] hover:bg-[#008f78] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-extrabold rounded-lg shadow-3xs transition-all cursor-pointer flex items-center gap-1 shrink-0"
-                                  title="Masukkan ke bundle aktif"
+                                  className="h-8 w-8 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
+                                  title="Menu Aksi"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>Bundle</span>
+                                  <MoreVertical className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRevisionTarget(item);
-                                  }}
-                                  disabled={loading}
-                                  className="h-8 w-8 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0"
-                                  title="Kembalikan untuk revisi"
-                                >
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                </button>
+
+                                {activeActionMenuId === item.id && (
+                                  <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200/90 rounded-md shadow-lg py-1 z-30 animate-fadeIn font-sans text-left">
+                                    {/* 1. Masukkan ke Bundle */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveActionMenuId(null);
+                                        handleAddToBundle(item.id);
+                                      }}
+                                      disabled={loading || !selectedBundle || selectedBundle.status !== 'DRAFT'}
+                                      className="w-full px-3 py-2 text-xs font-normal text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all cursor-pointer"
+                                    >
+                                      <Plus className="w-3.5 h-3.5 text-[#00a389] shrink-0" />
+                                      <span>Masukkan ke Bundle</span>
+                                    </button>
+
+                                    {/* 2. Resubmit Berkas (Muncul untuk berkas pengembalian Pengarsip) */}
+                                    {item.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI' && k.status === 'APPROVED') && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleResubmitPermohonan(item.id);
+                                        }}
+                                        disabled={loading}
+                                        className="w-full px-3 py-2 text-xs font-normal text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all cursor-pointer border-t border-slate-100"
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                        <span>Resubmit Berkas</span>
+                                      </button>
+                                    )}
+
+                                    {/* 3. Minta Revisi Penginput */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveActionMenuId(null);
+                                        setRevisionTarget(item);
+                                      }}
+                                      disabled={loading}
+                                      className="w-full px-3 py-2 text-xs font-normal text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all cursor-pointer border-t border-slate-100"
+                                    >
+                                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                      <span>Minta Revisi (Penginput)</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -2092,33 +2316,32 @@ export default function PenelitiWorkspace() {
                 );
               })}
               {filteredBundlesList.length === 0 && (
-                <div className="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200/60 shadow-3xs">
-                  <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
-                    <FishingAnimation isSearch={!!(searchBundleQuery || filterBundleStatus !== 'ALL')} />
-                    <div className="flex flex-col gap-1">
-                      <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider">
-                        {searchBundleQuery || filterBundleStatus !== 'ALL'
-                          ? 'Hasil Pencarian Tidak Ditemukan'
-                          : 'Belum Ada Bundle'}
-                      </h5>
-                      <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4">
-                        {searchBundleQuery || filterBundleStatus !== 'ALL'
-                          ? 'Kami tidak menemukan bundle yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.'
-                          : 'Daftar bundle operasional kosong. Silakan buat bundle baru untuk memulai.'}
-                      </p>
-                    </div>
-                    {(searchBundleQuery || filterBundleStatus !== 'ALL') && (
-                      <button
-                        onClick={() => {
-                          setSearchBundleQuery('');
-                          setFilterBundleStatus('ALL');
-                        }}
-                        className="mt-1 px-4.5 py-2 border border-slate-200/80 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-3xs"
-                      >
-                        Reset Pencarian
-                      </button>
-                    )}
-                  </div>
+                <div className="col-span-full py-10 text-center bg-white rounded-2xl border border-slate-200/60 shadow-3xs font-sans">
+                  <EmptyDataAnimation
+                    title={
+                      searchBundleQuery || filterBundleStatus !== 'ALL'
+                        ? 'Hasil Pencarian Tidak Ditemukan'
+                        : 'Belum Ada Bundle'
+                    }
+                    description={
+                      searchBundleQuery || filterBundleStatus !== 'ALL'
+                        ? 'Kami tidak menemukan bundle yang cocok dengan kriteria Anda. Silakan atur ulang kata kunci atau filter.'
+                        : 'Daftar bundle operasional kosong. Silakan buat bundle baru untuk memulai.'
+                    }
+                    action={
+                      (searchBundleQuery || filterBundleStatus !== 'ALL') ? (
+                        <button
+                          onClick={() => {
+                            setSearchBundleQuery('');
+                            setFilterBundleStatus('ALL');
+                          }}
+                          className="px-4 py-2 border border-slate-200/80 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-md transition-all cursor-pointer shadow-3xs font-sans"
+                        >
+                          Reset Pencarian
+                        </button>
+                      ) : undefined
+                    }
+                  />
                 </div>
               )}
             </div>
@@ -2514,28 +2737,45 @@ export default function PenelitiWorkspace() {
                                             </a>
                                           )}
 
-                                          {/* Extraction Action */}
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (selectedBundle.status === 'LOCKED') {
-                                                setExtractionTarget(item);
-                                              } else {
-                                                showConfirm({
-                                                  title: 'Keluarkan dari Bundle',
-                                                  message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPermohonan} dari bundle draf ini?`,
-                                                  onConfirm: () => {
-                                                    handleRemoveFromBundle(item);
-                                                  }
-                                                });
-                                              }
-                                            }}
-                                            disabled={loading || isFrozen}
-                                            className="h-8 w-8 bg-slate-50 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0 shadow-3xs"
-                                            title={selectedBundle.status === 'LOCKED' ? "Ajukan keluarkan (acc supervisor)" : "Keluarkan"}
-                                          >
-                                            <FolderMinus className="w-3.5 h-3.5" />
-                                          </button>
+                                          {/* Extraction Action with Strict UI Guard Validation */}
+                                           {(() => {
+                                             const canExtractDirect = selectedBundle.status === 'DRAFT' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
+                                             const canExtractViaSupervisor = selectedBundle.status === 'LOCKED' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
+                                             const isExtractionBlocked = !canExtractDirect && !canExtractViaSupervisor;
+
+                                             let tooltipText = "Keluarkan dari Bundle Draf";
+                                             if (canExtractViaSupervisor) tooltipText = "Ajukan keluarkan dari Bundle Terkunci (Persetujuan Supervisor)";
+                                             if (isExtractionBlocked) tooltipText = "Berkas pada bundle yang sudah diarsipkan/dimanifestkan tidak dapat dikeluarkan sepihak. Harus melalui pengembalian resmi dari Pengarsip.";
+
+                                             return (
+                                               <button
+                                                 onClick={(e) => {
+                                                   e.stopPropagation();
+                                                   if (isExtractionBlocked) return;
+                                                   if (selectedBundle.status === 'LOCKED') {
+                                                     setExtractionTarget(item);
+                                                   } else {
+                                                     showConfirm({
+                                                       title: 'Keluarkan dari Bundle',
+                                                       message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPelayanan || item.nomorPermohonan} dari bundle draf ini?`,
+                                                       onConfirm: () => {
+                                                         handleRemoveFromBundle(item);
+                                                       }
+                                                     });
+                                                   }
+                                                 }}
+                                                 disabled={loading || isFrozen || isExtractionBlocked}
+                                                 className={`h-8 w-8 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${
+                                                   isExtractionBlocked
+                                                     ? 'bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50'
+                                                     : 'bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer'
+                                                 }`}
+                                                 title={tooltipText}
+                                               >
+                                                 <FolderMinus className="w-3.5 h-3.5" />
+                                               </button>
+                                             );
+                                           })()}
                                         </div>
                                       </td>
                                     </tr>
@@ -2624,24 +2864,23 @@ export default function PenelitiWorkspace() {
               </div>
             ) : (
               /* Clean & Premium Empty Placeholder with Select-bro.svg */
-              <div className="py-14 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
-                <img
-                  src="/assets/Select-bro.svg"
-                  alt="Pilih Bundle"
-                  className="w-56 h-56 max-w-full object-contain pointer-events-none drop-shadow-xs"
+              <div className="bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs flex items-center justify-center min-h-[350px] font-sans">
+                <EmptyDataAnimation
+                  title="Belum Ada Bundle yang Dipilih"
+                  description={
+                    <>
+                      Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold">Pilih Bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
+                    </>
+                  }
+                  action={
+                    <button
+                      onClick={() => handleSwitchStep('bundle')}
+                      className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-xs font-bold rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
+                    >
+                      <span>Pilih Bundle Sekarang</span>
+                    </button>
+                  }
                 />
-                <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight font-sans">Belum Ada Bundle yang Dipilih</h3>
-                  <p className="text-xs text-slate-500 font-normal leading-relaxed font-sans">
-                    Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold font-sans">Pilih Bundle</strong> terlebih dahulu untuk mengulas berkas, melakukan penguncian, atau mencetak Surat Pengantar.
-                  </p>
-                  <button
-                    onClick={() => handleSwitchStep('bundle')}
-                    className="mt-3 px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
-                  >
-                    <span>Pilih Bundle Sekarang</span>
-                  </button>
-                </div>
               </div>
             )}
           </div>

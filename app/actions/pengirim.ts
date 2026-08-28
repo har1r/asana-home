@@ -7,6 +7,7 @@ import { sendWhatsApp } from "@/lib/fonnte";
 import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
+import { notifyAllUsersOfRole } from "@/lib/notifications";
 
 /**
  * Action: Get all bundles in LOCKED status that are fully digitalized (all applications are ARCHIVED)
@@ -681,7 +682,7 @@ export async function ajukanKembalikanKePengarsip(permohonanId: string, alasan: 
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const permohonan = await tx.permohonan.findUnique({
         where: { id: permohonanId },
         include: { bundle: true }
@@ -701,59 +702,48 @@ export async function ajukanKembalikanKePengarsip(permohonanId: string, alasan: 
         );
       }
 
-      // Check if there is an existing pending request
-      const existingRequest = await tx.permintaanKoreksi.findFirst({
-        where: {
-          permohonanId,
-          status: "PENDING_APPROVAL",
-          jenisKoreksi: "KEMBALIKAN_KE_PENGARSIP"
-        }
-      });
-
-      if (existingRequest) {
-        throw new Error("Permintaan koreksi untuk permohonan ini sudah diajukan dan masih menunggu keputusan Supervisor.");
-      }
-
-      // Create PermintaanKoreksi
+      // Create PermintaanKoreksi directly as APPROVED
       const request = await tx.permintaanKoreksi.create({
         data: {
           permohonanId,
           jenisKoreksi: "KEMBALIKAN_KE_PENGARSIP",
-          status: "PENDING_APPROVAL",
+          status: "APPROVED",
           pengajuId: session.user.id,
           catatanPengaju: alasan
         }
       });
 
-      // Notify Supervisor
-      const notifTitle = "Persetujuan Koreksi Logistik";
-      const notifPesan = `Pengirim mengajukan pengembalian Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} ke Pengarsip. Alasan: "${alasan}"`;
-      
-      const activeSupervisors = await tx.user.findMany({
-        where: { role: "SUPERVISOR", isActive: true },
-        select: { id: true }
+      // Create Audit Log
+      await tx.auditLog.create({
+        data: {
+          entityType: "PERMOHONAN",
+          entityId: permohonanId,
+          aksi: "Pengirim Mengajukan Pengembalian ke Pengarsip",
+          statusSebelum: permohonan.status,
+          statusSesudah: permohonan.status,
+          pelakuId: session.user.id,
+          metadata: { catatan: alasan, bundleId: permohonan.bundleId }
+        }
       });
 
-      if (activeSupervisors.length > 0) {
-        await tx.inAppNotification.createMany({
-          data: activeSupervisors.map((sup) => ({
-            userId: sup.id,
-            judul: notifTitle,
-            pesan: notifPesan,
-            metadata: {
-              koreksiId: request.id,
-              permohonanId,
-              bundleId: permohonan.bundleId
-            }
-          }))
-        });
-      }
-
-      return { success: true, status: "PENDING_APPROVAL", request };
+      return { success: true, status: "RETURNED_DIRECTLY", permohonan, request };
     });
+
+    // Notify Pengarsip users in background
+    await notifyAllUsersOfRole(
+      "PENGARSIP",
+      "Permintaan Pengembalian dari Pengirim",
+      `Pengirim ${session.user.name || ""} mengajukan pengembalian untuk Permohonan ${result.permohonan.nomorPelayanan || result.permohonan.nomorPermohonan}. Alasan: "${alasan}"`,
+      {
+        permohonanId
+      }
+    );
+
+    revalidatePath("/");
+    return result;
   } catch (error: any) {
     console.error("[ACTION-KEMBALIKAN-KE-PENGARSIP-ERR]", error);
-    return { success: false, error: error.message || "Gagal mengajukan pengembalian ke pengarsip." };
+    return { success: false, error: error.message || "Gagal mengembalikan permohonan ke pengarsip." };
   }
 }
 

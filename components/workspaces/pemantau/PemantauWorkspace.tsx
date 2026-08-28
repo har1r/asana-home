@@ -46,6 +46,7 @@ import {
 import { useDashboard } from "@/context/DashboardContext";
 import { SkeletonBox, SkeletonText, SkeletonBadge } from "@/components/skeletons/SkeletonBase";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
 
 type WorkspaceTab = "daftar-bundle" | "daftar-pantau";
 
@@ -97,15 +98,21 @@ export function PemantauBundleSkeleton() {
     <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
       <PemantauBaseHeaderSkeleton />
 
-      <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      {/* Toolbar Skeleton */}
+      <div className="bg-[#f8fafc] border border-slate-200/80 p-3 rounded-md shadow-3xs flex flex-col gap-2.5">
+        <div className="flex items-center justify-between gap-3">
           <SkeletonBox width="w-full md:w-[403px]" height="h-10" rounded="rounded-md" />
-          <div className="flex items-center gap-2">
-            <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
-            <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
-          </div>
+          <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
         </div>
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+          <SkeletonBox width="w-16" height="h-7" rounded="rounded-md" />
+          <SkeletonBox width="w-28" height="h-7" rounded="rounded-md" />
+          <SkeletonBox width="w-28" height="h-7" rounded="rounded-md" />
+        </div>
+      </div>
 
+      {/* Main Grid Skeleton Card */}
+      <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="p-4 rounded-md border border-slate-200/90 bg-white flex flex-col justify-between gap-3.5 min-h-[140px]">
@@ -461,16 +468,40 @@ export default function PemantauWorkspace() {
     });
   }, [selectedBundle, searchQuery]);
 
-  // Computed KPI Counts
-  const bundleKpiCounts = useMemo(() => {
-    const counts = { total: uniqueBundlesList.length, ms: 0, mh: 0, other: 0 };
-    uniqueBundlesList.forEach((b) => {
-      if (b.jenisPermohonan === "MUTASI_SEBAGIAN") counts.ms++;
-      else if (b.jenisPermohonan === "MUTASI_HABIS_REGULER" || b.jenisPermohonan === "MUTASI_HABIS_UPDATE") counts.mh++;
-      else counts.other++;
+  // Computed KPI Counts for Pemohon & Completion Progress
+  const pemohonKpiCounts = useMemo(() => {
+    let totalPemohon = 0;
+    let completedPemohon = 0;
+
+    permohonanList.forEach((p) => {
+      if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
+        totalPemohon += p.dataBaru.length;
+        if (p.status === "COMPLETED") {
+          completedPemohon += p.dataBaru.length;
+        } else {
+          p.dataBaru.forEach((db: any) => {
+            if (db.isVerified) completedPemohon++;
+          });
+        }
+      } else {
+        totalPemohon += 1;
+        if (p.status === "COMPLETED") {
+          completedPemohon += 1;
+        }
+      }
     });
-    return counts;
-  }, [uniqueBundlesList]);
+
+    const effectiveTotal = Math.max(totalPemohon, 75);
+    const pendingPemohon = Math.max(0, effectiveTotal - completedPemohon);
+    const pctCompleted = effectiveTotal > 0 ? Math.round((completedPemohon / effectiveTotal) * 100) : 0;
+
+    return {
+      total: effectiveTotal,
+      completed: completedPemohon,
+      pending: pendingPemohon,
+      percentage: pctCompleted
+    };
+  }, [permohonanList]);
 
   // Counts for Pemantau Bundle Jenis Layanan Quick Filter Pills
   const bundleJenisCounts = useMemo(() => {
@@ -520,70 +551,70 @@ export default function PemantauWorkspace() {
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
 
+        {/* Alert Banner jika terdapat berkas frozen/sedang dikoreksi */}
+        <RevisionAlertBanner
+          count={permohonanList.filter(p => p.permintaanKoreksi && p.permintaanKoreksi.length > 0).length}
+          titlePrefix="Perhatian, "
+          titleText="Berkas Dibekukan (Sedang Koreksi)"
+          descriptionText="berkas permohonan sedang diajukan pembatalan/koreksi dan menunggu keputusan Supervisor."
+          actionLabel="Lihat Antrean Pantau"
+          onAction={() => {
+            setWorkspaceTab("daftar-pantau");
+          }}
+        />
+
         {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling matching Peneliti) */}
         <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-            {/* Metric 1: Total Bundle */}
+            {/* Metric 1: Total Pemohon */}
             <div
-              onClick={() => { setFilterJenisLayanan('ALL'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'ALL' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
-                }`}
+              className="p-2.5 px-3 flex items-center justify-between transition-all rounded-md hover:bg-slate-50 text-slate-600"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Bundle</span>
-                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.total}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Total Pemohon</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{pemohonKpiCounts.total}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan === 'ALL' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
-                }`}>
+              <span className="text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all bg-[#00a389] text-white border-[#00a389]">
                 100%
               </span>
             </div>
 
-            {/* Metric 2: Mutasi Sebagian */}
+            {/* Metric 2: Selesai */}
             <div
-              onClick={() => { setFilterJenisLayanan('MUTASI_SEBAGIAN'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
-                }`}
+              className="p-2.5 px-3 flex items-center justify-between transition-all rounded-md hover:bg-slate-50 text-slate-600"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Mutasi Sebagian</span>
-                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.ms}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Selesai</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{pemohonKpiCounts.completed}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan === 'MUTASI_SEBAGIAN' ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
-                }`}>
-                {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.ms / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
+              <span className="text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all bg-slate-100 text-slate-600 border-slate-200/80">
+                {pemohonKpiCounts.percentage}%
               </span>
             </div>
 
-            {/* Metric 3: Mutasi Habis */}
+            {/* Metric 3: Belum Selesai (Selisih) */}
             <div
-              onClick={() => { setFilterJenisLayanan('MUTASI_HABIS_REGULER'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
-                }`}
+              className="p-2.5 px-3 flex items-center justify-between transition-all rounded-md hover:bg-slate-50 text-slate-600"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Mutasi Habis</span>
-                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.mh}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Belum Selesai</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{pemohonKpiCounts.pending}</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${filterJenisLayanan.startsWith('MUTASI_HABIS') ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
-                }`}>
-                {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.mh / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
+              <span className="text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all bg-slate-100 text-slate-600 border-slate-200/80">
+                {pemohonKpiCounts.total > 0 ? `${Math.round((pemohonKpiCounts.pending / pemohonKpiCounts.total) * 100)}%` : '0%'}
               </span>
             </div>
 
-            {/* Metric 4: Lainnya */}
+            {/* Metric 4: Progres Penyelesaian */}
             <div
-              onClick={() => { setFilterJenisLayanan('OBJEK_PAJAK_BARU'); setCurrentBundlePage(1); handleSwitchTab('daftar-bundle'); }}
-              className={`p-2.5 px-3 flex items-center justify-between transition-all cursor-pointer rounded-md ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-slate-100/90 text-slate-900 font-semibold' : 'hover:bg-slate-50 text-slate-600'
-                }`}
+              className="p-2.5 px-3 flex items-center justify-between transition-all rounded-md hover:bg-slate-50 text-slate-600"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Lainnya</span>
-                <span className="text-lg font-bold font-mono text-slate-800">{bundleKpiCounts.other}</span>
+                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Progres</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{pemohonKpiCounts.percentage}%</span>
               </div>
-              <span className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${!['ALL', 'MUTASI_SEBAGIAN', 'MUTASI_HABIS_REGULER', 'MUTASI_HABIS_UPDATE'].includes(filterJenisLayanan) ? 'bg-[#00a389] text-white border-[#00a389]' : 'bg-slate-100 text-slate-500 border-slate-200/80'
-                }`}>
-                {bundleKpiCounts.total > 0 ? `${((bundleKpiCounts.other / bundleKpiCounts.total) * 100).toFixed(0)}%` : '0%'}
+              <span className="text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all bg-slate-100 text-slate-600 border-slate-200/80">
+                {pemohonKpiCounts.completed}/{pemohonKpiCounts.total}
               </span>
             </div>
           </div>
@@ -633,12 +664,13 @@ export default function PemantauWorkspace() {
 
         {/* ==================== TAB: DAFTAR BUNDLE ==================== */}
         {workspaceTab === "daftar-bundle" && (
-          <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
-            {/* Header Toolbar */}
-            <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 select-none">
+          <div className="flex flex-col gap-4">
+            {/* TIER 2: UNIFIED COMMAND BAR & QUICK FILTER CHIPS (Terpisah Dari Card Utama — Identik Peneliti) */}
+            <div className="flex flex-col gap-2.5 bg-[#f8fafc] border border-slate-200/80 p-3 rounded-md shadow-3xs select-none font-sans">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                {/* Search input for Bundles */}
-                <div className="relative w-full md:w-[403px] max-w-full">
+                {/* Search input for Bundles (Identik Peneliti dengan Ikon Search) */}
+                <div className="relative w-full md:w-[403px] max-w-full font-sans">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                   <input
                     type="text"
                     ref={searchBundleInputRef}
@@ -646,7 +678,7 @@ export default function PemantauWorkspace() {
                     onChange={(e) => setSearchBundleQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 px-3.5 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
+                    className="w-full h-10 pl-9 pr-9 bg-white border border-slate-200/90 rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all shadow-3xs font-sans"
                     placeholder="Cari nomor bundle..."
                   />
                   {!isSearchFocused && !searchBundleQuery && (
@@ -657,21 +689,21 @@ export default function PemantauWorkspace() {
                   {searchBundleQuery && (
                     <button
                       onClick={() => setSearchBundleQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors font-bold"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors font-bold cursor-pointer"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                {/* Refresh button */}
+                {/* Refresh Icon Button (Identik Peneliti) */}
                 <button
                   onClick={() => fetchData(true)}
-                  disabled={isRefreshing}
-                  className="px-3 h-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-600 text-[13px] font-normal shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                  disabled={isRefreshing || listLoading}
+                  className="h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
                   title="Refresh Data"
                 >
-                  <span>{isRefreshing ? "Memuat..." : "Refresh"}</span>
+                  <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
                 </button>
               </div>
 
@@ -712,13 +744,21 @@ export default function PemantauWorkspace() {
               </div>
             </div>
 
+            {/* Main Cards Grid Container */}
+            <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
+
             {/* Bundle Cards Grid (Exact Preserved Content, Palette & Rounded-md Updated) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
               {paginatedBundles.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-[13px] text-slate-400 font-normal italic select-none font-sans capitalize">
-                  {searchBundleQuery
-                    ? "Tidak ada bundle yang sesuai dengan kriteria pencarian."
-                    : "Tidak ada bundle aktif dalam antrean pemantauan."}
+                <div className="col-span-full py-8 font-sans">
+                  <EmptyDataAnimation
+                    title={searchBundleQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Bundle"}
+                    description={
+                      searchBundleQuery
+                        ? "Tidak ada bundle yang sesuai dengan kriteria pencarian."
+                        : "Tidak ada bundle aktif dalam antrean pemantauan."
+                    }
+                  />
                 </div>
               ) : (
                 paginatedBundles.map((b) => {
@@ -890,23 +930,30 @@ export default function PemantauWorkspace() {
               )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* ==================== TAB: DAFTAR PANTAU ==================== */}
         {workspaceTab === "daftar-pantau" && (
           <div className="w-full">
             {!selectedBundle ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-8 select-none bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[300px]">
-                <h3 className="text-sm font-bold text-slate-800 mb-1">Pilih Bundle Terlebih Dahulu</h3>
-                <p className="text-xs text-slate-400 font-semibold max-w-sm leading-relaxed mb-4">
-                  Silakan pilih salah satu bundle di tab <strong>Daftar Bundle</strong> terlebih dahulu untuk melihat daftar permohonan yang harus dipantau.
-                </p>
-                <button
-                  onClick={() => handleSwitchTab("daftar-bundle")}
-                  className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>Ke Daftar Bundle</span>
-                </button>
+              <div className="bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[350px] flex items-center justify-center font-sans">
+                <EmptyDataAnimation
+                  title="Pilih Bundle Terlebih Dahulu"
+                  description={
+                    <>
+                      Silakan pilih salah satu bundle di tab <strong>Daftar Bundle</strong> terlebih dahulu untuk melihat daftar permohonan yang harus dipantau.
+                    </>
+                  }
+                  action={
+                    <button
+                      onClick={() => handleSwitchTab("daftar-bundle")}
+                      className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 font-sans"
+                    >
+                      <span>Ke Daftar Bundle</span>
+                    </button>
+                  }
+                />
               </div>
             ) : (
               /* Master-Detail Stacked Panel Layout */
@@ -1428,9 +1475,14 @@ export default function PemantauWorkspace() {
 
                       </div>
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400 p-12 my-auto">
-                        <h4 className="text-[13px] font-normal text-slate-700 capitalize font-sans">Pilih Permohonan</h4>
-                        <p className="text-[13px] font-normal text-slate-400 capitalize font-sans max-w-xs mt-1">
+                      <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400 p-8 my-auto select-none font-sans">
+                        <img
+                          src="/assets/Select-bro.svg"
+                          alt="Pilih Permohonan"
+                          className="w-48 h-48 sm:w-56 sm:h-56 max-w-full object-contain pointer-events-none drop-shadow-xs mb-2"
+                        />
+                        <h4 className="text-sm font-extrabold text-slate-800 tracking-tight font-sans">Pilih Permohonan</h4>
+                        <p className="text-xs text-slate-500 font-normal leading-relaxed max-w-xs mt-1 font-sans">
                           Klik salah satu berkas permohonan di panel atas untuk menampilkan detail dan tombol aksi.
                         </p>
                       </div>

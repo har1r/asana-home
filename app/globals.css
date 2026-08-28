@@ -23,6 +23,12 @@
   }
 }
 
+/* Custom Green Native Date Picker Calendar Indicator */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(45%) sepia(85%) saturate(850%) hue-rotate(125deg) brightness(90%) contrast(90%);
+}
+
 /* Custom Scrollbar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 5px;

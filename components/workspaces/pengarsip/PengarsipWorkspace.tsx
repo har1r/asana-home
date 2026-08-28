@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { formatNop, toTitleCase } from "@/components/workspaces/shared/constants";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
 import {
   getDigitizationBundles,
   getBundleDetails,
@@ -352,6 +353,11 @@ export default function PengarsipWorkspace() {
   const [permohonanList, setPermohonanList] = useState<any[]>([]);
 
   // State Loading & Refetch
+  const [mounted, setMounted] = useState<boolean>(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [listLoading, setListLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -412,12 +418,7 @@ export default function PengarsipWorkspace() {
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const fractionFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [mounted, setMounted] = useState<boolean>(false);
 
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -882,6 +883,18 @@ export default function PengarsipWorkspace() {
             </button>
           </div>
         )}
+
+        {/* Alert Banner jika ada berkas yang perlu revisi pengarsipan */}
+        <RevisionAlertBanner
+          count={bundlesList.filter(b => b.permohonan?.some((p: any) => p.status === 'REVISION')).length}
+          titlePrefix="Perhatian, "
+          titleText="Berkas Dalam Revisi Pengarsipan"
+          descriptionText="map bundle berisi berkas permohonan yang perlu dilakukan pengunggahan ulang atau perbaikan arsip."
+          actionLabel="Filter Map Revisi"
+          onAction={() => {
+            setSearchBundleQuery('REVISION');
+          }}
+        />
 
         {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling - 100% Identik dengan Peneliti) */}
         <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">
@@ -1710,15 +1723,35 @@ export default function PengarsipWorkspace() {
                                           </>
                                         )}
 
-                                        <button
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); openCorrectionModal(p); }}
-                                          disabled={loading}
-                                          className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg text-slate-400 transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
-                                          title="Kembalikan ke Peneliti"
-                                        >
-                                          <ArrowLeftRight className="w-3.5 h-3.5" />
-                                        </button>
+                                        {(() => {
+                                          const isBundleInManifest = selectedBundle?.status === 'IN_MANIFEST';
+                                          const hasPengirimReturnRequest = p.permintaanKoreksi?.some((k: any) => k.jenisKoreksi === 'KEMBALIKAN_KE_PENGARSIP' && k.status === 'APPROVED');
+                                          const canReturnToPeneliti = !isBundleInManifest || hasPengirimReturnRequest;
+
+                                          return (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!canReturnToPeneliti) return;
+                                                openCorrectionModal(p);
+                                              }}
+                                              disabled={loading || isFrozen || !canReturnToPeneliti}
+                                              className={`p-1.5 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${
+                                                !canReturnToPeneliti
+                                                  ? 'bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50'
+                                                  : 'bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer'
+                                              }`}
+                                              title={
+                                                !canReturnToPeneliti
+                                                  ? 'Bundle sudah di Pengirim (Dimanifest). Tidak dapat dikembalikan ke Peneliti tanpa adanya pengembalian resmi dari Pengirim.'
+                                                  : 'Kembalikan ke Peneliti'
+                                              }
+                                            >
+                                              <ArrowLeftRight className="w-3.5 h-3.5" />
+                                            </button>
+                                          );
+                                        })()}
                                       </>
                                     )}
                                   </div>
@@ -1796,24 +1829,23 @@ export default function PengarsipWorkspace() {
               </div>
             ) : (
               /* Clean & Premium Empty Placeholder with Select-bro.svg */
-              <div className="py-14 text-center flex flex-col items-center justify-center gap-4 select-none animate-fadeIn bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs">
-                <img
-                  src="/assets/Select-bro.svg"
-                  alt="Pilih Bundle"
-                  className="w-56 h-56 max-w-full object-contain pointer-events-none drop-shadow-xs"
+              <div className="bg-white border border-slate-200/90 rounded-md p-8 shadow-3xs flex items-center justify-center min-h-[350px] font-sans">
+                <EmptyDataAnimation
+                  title="Belum Ada Bundle yang Dipilih"
+                  description={
+                    <>
+                      Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold">Pilih Bundle</strong> terlebih dahulu untuk mengunggah berkas arsip digital.
+                    </>
+                  }
+                  action={
+                    <button
+                      onClick={() => handleSwitchTab("bundle")}
+                      className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-xs font-bold rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
+                    >
+                      <span>Pilih Bundle Sekarang</span>
+                    </button>
+                  }
                 />
-                <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-sm font-extrabold text-slate-800 tracking-tight font-sans">Belum Ada Bundle yang Dipilih</h3>
-                  <p className="text-xs text-slate-500 font-normal leading-relaxed font-sans">
-                    Silakan pilih salah satu bundle pada tab <strong className="text-slate-700 font-bold font-sans">Pilih Bundle</strong> terlebih dahulu untuk mengunggah berkas arsip digital.
-                  </p>
-                  <button
-                    onClick={() => handleSwitchTab("bundle")}
-                    className="mt-3 px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white text-[13px] font-normal rounded-md transition-all cursor-pointer shadow-3xs inline-flex items-center gap-1.5 font-sans"
-                  >
-                    <span>Pilih Bundle Sekarang</span>
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -1831,9 +1863,9 @@ export default function PengarsipWorkspace() {
       )}
 
       {/* ==================== MODAL: Kembalikan ke Peneliti ==================== */}
-      {showCorrectionModal && correctionTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 select-none animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-scaleUp">
+      {mounted && showCorrectionModal && correctionTarget && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 select-none animate-fadeIn font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-scaleUp font-sans">
 
             {/* Modal Header */}
             <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex items-center justify-between">
@@ -1862,7 +1894,7 @@ export default function PengarsipWorkspace() {
                     <strong className="font-mono">{formatNop(correctionTarget.nop)}</strong>.
                   </p>
                   <p className="text-[10px] text-rose-700 mt-1.5 font-bold">
-                    * Tindakan ini memerlukan persetujuan Supervisor dan akan mem-freeze permohonan hingga diputuskan.
+                    * Berkas akan langsung dikembalikan ke antrean Peneliti untuk ditindaklanjuti.
                   </p>
                 </div>
 
@@ -1902,7 +1934,8 @@ export default function PengarsipWorkspace() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ==================== MODAL: Detail Pecahan (Mutasi Sebagian) ==================== */}

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredVa
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
 import {
   FileText,
   Search,
@@ -832,6 +833,19 @@ export default function PengirimWorkspace() {
 
       {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
+
+        {/* Alert Banner jika terdapat manifest draf / belum dikirim */}
+        <RevisionAlertBanner
+          count={manifestsList.filter(m => m.status === 'DRAFT').length}
+          titlePrefix="Perhatian, "
+          titleText="Manifest Pengiriman Dalam Draf"
+          descriptionText="manifest pengiriman kargo berkas fisik yang belum terkunci atau belum diunggah resi bukti kirimnya."
+          actionLabel="Lihat Draf Manifest"
+          onAction={() => {
+            setFilterManifestStatus('DRAFT');
+            handleSwitchTab('daftar-manifest');
+          }}
+        />
 
         {/* TIER 1: UNIFIED KPI STATS STRIP (Clean Neutral Slate Styling - 100% Identik dengan Pengarsip & Peneliti) */}
         <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none font-sans">

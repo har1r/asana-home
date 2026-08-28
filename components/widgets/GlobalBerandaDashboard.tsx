@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   FileText,
   Users,
@@ -21,10 +21,14 @@ import {
   Activity,
   FileCheck,
   Lock,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Printer,
+  Calendar,
+  X
 } from 'lucide-react';
 import { getGlobalBerandaStats } from '@/app/actions/beranda';
 import { useDashboard } from '@/context/DashboardContext';
+import { GlobalBerandaSkeleton } from '@/components/skeletons/SkeletonBase';
 
 interface GlobalBerandaDashboardProps {
   onViewAllTasks?: () => void;
@@ -56,6 +60,8 @@ export default function GlobalBerandaDashboard({ onViewAllTasks }: GlobalBeranda
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kecamatan' | 'desa'>('kecamatan');
   const [regionSearch, setRegionSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [data, setData] = useState<{
     totalNopel: number;
     totalPemohon: number;
@@ -94,10 +100,10 @@ export default function GlobalBerandaDashboard({ onViewAllTasks }: GlobalBeranda
     }
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async (start = startDate, end = endDate) => {
     setLoading(true);
     try {
-      const res = await getGlobalBerandaStats();
+      const res = await getGlobalBerandaStats(start, end);
       if (res.success) {
         setData({
           totalNopel: res.totalNopel || 0,
@@ -119,11 +125,11 @@ export default function GlobalBerandaDashboard({ onViewAllTasks }: GlobalBeranda
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(startDate, endDate);
+  }, [startDate, endDate]);
 
   const [showAllDesa, setShowAllDesa] = useState(false);
 
@@ -144,8 +150,136 @@ export default function GlobalBerandaDashboard({ onViewAllTasks }: GlobalBeranda
     return filteredRegionList;
   }, [viewMode, showAllDesa, regionSearch, filteredRegionList]);
 
+  if (loading) {
+    return <GlobalBerandaSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full pb-10 font-sans">
+
+      {/* ========================================== */}
+      {/* 0. TOP HEADER COMMAND TOOLBAR (Date Filter & Actions) */}
+      {/* ========================================== */}
+      <div className=" flex flex-col md:flex-row md:items-center justify-between gap-3 select-none font-sans">
+        {/* Left Side: Filter Tanggal menggantikan teks Judul & Subjudul */}
+        <div className="flex items-center gap-2 flex-wrap font-sans">
+          <div className="flex items-center gap-2 bg-white border border-slate-200/90 rounded-md p-1 px-3 shadow-3xs font-sans">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent text-[13px] font-normal text-slate-800 focus:outline-none font-sans cursor-pointer"
+              title="Tanggal Mulai"
+            />
+            <span className="text-[13px] font-normal text-slate-400 font-sans">s/d</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent text-[13px] font-normal text-slate-800 focus:outline-none font-sans cursor-pointer"
+              title="Tanggal Selesai"
+            />
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="text-[11px] font-normal text-slate-400 hover:text-rose-600 ml-1 px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors cursor-pointer font-sans"
+                title="Reset Filter Tanggal"
+              >
+                ✕ Reset
+              </button>
+            )}
+          </div>
+
+          {/* Quick Presets: Semua Periode & Triwulan (TW 1 - TW 4) */}
+          <div className="flex items-center gap-1 font-sans flex-wrap">
+            <button
+              type="button"
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className={`px-3 py-1 rounded-md text-[13px] font-normal transition-all cursor-pointer border font-sans ${!startDate && !endDate ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+            >
+              Semua Periode
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const yr = new Date().getFullYear();
+                setStartDate(`${yr}-01-01`);
+                setEndDate(`${yr}-03-31`);
+              }}
+              className={`px-3 py-1 rounded-md text-[13px] font-normal transition-all cursor-pointer border font-sans ${startDate.endsWith('-01-01') && endDate.endsWith('-03-31') ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              title="Triwulan I (1 Jan - 31 Mar)"
+            >
+              TW 1 (Jan - Mar)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const yr = new Date().getFullYear();
+                setStartDate(`${yr}-04-01`);
+                setEndDate(`${yr}-06-30`);
+              }}
+              className={`px-3 py-1 rounded-md text-[13px] font-normal transition-all cursor-pointer border font-sans ${startDate.endsWith('-04-01') && endDate.endsWith('-06-30') ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              title="Triwulan II (1 Apr - 30 Jun)"
+            >
+              TW 2 (Apr - Jun)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const yr = new Date().getFullYear();
+                setStartDate(`${yr}-07-01`);
+                setEndDate(`${yr}-09-30`);
+              }}
+              className={`px-3 py-1 rounded-md text-[13px] font-normal transition-all cursor-pointer border font-sans ${startDate.endsWith('-07-01') && endDate.endsWith('-09-30') ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              title="Triwulan III (1 Jul - 30 Sep)"
+            >
+              TW 3 (Jul - Sep)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const yr = new Date().getFullYear();
+                setStartDate(`${yr}-10-01`);
+                setEndDate(`${yr}-12-31`);
+              }}
+              className={`px-3 py-1 rounded-md text-[13px] font-normal transition-all cursor-pointer border font-sans ${startDate.endsWith('-10-01') && endDate.endsWith('-12-31') ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              title="Triwulan IV (1 Okt - 31 Des)"
+            >
+              TW 4 (Okt - Des)
+            </button>
+          </div>
+        </div>
+
+        {/* Right Side: Direct 1-Click PDF Download & Refresh */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Tombol Download PDF Rangkuman Pelayanan Total (Langsung Unduh Sesuai Tanggal Tanpa Modal) */}
+          <a
+            href={`/api/pdf/rangkuman-pelayanan?startDate=${startDate}&endDate=${endDate}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-10 px-3.5 rounded-md border border-slate-200/90 hover:border-slate-300 hover:bg-slate-100 text-slate-700 transition-all cursor-pointer flex items-center gap-2 text-[13px] font-normal shadow-3xs font-sans"
+            title="Cetak & Download PDF Rangkuman Pelayanan Total (Otomatis Ikut Filter Tanggal)"
+          >
+            <Printer className="w-4 h-4 text-emerald-600" />
+          </a>
+
+          {/* Tombol Refresh Dipindahkan ke Paling Atas */}
+          <button
+            type="button"
+            onClick={() => loadData(startDate, endDate)}
+            disabled={loading}
+            className="h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-100 text-slate-500 transition-all cursor-pointer disabled:opacity-40 shadow-3xs flex items-center justify-center shrink-0"
+            title="Refresh Data Beranda"
+          >
+            <RefreshCw className={`w-4 h-4 transition-all duration-300 ${loading ? 'animate-spin text-[#00a389]' : ''}`} />
+          </button>
+        </div>
+      </div>
 
       {/* ========================================== */}
       {/* 1. TOP OVERVIEW SUMMARY CARDS (6 CARDS GRID) */}
@@ -366,7 +500,7 @@ export default function GlobalBerandaDashboard({ onViewAllTasks }: GlobalBeranda
             <h2 className="text-[13px] font-normal text-slate-800 capitalize font-sans">Rincian Pemohon Per Jenis Layanan</h2>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => loadData(startDate, endDate)}
             className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
             title="Refresh Data Statistik"
           >

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
 import { uploadToGoogleDrive } from "@/lib/googleDrive";
+import { notifyAllUsersOfRole } from "@/lib/notifications";
 
 /**
  * Action: Get all bundles that Pengarsip can work on.
@@ -355,7 +356,7 @@ export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: s
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const permohonan = await tx.permohonan.findUnique({
         where: { id: permohonanId },
         include: { bundle: true }
@@ -369,59 +370,85 @@ export async function ajukanKembalikanKePeneliti(permohonanId: string, alasan: s
         throw new Error("Hanya permohonan berstatus Terbundel atau Terarsip yang dapat dikembalikan ke Peneliti.");
       }
 
-      // Check if there is an existing pending request
-      const existingRequest = await tx.permintaanKoreksi.findFirst({
-        where: {
-          permohonanId,
-          status: "PENDING_APPROVAL",
-          jenisKoreksi: "KEMBALIKAN_KE_PENELITI"
+      if (permohonan.bundle?.status === "IN_MANIFEST") {
+        const hasPengirimReturn = await tx.permintaanKoreksi.findFirst({
+          where: {
+            permohonanId,
+            jenisKoreksi: "KEMBALIKAN_KE_PENGARSIP",
+            status: "APPROVED"
+          }
+        });
+        if (!hasPengirimReturn) {
+          throw new Error("Permohonan berada dalam manifest (IN_MANIFEST). Tidak dapat dikembalikan ke Peneliti tanpa adanya pengembalian resmi dari Pengirim.");
         }
-      });
-
-      if (existingRequest) {
-        throw new Error("Permintaan pengembalian permohonan ini sudah diajukan sebelumnya dan masih menunggu keputusan Supervisor.");
       }
 
-      // Create PermintaanKoreksi
+      // Create PermintaanKoreksi directly as APPROVED
       const request = await tx.permintaanKoreksi.create({
         data: {
           permohonanId,
           jenisKoreksi: "KEMBALIKAN_KE_PENELITI",
-          status: "PENDING_APPROVAL",
+          status: "APPROVED",
           pengajuId: session.user.id,
           catatanPengaju: alasan
         }
       });
 
-      // Notify Supervisor
-      const notifTitle = "Persetujuan Koreksi";
-      const notifPesan = `Pengarsip mengajukan koreksi untuk mengembalikan Permohonan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} ke Peneliti. Alasan: "${alasan}"`;
-      
-      const activeSupervisors = await tx.user.findMany({
-        where: { role: "SUPERVISOR", isActive: true },
-        select: { id: true }
+      const oldBundleId = permohonan.bundleId;
+
+      // Revert permohonan back to SUBMITTED and unbundle
+      const updatedPermohonan = await tx.permohonan.update({
+        where: { id: permohonanId },
+        data: {
+          bundleId: null,
+          status: "SUBMITTED"
+        }
       });
 
-      if (activeSupervisors.length > 0) {
-        await tx.inAppNotification.createMany({
-          data: activeSupervisors.map((sup) => ({
-            userId: sup.id,
-            judul: notifTitle,
-            pesan: notifPesan,
-            metadata: {
-              koreksiId: request.id,
-              permohonanId,
-              bundleId: permohonan.bundleId
-            }
-          }))
+      // If bundle is now empty, reset bundle jenis
+      if (oldBundleId) {
+        const remaining = await tx.permohonan.findMany({
+          where: { bundleId: oldBundleId }
         });
+        if (remaining.length === 0) {
+          await tx.bundle.update({
+            where: { id: oldBundleId },
+            data: { jenisPermohonan: null }
+          });
+        }
       }
 
-      return { success: true, status: "PENDING_APPROVAL", request };
+      // Create Audit Log
+      await tx.auditLog.create({
+        data: {
+          entityType: "PERMOHONAN",
+          entityId: permohonanId,
+          aksi: "Pengarsip Mengembalikan Permohonan ke Peneliti",
+          statusSebelum: permohonan.status,
+          statusSesudah: "SUBMITTED",
+          pelakuId: session.user.id,
+          metadata: { catatan: alasan, bundleId: oldBundleId }
+        }
+      });
+
+      return { success: true, status: "RETURNED_DIRECTLY", permohonan: updatedPermohonan, request };
     });
+
+    // Notify Peneliti users in background
+    await notifyAllUsersOfRole(
+      "PENELITI",
+      "Permohonan Dikembalikan Pengarsip",
+      `Permohonan No. Pelayanan ${result.permohonan.nomorPelayanan || result.permohonan.nomorPermohonan} dikembalikan oleh Pengarsip ${session.user.name || ""}. Alasan: "${alasan}"`,
+      {
+        permohonanId
+      }
+    );
+
+    revalidatePath("/");
+    return result;
   } catch (error: any) {
     console.error("[ACTION-KEMBALIKAN-KE-PENELITI-ERR]", error);
-    return { success: false, error: error.message || "Gagal mengajukan pengembalian ke peneliti." };
+    return { success: false, error: error.message || "Gagal mengembalikan permohonan ke peneliti." };
   }
 }
 

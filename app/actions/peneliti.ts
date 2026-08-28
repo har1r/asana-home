@@ -24,7 +24,13 @@ export async function getSubmittedPermohonan() {
       where: { status: 'SUBMITTED' },
       include: {
         dataBaru: true,
-        penginput: { select: { id: true, name: true, email: true } }
+        penginput: { select: { id: true, name: true, email: true } },
+        permintaanKoreksi: {
+          include: {
+            pengaju: { select: { name: true, role: true } }
+          },
+          orderBy: { updatedAt: 'desc' }
+        }
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -373,6 +379,11 @@ export async function removePermohonanFromBundle(bundleId: string, permohonanId:
 
       if (!permohonan || permohonan.bundleId !== bundleId) {
         throw new Error('Permohonan tidak berada di dalam bundle yang dipilih.');
+      }
+
+      // Guard: Permohonan that is ARCHIVED, COMPLETED or Bundle that is IN_MANIFEST / VOID cannot be extracted by Peneliti
+      if (bundle.status === 'IN_MANIFEST' || bundle.status === 'VOID' || permohonan.status === 'ARCHIVED' || permohonan.status === 'COMPLETED') {
+        throw new Error('Permohonan yang sudah diarsip (ARCHIVED), dalam manifest (IN_MANIFEST), atau selesai (COMPLETED) tidak dapat dikeluarkan sepihak oleh Peneliti.');
       }
 
       // Case A: Bundle is DRAFT (Immediate action)
@@ -769,6 +780,55 @@ export async function getDraftBundles(limit = 5) {
   } catch (error: any) {
     console.error('[ACTION-GET-DRAFT-BUNDLES-ERR]', error);
     return { success: false, list: [], total: 0, error: 'Gagal mengambil daftar bundle draf.' };
+  }
+}
+
+/**
+ * Resubmit permohonan that was returned from Pengarsip to Peneliti.
+ * This marks the returned items as re-verified/resubmitted by Peneliti.
+ */
+export async function resubmitPermohonanPeneliti(permohonanId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'PENELITI') {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const permohonan = await prisma.permohonan.findUnique({
+      where: { id: permohonanId }
+    });
+
+    if (!permohonan) {
+      return { success: false, error: 'Permohonan tidak ditemukan.' };
+    }
+
+    // Clear the KEMBALIKAN_KE_PENELITI correction record so it is marked resolved
+    await prisma.permintaanKoreksi.deleteMany({
+      where: {
+        permohonanId: permohonanId,
+        jenisKoreksi: 'KEMBALIKAN_KE_PENELITI'
+      }
+    });
+
+    // Touch permohonan updatedAt
+    await prisma.permohonan.update({
+      where: { id: permohonanId },
+      data: { updatedAt: new Date() }
+    });
+
+    // In-app notification to Pengarsip
+    await notifyAllUsersOfRole(
+      'PENGARSIP',
+      `Permohonan No. Pelayanan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} telah diteliti ulang (resubmit) oleh Peneliti ${session.user.name || ''}.`,
+      `/workspace/pengarsip`,
+      'INFO'
+    );
+
+    revalidatePath('/');
+    return { success: true, message: `Permohonan No. Pelayanan ${permohonan.nomorPelayanan || permohonan.nomorPermohonan} berhasil diteliti ulang (Resubmit)!` };
+  } catch (error: any) {
+    console.error('[ACTION-RESUBMIT-PENELITI-ERR]', error);
+    return { success: false, error: 'Gagal melakukan resubmit permohonan.' };
   }
 }
 

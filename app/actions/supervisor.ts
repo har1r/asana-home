@@ -285,6 +285,26 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
       }
     }
 
+    // If KEMBALIKAN_KE_PENELITI, notify all PENELITI users so they know a returned application has entered their queue
+    if (result.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI') {
+      try {
+        const penelitiUsers = await prisma.user.findMany({
+          where: { role: 'PENELITI' },
+          select: { id: true }
+        });
+        for (const u of penelitiUsers) {
+          await createInAppNotification(
+            u.id,
+            'Permohonan Dikembalikan oleh Pengarsip',
+            `Permohonan No. Pelayanan ${result.nomorPelayanan} dikembalikan oleh Pengarsip (disetujui Supervisor) untuk diteliti/dibundel ulang.${catatan ? ` Catatan Alasan: "${catatan}"` : ''}`,
+            { koreksiId }
+          );
+        }
+      } catch (err) {
+        console.error('[NOTIF-PENELITI-ERR]', err);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {

@@ -32,6 +32,7 @@ import {
 import { useDashboard } from '@/context/DashboardContext';
 import { getGlobalBerandaStats } from '@/app/actions/beranda';
 import { getPermohonanStats } from '@/app/actions/penginput';
+import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonCircle } from '@/components/skeletons/SkeletonBase';
 
 // ==========================================
 // 2. TYPE DEFINITIONS & INTERFACES
@@ -70,7 +71,8 @@ export default function Sidebar() {
   } = useDashboard();
 
   // --- User Session & Role ---
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const isSessionLoading = sessionStatus === 'loading';
   const userName = session?.user?.name || '';
   const userRoleRaw = (session?.user as any)?.role || '';
 
@@ -115,12 +117,14 @@ export default function Sidebar() {
   // --- State Data Permohonan & Statistik ---
   const [permohonanList, setPermohonanList] = useState<any[]>([]);
   const [stats, setStats] = useState<PermohonanStatsState>({ total: 0, scanned: 0 });
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
 
   // ==========================================
   // 4. DATA FETCHING & LOGIKA DIHUBUNGKAN
   // ==========================================
   useEffect(() => {
     async function loadPermohonanData() {
+      setIsDataLoading(true);
       try {
         const [globalRes, statsRes] = await Promise.all([
           getGlobalBerandaStats(),
@@ -137,6 +141,8 @@ export default function Sidebar() {
         }
       } catch (e) {
         console.error('Gagal memuat data permohonan untuk sidebar:', e);
+      } finally {
+        setIsDataLoading(false);
       }
     }
     loadPermohonanData();
@@ -231,27 +237,39 @@ export default function Sidebar() {
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-100 group transition-colors text-left"
                   >
                     <div className="flex gap-x-2 items-center">
-                      <div className="relative flex items-center gap-2 text-gray-600">
-                        <div className="w-7.5 h-7.5 rounded-lg bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
-                          <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">{userInitials}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col max-w-[130px]">
-                        <div className="text-slate-800 text-[13px] font-normal tracking-tight font-sans">
-                          <div className="flex items-center gap-x-1">
-                            <div className="capitalize truncate">
-                              {firstName ? `Hi, ${firstName}` : "Hi, User"}
+                      {isSessionLoading ? (
+                        <>
+                          <SkeletonCircle size="w-7.5 h-7.5" />
+                          <div className="flex flex-col gap-1 max-w-[130px]">
+                            <SkeletonText width="w-20" height="h-3" />
+                            <SkeletonText width="w-16" height="h-2.5" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="relative flex items-center gap-2 text-gray-600">
+                            <div className="w-7.5 h-7.5 rounded-lg bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
+                              <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">{userInitials}</p>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-slate-600 text-[13px] font-normal leading-normal truncate font-sans">
-                          <div className="flex items-center gap-x-1">
-                            <span className="capitalize truncate">
-                              {userRoleFormatted}
-                            </span>
+                          <div className="flex flex-col max-w-[130px]">
+                            <div className="text-slate-800 text-[13px] font-normal tracking-tight font-sans">
+                              <div className="flex items-center gap-x-1">
+                                <div className="capitalize truncate">
+                                  {firstName ? `Hi, ${firstName}` : "Hi, User"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-slate-600 text-[13px] font-normal leading-normal truncate font-sans">
+                              <div className="flex items-center gap-x-1">
+                                <span className="capitalize truncate">
+                                  {userRoleFormatted}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </>
+                      )}
                     </div>
                     <ChevronDown className="w-3 h-3 shrink-0 text-slate-400 group-hover:text-slate-800 transition-colors ml-0.5" />
                   </button>
@@ -267,38 +285,62 @@ export default function Sidebar() {
             {/* 2. USAGE TRACKER / PROGRESS & ACTION BUTTONS */}
             <div className="flex flex-col gap-2.5 px-1 py-1">
               <div className="flex flex-col gap-2">
-                {/* Tracker 1: Permohonan Masuk */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-slate-600 font-sans">
-                      Permohonan Masuk
-                    </span>
-                    <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
-                      {totalApplicantsCount}
-                    </span>
-                  </div>
-                  <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
-                    <div className="h-full bg-[#00a389] rounded-full w-full motion-safe:animate-progress-ok" />
-                  </div>
-                </div>
+                {isDataLoading ? (
+                  <>
+                    {/* Tracker 1 Skeleton */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-600 font-sans">Permohonan Masuk</span>
+                        <SkeletonText width="w-6" height="h-3" />
+                      </div>
+                      <SkeletonBox width="w-full" height="h-1.5" rounded="rounded-full" />
+                    </div>
 
-                {/* Tracker 2: Scan permohonan diupload */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-slate-600 font-sans">
-                      Scan permohonan diupload
-                    </span>
-                    <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
-                      {stats.scanned}/{totalApplicantsCount}
-                    </span>
-                  </div>
-                  <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full bg-[#00a389] rounded-full transition-all duration-500 motion-safe:animate-progress-ok"
-                      style={{ width: `${totalApplicantsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicantsCount) * 100)) : 0}%` }}
-                    />
-                  </div>
-                </div>
+                    {/* Tracker 2 Skeleton */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-600 font-sans">Scan permohonan diupload</span>
+                        <SkeletonText width="w-10" height="h-3" />
+                      </div>
+                      <SkeletonBox width="w-full" height="h-1.5" rounded="rounded-full" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Tracker 1: Permohonan Masuk */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-600 font-sans">
+                          Permohonan Masuk
+                        </span>
+                        <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
+                          {totalApplicantsCount}
+                        </span>
+                      </div>
+                      <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
+                        <div className="h-full bg-[#00a389] rounded-full w-full motion-safe:animate-progress-ok" />
+                      </div>
+                    </div>
+
+                    {/* Tracker 2: Scan permohonan diupload */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-600 font-sans">
+                          Scan permohonan diupload
+                        </span>
+                        <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
+                          {stats.scanned}/{totalApplicantsCount}
+                        </span>
+                      </div>
+                      <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full bg-[#00a389] rounded-full transition-all duration-500 motion-safe:animate-progress-ok"
+                          style={{ width: `${totalApplicantsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicantsCount) * 100)) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Digital Clock Badge */}
@@ -372,7 +414,13 @@ export default function Sidebar() {
                   </button>
                   {showProjects && (
                     <div className="pl-12 flex flex-col gap-0.5 animate-fadeIn">
-                      {dataBaruItems.length > 0 ? (
+                      {isDataLoading ? (
+                        <div className="py-1 px-2 flex flex-col gap-2">
+                          <SkeletonText width="w-3/4" height="h-3" />
+                          <SkeletonText width="w-2/3" height="h-3" />
+                          <SkeletonText width="w-4/5" height="h-3" />
+                        </div>
+                      ) : dataBaruItems.length > 0 ? (
                         dataBaruItems.map((item) => (
                           <button
                             key={item.id}
@@ -411,15 +459,22 @@ export default function Sidebar() {
                       <Layers className={`w-4 h-4 shrink-0 transition-all ${showCollections ? 'text-slate-900 fill-slate-900/15' : 'text-slate-400 fill-none group-hover:text-slate-900'}`} />
                       <span className={showCollections ? 'text-slate-900' : ''}>Favorit</span>
                     </div>
-                    {favoritePermohonans && favoritePermohonans.length > 0 && (
+                    {isDataLoading ? (
+                      <SkeletonBadge width="w-5" />
+                    ) : favoritePermohonans && favoritePermohonans.length > 0 ? (
                       <span className="text-[11px] font-normal text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full font-sans">
                         {favoritePermohonans.length}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                   {showCollections && (
                     <div className="pl-12 flex flex-col gap-0.5 animate-fadeIn">
-                      {favoritePermohonans && favoritePermohonans.length > 0 ? (
+                      {isDataLoading ? (
+                        <div className="py-1 px-2 flex flex-col gap-2">
+                          <SkeletonText width="w-2/3" height="h-3" />
+                          <SkeletonText width="w-3/4" height="h-3" />
+                        </div>
+                      ) : favoritePermohonans && favoritePermohonans.length > 0 ? (
                         <>
                           {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => (
                             <button
@@ -500,22 +555,32 @@ export default function Sidebar() {
             </div>
 
             {/* User Profile Badge */}
-            <div
-              onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-              className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors group mt-1"
-            >
-              <div className="w-7 h-7 rounded-full bg-[#ffedd5] text-[#9a3412] font-normal text-[13px] flex items-center justify-center shrink-0 border border-[#fed7aa] font-sans">
-                M
+            {isSessionLoading ? (
+              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg mt-1 select-none">
+                <SkeletonCircle size="w-7 h-7" />
+                <div className="flex flex-col gap-1 truncate max-w-[180px]">
+                  <SkeletonText width="w-24" height="h-3" />
+                  <SkeletonText width="w-32" height="h-2.5" />
+                </div>
               </div>
-              <div className="flex flex-col truncate max-w-[180px]">
-                <span className="truncate font-normal text-[13px] text-slate-700 group-hover:text-slate-900 font-sans">
-                  Mufti Harir
-                </span>
-                <span className="truncate text-xs font-normal text-slate-500 font-sans">
-                  muftiharir3@gmail.com
-                </span>
+            ) : (
+              <div
+                onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
+                className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors group mt-1"
+              >
+                <div className="w-7 h-7 rounded-full bg-[#ffedd5] text-[#9a3412] font-normal text-[13px] flex items-center justify-center shrink-0 border border-[#fed7aa] font-sans">
+                  {userInitials.slice(0, 1)}
+                </div>
+                <div className="flex flex-col truncate max-w-[180px]">
+                  <span className="truncate font-normal text-[13px] text-slate-700 group-hover:text-slate-900 font-sans">
+                    {userName || 'User Profile'}
+                  </span>
+                  <span className="truncate text-xs font-normal text-slate-500 font-sans">
+                    {session?.user?.email || ''}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
         </div>

@@ -35,6 +35,8 @@ import {
 import { getTrackingData } from "@/app/actions/tracking";
 import { useDashboard } from "@/context/DashboardContext";
 import { useDebounce } from "@/lib/useDebounce";
+import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { TrackingTabSkeleton } from "@/components/skeletons/SkeletonBase";
 
 
 // -------------------- HELPER FUNCTIONS --------------------
@@ -443,6 +445,16 @@ export default function TrackingTab() {
     );
   }, [bundleItemsList, activePage, itemsPerPage]);
 
+  if (loading) {
+    return (
+      <TrackingTabSkeleton
+        viewMode={
+          activeBundleView ? 'permohonan' : activeManifestView ? 'bundles' : 'manifests'
+        }
+      />
+    );
+  }
+
   return (
     <div className="w-full flex flex-col gap-6 font-sans">
 
@@ -540,19 +552,47 @@ export default function TrackingTab() {
 
       {/* Main Content Container: Tampilan Card Manifest / Card Bundle / Tabel Permohonan */}
       <div className="w-full font-sans">
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
-            <div className="w-7 h-7 rounded-full border-2 border-indigo-600/30 border-t-indigo-600 animate-spin" />
-            <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">Menghubungkan ke database...</span>
-          </div>
-        ) : activeBundleView ? (
+        {activeBundleView ? (
           /* ==================== VIEW MODE 3: TABEL PERMOHONAN BERKAS (Identik Penginput Workspace) ==================== */
           <div className="flex flex-col gap-3 font-sans animate-fadeIn">
-            {/* Toolbar Atas Tabel: Mode Switcher ('Nopel' vs 'Pemohon') */}
-            <div className="flex items-center justify-between select-none font-sans">
-              <span className="text-[13px] font-normal text-slate-600 font-sans">
-                Daftar Berkas dalam Bundle <strong className="font-mono text-slate-800">{activeBundleView.nomorBundle}</strong>
-              </span>
+            {/* Toolbar Atas Tabel: Action Buttons (Download Surat Pengantar & Bukti Kirim) + Mode Switcher */}
+            <div className="flex items-center justify-between gap-3 select-none font-sans flex-wrap">
+              {/* Action Buttons: Download Surat Pengantar & Download Bukti Kirim */}
+              <div className="flex items-center gap-2">
+                <a
+                  href={activeBundleView?.id ? `/api/pdf/surat-pengantar-bundle/${activeBundleView.id}` : (activeManifestView?.id ? `/api/pdf/surat-pengantar-manifest/${activeManifestView.id}` : '#')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-8 px-3 rounded-md bg-white border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 text-slate-700 transition-all cursor-pointer flex items-center gap-1.5 text-[12px] font-normal shadow-3xs font-sans"
+                  title="Download / Cetak Surat Pengantar PDF (Bundle)"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Download Surat Pengantar</span>
+                </a>
+
+                {activeManifestView?.buktiTandaTerima ? (
+                  <a
+                    href={activeManifestView.buktiTandaTerima}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-8 px-3 rounded-md bg-emerald-50 border border-emerald-200/90 text-[#008f78] hover:bg-emerald-100 transition-all cursor-pointer flex items-center gap-1.5 text-[12px] font-normal shadow-3xs font-sans"
+                    title="Download / Lihat Bukti Tanda Terima Kirim"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#00a389]" />
+                    <span>Download Bukti Kirim</span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => alert("Bukti kirim tanda terima belum diunggah untuk manifest ini.")}
+                    className="h-8 px-3 rounded-md bg-slate-50 border border-slate-200/80 text-slate-400 hover:text-slate-600 transition-all cursor-pointer flex items-center gap-1.5 text-[12px] font-normal font-sans"
+                    title="Bukti kirim belum diunggah"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Download Bukti Kirim</span>
+                  </button>
+                )}
+              </div>
 
               {/* Right Side: Tab Mode Switcher (Nopel & Pemohon) */}
               <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
@@ -639,8 +679,11 @@ export default function TrackingTab() {
                   <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans">
                     {paginatedBundleItems.length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="py-12 text-center text-slate-400 font-normal italic font-sans">
-                          Tidak ada permohonan dalam bundle ini.
+                        <td colSpan={12} className="py-10 text-center bg-white font-sans">
+                          <EmptyDataAnimation
+                            title="Belum Ada Permohonan"
+                            description="Tidak ada permohonan dalam bundle ini."
+                          />
                         </td>
                       </tr>
                     ) : (
@@ -656,9 +699,8 @@ export default function TrackingTab() {
                           <tr
                             key={item.uniqueRowKey || item.id || idx}
                             onClick={() => setGlobalSelectedRequest(item)}
-                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer text-[12px] font-normal font-sans text-slate-600 h-11 ${
-                              item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
-                            }`}
+                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer text-[12px] font-normal font-sans text-slate-600 h-11 ${item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
+                              }`}
                           >
                             <td className="py-2.5 px-4 text-center text-slate-600 font-sans">{globalIdx}</td>
                             <td className="py-2.5 px-2 text-center">
@@ -748,19 +790,6 @@ export default function TrackingTab() {
                                     >
                                       <Download className="w-3.5 h-3.5 text-indigo-500" />
                                       <span>Download Arsip</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenDropdownId(null);
-                                        handleDownloadBuktiKirim(item);
-                                      }}
-                                      className="w-full text-left px-3.5 py-2 text-[12px] text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-2 font-normal transition-colors cursor-pointer font-sans"
-                                    >
-                                      <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Download Bukti Kirim</span>
                                     </button>
                                   </div>
                                 </>
@@ -852,8 +881,11 @@ export default function TrackingTab() {
           <div className="flex flex-col gap-4 font-sans animate-fadeIn">
             {/* Grid Card Bundle (Identik dengan Peneliti Workspace) */}
             {(!activeManifestView.bundle || activeManifestView.bundle.length === 0) ? (
-              <div className="bg-white rounded-md border border-slate-200/90 p-16 text-center text-[13px] text-slate-400 font-normal italic font-sans">
-                Manifest ini belum memiliki bundle berkas.
+              <div className="bg-white rounded-md border border-slate-200/90 p-8 text-center shadow-3xs flex items-center justify-center font-sans">
+                <EmptyDataAnimation
+                  title="Belum Ada Bundle"
+                  description="Manifest ini belum memiliki bundle berkas."
+                />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
@@ -867,8 +899,8 @@ export default function TrackingTab() {
                   }, 0);
 
                   const penelitiName = b.peneliti?.name || "Peneliti";
-                  const penelitiInitials = penelitiName
-                    ? penelitiName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+                  const penelitiInitials = b.peneliti?.name
+                    ? b.peneliti.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
                     : "PN";
 
                   return (
@@ -914,7 +946,6 @@ export default function TrackingTab() {
                           <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
                             {penelitiInitials}
                           </div>
-                          <span className="text-[12px] font-normal text-slate-600 truncate font-sans uppercase">{penelitiName}</span>
                         </div>
 
                         <span className="font-mono text-[12px] text-slate-500 font-normal shrink-0 font-sans">
@@ -929,26 +960,25 @@ export default function TrackingTab() {
           </div>
         ) : manifests.length === 0 ? (
           /* ==================== EMPTY STATE ==================== */
-          <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center justify-center gap-4 shadow-xs select-none font-sans">
-            <FishingAnimation isSearch={!!debouncedSearch} />
-            <div className="flex flex-col gap-1 max-w-sm font-sans">
-              <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider font-sans">
-                {debouncedSearch ? "Hasil Pencarian Tidak Ditemukan" : "Pelacakan Kosong"}
-              </h5>
-              <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4 font-sans">
-                {debouncedSearch
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center flex flex-col items-center justify-center shadow-3xs select-none font-sans">
+            <EmptyDataAnimation
+              title={debouncedSearch ? "Hasil Pencarian Tidak Ditemukan" : "Pelacakan Kosong"}
+              description={
+                debouncedSearch
                   ? "Kami tidak menemukan manifest yang sesuai dengan kata kunci."
-                  : "Belum ada log pengiriman manifest di sistem saat ini."}
-              </p>
-            </div>
-            {debouncedSearch && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-3xs font-sans"
-              >
-                Reset Pencarian
-              </button>
-            )}
+                  : "Belum ada log pengiriman manifest di sistem saat ini."
+              }
+              action={
+                debouncedSearch ? (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-md transition-all cursor-pointer shadow-3xs font-sans"
+                  >
+                    Reset Pencarian
+                  </button>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
           /* ==================== VIEW MODE 1: GRID CARD MANIFEST ==================== */
@@ -1008,7 +1038,6 @@ export default function TrackingTab() {
                       <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-3xs" title={pengirimName}>
                         {pengirimInitials}
                       </div>
-                      <span className="text-[12px] font-normal text-slate-600 truncate font-sans uppercase">{pengirimName}</span>
                     </div>
 
                     <span className="text-[12px] font-normal text-slate-500 flex items-center gap-1 shrink-0 font-sans">

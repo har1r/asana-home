@@ -175,9 +175,22 @@ export async function createPermohonan(rawInput: any) {
 
   // Parse dan validasi data input
   const validated = permohonanSchema.parse(rawInput);
-  const nomorPermohonan = await generateUniqueNomorPermohonan();
-
   try {
+    // Pengecekan keunikan Nomor Pelayanan (Nopel) untuk mencegah input data duplikat
+    const existingNopel = await prisma.permohonan.findFirst({
+      where: { nomorPelayanan: validated.nomorPelayanan },
+      select: { id: true, nomorPelayanan: true }
+    });
+
+    if (existingNopel) {
+      return {
+        success: false,
+        error: `Nomor Pelayanan "${validated.nomorPelayanan}" sudah terdaftar di sistem. Mohon periksa kembali berkas Anda.`
+      };
+    }
+
+    const nomorPermohonan = await generateUniqueNomorPermohonan();
+
     const derivedNama = (validated.dataBaru && validated.dataBaru.length > 0)
       ? validated.dataBaru[0].namaPemilikBaru
       : (validated.namaPemilikLama || "");
@@ -332,6 +345,22 @@ export async function updatePermohonan(id: string, rawInput: any) {
 
     if (!canUpdate) {
       return { success: false, error: 'Data permohonan sudah terkunci atau diproses ke dalam bundle, tidak dapat diedit.' };
+    }
+
+    // Pengecekan keunikan Nomor Pelayanan (Nopel) untuk permohonan lain
+    const existingNopel = await prisma.permohonan.findFirst({
+      where: {
+        nomorPelayanan: validated.nomorPelayanan,
+        id: { not: id }
+      },
+      select: { id: true, nomorPelayanan: true }
+    });
+
+    if (existingNopel) {
+      return {
+        success: false,
+        error: `Nomor Pelayanan "${validated.nomorPelayanan}" sudah digunakan oleh permohonan lain.`
+      };
     }
 
     const derivedNama = (validated.dataBaru && validated.dataBaru.length > 0)
@@ -538,7 +567,7 @@ export async function resubmitPermohonan(id: string) {
  * ============================================================================ */
 
 /**
- * Server Action: Mengambil seluruh daftar permohonan PBB yang diinput oleh pengguna yang sedang login.
+ * Server Action: Mengambil seluruh daftar permohonan PBB secara global untuk workspace Penginput.
  * 
  * @returns Object `{ success: boolean, list: Permohonan[], error?: string }`
  */
@@ -551,9 +580,6 @@ export async function getPenginputPermohonan() {
 
   try {
     const list = await prisma.permohonan.findMany({
-      where: {
-        penginputId: session.user.id
-      },
       include: {
         dataBaru: true,
         penginput: {

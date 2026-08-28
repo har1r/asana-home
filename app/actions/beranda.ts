@@ -7,14 +7,28 @@ import { prisma } from "@/lib/prisma";
 /**
  * Server Action: Get global unified beranda statistics (NOPEL vs Pemohon & breakdown per jenis layanan)
  */
-export async function getGlobalBerandaStats() {
+export async function getGlobalBerandaStats(startDate?: string, endDate?: string) {
   const session = await getServerSession(authOptions);
   if (!session) {
     throw new Error('Unauthorized');
   }
 
   try {
+    const whereClause: any = {};
+    if (startDate || endDate) {
+      whereClause.createdAt = {};
+      if (startDate) {
+        whereClause.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        whereClause.createdAt.lte = end;
+      }
+    }
+
     const list = await prisma.permohonan.findMany({
+      where: whereClause,
       include: {
         dataBaru: true,
         arsipDigital: true,

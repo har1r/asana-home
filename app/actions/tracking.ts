@@ -24,8 +24,15 @@ export async function getTrackingData(query?: string) {
           },
           bundle: {
             include: {
+              peneliti: {
+                select: { name: true, email: true }
+              },
               permohonan: {
                 include: {
+                  penginput: {
+                    select: { name: true, email: true }
+                  },
+                  dataBaru: true,
                   arsipDigital: {
                     where: { status: "ACTIVE" },
                     orderBy: { versi: "desc" },
@@ -47,12 +54,22 @@ export async function getTrackingData(query?: string) {
           ]
         },
         include: {
+          penginput: {
+            select: { name: true, email: true }
+          },
+          dataBaru: true,
           arsipDigital: {
             where: { status: "ACTIVE" },
             orderBy: { versi: "desc" },
             take: 1
           },
-          bundle: true
+          bundle: {
+            include: {
+              peneliti: {
+                select: { name: true, email: true }
+              }
+            }
+          }
         },
         orderBy: { createdAt: "desc" },
         take: 15
@@ -94,8 +111,15 @@ export async function getTrackingData(query?: string) {
           },
           bundle: {
             include: {
+              peneliti: {
+                select: { name: true, email: true }
+              },
               permohonan: {
                 include: {
+                  penginput: {
+                    select: { name: true, email: true }
+                  },
+                  dataBaru: true,
                   arsipDigital: {
                     where: { status: "ACTIVE" },
                     orderBy: { versi: "desc" },
@@ -130,12 +154,22 @@ export async function getTrackingData(query?: string) {
           ]
         },
         include: {
+          penginput: {
+            select: { name: true, email: true }
+          },
+          dataBaru: true,
           arsipDigital: {
             where: { status: "ACTIVE" },
             orderBy: { versi: "desc" },
             take: 1
           },
-          bundle: true
+          bundle: {
+            include: {
+              peneliti: {
+                select: { name: true, email: true }
+              }
+            }
+          }
         },
         orderBy: { createdAt: "desc" }
       });

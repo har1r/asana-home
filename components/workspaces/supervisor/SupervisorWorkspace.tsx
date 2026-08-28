@@ -37,6 +37,7 @@ import {
 } from "@/app/actions/supervisor";
 import { useDashboard } from "@/context/DashboardContext";
 import { SkeletonBox, SkeletonText } from "@/components/skeletons/SkeletonBase";
+import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
 
 type WorkspaceTab = "queue" | "history";
 
@@ -556,22 +557,15 @@ export default function SupervisorWorkspace() {
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {paginatedPending.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-20 px-5 text-center bg-white">
-                          <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
-                            <div className="w-14 h-14 rounded-md bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-[#00a389] shadow-3xs">
-                              <CheckCircle2 className="w-7 h-7 stroke-[1.75]" />
-                            </div>
-                            <div className="space-y-1 text-center">
-                              <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-                                {searchQuery || filterJenis !== 'ALL' ? 'Tidak Ditemukan' : 'Antrean Persetujuan Kosong'}
-                              </h3>
-                              <p className="text-xs text-slate-400 font-semibold leading-relaxed">
-                                {searchQuery || filterJenis !== 'ALL'
-                                  ? 'Tidak ada permintaan koreksi yang sesuai dengan kriteria pencarian.'
-                                  : 'Semua permintaan koreksi telah ditangani. Tidak ada permohonan yang menunggu persetujuan.'}
-                              </p>
-                            </div>
-                          </div>
+                        <td colSpan={10} className="py-10 px-5 text-center bg-white font-sans">
+                          <EmptyDataAnimation
+                            title={searchQuery || filterJenis !== 'ALL' ? 'Tidak Ditemukan' : 'Antrean Persetujuan Kosong'}
+                            description={
+                              searchQuery || filterJenis !== 'ALL'
+                                ? 'Tidak ada permintaan koreksi yang sesuai dengan kriteria pencarian.'
+                                : 'Semua permintaan koreksi telah ditangani. Tidak ada permohonan yang menunggu persetujuan.'
+                            }
+                          />
                         </td>
                       </tr>
                     ) : (
@@ -775,18 +769,11 @@ export default function SupervisorWorkspace() {
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {paginatedHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-20 px-5 text-center bg-white">
-                          <div className="flex flex-col items-center justify-center gap-4 max-w-md mx-auto select-none animate-fadeIn">
-                            <div className="w-14 h-14 rounded-md bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400 shadow-3xs">
-                              <History className="w-7 h-7 stroke-[1.75]" />
-                            </div>
-                            <div className="space-y-1 text-center">
-                              <h3 className="text-sm font-bold text-slate-800 tracking-tight">Belum Ada Riwayat</h3>
-                              <p className="text-xs text-slate-400 font-semibold leading-relaxed">
-                                Riwayat keputusan koreksi akan muncul di sini setelah Anda menyetujui atau menolak permintaan.
-                              </p>
-                            </div>
-                          </div>
+                        <td colSpan={9} className="py-10 px-5 text-center bg-white font-sans">
+                          <EmptyDataAnimation
+                            title="Belum Ada Riwayat"
+                            description="Riwayat keputusan koreksi akan muncul di sini setelah Anda menyetujui atau menolak permintaan."
+                          />
                         </td>
                       </tr>
                     ) : (

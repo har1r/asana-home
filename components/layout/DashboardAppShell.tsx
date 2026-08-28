@@ -114,7 +114,7 @@ function WorkspaceLoadingSkeleton() {
     <div className="w-full min-h-[400px] flex flex-col items-center justify-center gap-3 select-none animate-fadeIn">
       <div className="relative w-10 h-10">
         <div className="w-full h-full rounded-full border-[3px] border-slate-100" />
-        <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
+        <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-[#00a389] border-t-transparent animate-spin" />
       </div>
       <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">
         Memuat Halaman...
@@ -128,9 +128,9 @@ function MascotLoadingSpinner() {
   return (
     <div className="w-full min-h-[520px] flex flex-col items-center justify-center gap-4 select-none animate-fadeIn pt-16">
       <div className="relative w-20 h-20">
-        {/* Outer spinning ring with gradient */}
+        {/* Outer spinning ring with uniform solid brand green */}
         <div className="absolute inset-0 w-full h-full rounded-full border-[4px] border-slate-100/60" />
-        <div className="absolute inset-0 w-full h-full rounded-full border-[4px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
+        <div className="absolute inset-0 w-full h-full rounded-full border-[4px] border-[#00a389] border-t-transparent animate-spin" />
 
         {/* Animated Architax Logo inside the spinning ring */}
         <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden">

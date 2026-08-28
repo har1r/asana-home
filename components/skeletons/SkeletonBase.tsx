@@ -590,5 +590,216 @@ export function FavoritesCardSkeleton() {
   );
 }
 
+interface TrackingTabSkeletonProps {
+  viewMode?: 'manifests' | 'bundles' | 'permohonan';
+}
+
+/** Skeleton presisi untuk TrackingTab (Lacak Permohonan) — mencakup Header Card & Main Content */
+export function TrackingTabSkeleton({ viewMode = 'manifests' }: TrackingTabSkeletonProps) {
+  return (
+    <div className="w-full flex flex-col gap-6 font-sans select-none animate-fadeIn">
+      {/* 1. Command Bar Header Skeleton */}
+      <div className="bg-white border border-slate-200/90 p-4 rounded-md shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans">
+        <SkeletonBox width="w-44" height="h-5" rounded="rounded-full" />
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <SkeletonBox width="w-full md:w-[403px]" height="h-10" rounded="rounded-md" />
+          <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
+        </div>
+      </div>
+
+      {/* 2. Main Content Container Skeleton */}
+      {viewMode === 'permohonan' ? (
+        <div className="flex flex-col gap-3 font-sans">
+          <div className="flex items-center justify-end">
+            <SkeletonBox width="w-36" height="h-8" rounded="rounded-md" />
+          </div>
+          <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[400px]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse font-sans">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200">
+                    {['No', '⭐', 'Tgl. Input', 'Petugas Input', 'Tgl. Nopel', 'Tgl. Selesai', 'No. Pelayanan', 'NOP', 'Nama Pemohon', 'Jenis', 'Status', 'Aksi'].map((_, idx) => (
+                      <th key={idx} className="py-3 px-4">
+                        <SkeletonText width="w-14" height="h-3" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="py-3 px-4 text-center"><SkeletonText width="w-4" height="h-3" /></td>
+                      <td className="py-3 px-2 text-center"><SkeletonCircle size="w-4 h-4" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-16" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-24" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-16" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-16" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-28" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width="w-32" height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonText width={i % 2 === 0 ? "w-28" : "w-24"} height="h-3" /></td>
+                      <td className="py-3 px-4"><SkeletonBadge width="w-10" /></td>
+                      <td className="py-3 px-4"><SkeletonBadge width="w-16" /></td>
+                      <td className="py-3 px-4 text-center"><SkeletonBox width="w-14" height="h-7" rounded="rounded-md" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200/90 bg-slate-50 flex items-center justify-between mt-auto">
+              <SkeletonText width="w-36" height="h-3" />
+              <SkeletonBox width="w-32" height="h-7" rounded="rounded-md" />
+            </div>
+          </div>
+        </div>
+      ) : viewMode === 'bundles' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border bg-white border-slate-200/90 flex flex-col justify-between gap-3.5 select-none min-h-[140px] font-sans shadow-3xs">
+              <div className="flex items-center justify-between gap-2">
+                <SkeletonText width="w-36" height="h-4" />
+              </div>
+              <div className="flex items-center justify-center gap-1.5 py-1">
+                <SkeletonBadge width="w-12" />
+                <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+                <SkeletonBadge width="w-16" />
+                <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+                <SkeletonBadge width="w-20" />
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 mt-auto">
+                <SkeletonCircle size="w-5.5 h-5.5" />
+                <SkeletonText width="w-20" height="h-3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border bg-white border-slate-200/90 flex flex-col justify-between gap-3.5 select-none min-h-[140px] font-sans shadow-3xs">
+              <div className="flex items-center justify-between gap-2">
+                <SkeletonText width="w-32" height="h-4" />
+                <SkeletonBadge width="w-16" />
+              </div>
+              <div className="py-2 px-1 bg-slate-50 rounded-md border border-slate-100 flex items-center">
+                <div className="flex-1 flex justify-center"><SkeletonText width="w-16" height="h-3" /></div>
+                <div className="w-px h-3.5 bg-slate-200 shrink-0" />
+                <div className="flex-1 flex justify-center"><SkeletonText width="w-20" height="h-3" /></div>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 mt-auto">
+                <SkeletonCircle size="w-5.5 h-5.5" />
+                <SkeletonText width="w-20" height="h-3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Skeleton presisi untuk GlobalBerandaDashboard — mirror 100% struktur Beranda */
+export function GlobalBerandaSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 w-full pb-10 font-sans select-none animate-fadeIn">
+      {/* 0. Top Command Toolbar (Date Filter & Actions) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 font-sans">
+        <div className="flex items-center gap-2 flex-wrap font-sans">
+          {/* Date range picker container */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200/90 rounded-md p-1 px-3 shadow-3xs h-10 w-72">
+            <SkeletonBox width="w-full" height="h-4" rounded="rounded-md" />
+          </div>
+          {/* Preset pills */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonBox key={i} width="w-24" height="h-8" rounded="rounded-md" />
+            ))}
+          </div>
+        </div>
+        {/* Right side buttons */}
+        <div className="flex items-center gap-2">
+          <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
+          <SkeletonBox width="w-10" height="h-10" rounded="rounded-md" />
+        </div>
+      </div>
+
+      {/* 1. Main KPI Stats Grid (6 Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 font-sans">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-md p-4 border border-slate-200/90 shadow-3xs flex flex-col justify-between gap-3 min-h-[100px]">
+            <div className="flex items-center justify-between">
+              <SkeletonText width="w-20" height="h-2.5" />
+              <SkeletonCircle size="w-7 h-7" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <SkeletonText width="w-16" height="h-6" />
+              <SkeletonText width="w-24" height="h-2" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 2. Rekomendasi Stats Cards (3 Cards) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-md p-4 border border-slate-200/90 shadow-3xs flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-2">
+              <SkeletonText width="w-28" height="h-3" />
+              <SkeletonText width="w-16" height="h-6" />
+            </div>
+            <SkeletonCircle size="w-10 h-10" />
+          </div>
+        ))}
+      </div>
+
+      {/* 3. Rincian Pemohon Per Jenis Layanan (6 Cards) */}
+      <div className="flex flex-col gap-3 font-sans">
+        <div className="flex items-center justify-between px-1">
+          <SkeletonText width="w-56" height="h-4" />
+          <SkeletonBox width="w-8" height="h-8" rounded="rounded-md" />
+        </div>
+        <div className="bg-white rounded-md p-6 border border-slate-200/90 shadow-3xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-slate-50/80 rounded-md p-4 border border-slate-200/70 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <SkeletonText width="w-36" height="h-3" />
+                  <SkeletonBadge width="w-12" />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <SkeletonText width="w-16" height="h-5" />
+                  <SkeletonText width="w-20" height="h-2.5" />
+                </div>
+                <SkeletonProgressBar />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Rekapitulasi Wilayah (Kecamatan / Desa) */}
+      <div className="flex flex-col gap-3 font-sans">
+        <div className="flex items-center justify-between px-1">
+          <SkeletonText width="w-48" height="h-4" />
+          <div className="flex items-center gap-2">
+            <SkeletonBox width="w-36" height="h-8" rounded="rounded-md" />
+            <SkeletonBox width="w-44" height="h-8" rounded="rounded-md" />
+          </div>
+        </div>
+        <div className="bg-white rounded-md p-6 border border-slate-200/90 shadow-3xs flex flex-col gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <SkeletonText width="w-36" height="h-3" />
+                <SkeletonText width="w-16" height="h-3" />
+              </div>
+              <SkeletonProgressBar />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 

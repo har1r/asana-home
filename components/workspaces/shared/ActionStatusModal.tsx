@@ -32,22 +32,22 @@ export const ActionStatusModal: React.FC<ActionStatusModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn select-none">
       {/* Backdrop overlay clicks blocked during loading */}
-      <div 
-        className="fixed inset-0" 
+      <div
+        className="fixed inset-0"
         onClick={() => {
           if (status !== 'loading') onClose();
-        }} 
+        }}
       />
-      
+
       <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100/80 flex flex-col items-center text-center gap-4 z-10 transform transition-all animate-scaleUp">
         {/* Status Graphic/Icon */}
         <div className="relative flex items-center justify-center w-16 h-16 rounded-full">
           {status === 'loading' && (
             <div className="relative w-16 h-16">
-              {/* Outer spinning ring with gradient */}
+              {/* Outer spinning ring with uniform solid brand green */}
               <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-slate-100/60" />
-              <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-transparent border-t-indigo-500 border-r-violet-500 animate-spin" />
-              
+              <div className="absolute inset-0 w-full h-full rounded-full border-[3px] border-[#00a389] border-t-transparent animate-spin" />
+
               {/* Animated Architax Logo inside the spinning ring */}
               <div className="absolute inset-1.5 bg-white rounded-full flex items-center justify-center shadow-3xs overflow-hidden">
                 <svg viewBox="34 34 132 132" className="w-9 h-9">
