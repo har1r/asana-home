@@ -16,17 +16,26 @@ import {
   Star,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+  ArrowLeftRight,
   RefreshCw,
   GitCommit,
   User,
   ArrowRight,
   Send,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  Copy,
+  Check,
+  MoreVertical,
+  Download,
+  FileCheck
 } from "lucide-react";
 import { getTrackingData } from "@/app/actions/tracking";
 import { useDashboard } from "@/context/DashboardContext";
 import { useDebounce } from "@/lib/useDebounce";
+
 
 // -------------------- HELPER FUNCTIONS --------------------
 const formatNop = (nop: string) => {
@@ -189,7 +198,7 @@ FishingAnimation.displayName = "FishingAnimation";
 // -------------------- MAIN COMPONENT --------------------
 export default function TrackingTab() {
   const { setGlobalSelectedRequest } = useDashboard();
-  
+
   // Search & data states
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -205,7 +214,64 @@ export default function TrackingTab() {
   // Accordion open/close mapping
   const [expandedManifests, setExpandedManifests] = useState<Record<string, boolean>>({});
   const [expandedBundles, setExpandedBundles] = useState<Record<string, boolean>>({});
-  
+
+  // Active Selected Manifest & Bundle for 3-Tier drilldown view
+  const [activeManifestView, setActiveManifestView] = useState<any | null>(null);
+  const [activeBundleView, setActiveBundleView] = useState<any | null>(null);
+
+  // Display mode switcher ('berkas' vs 'pemohon')
+  const [displayMode, setDisplayMode] = useState<'berkas' | 'pemohon'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tracking_table_display_mode');
+      if (saved === 'berkas' || saved === 'pemohon') return saved;
+    }
+    return 'berkas';
+  });
+
+  const handleSwitchDisplayMode = (mode: 'berkas' | 'pemohon') => {
+    setDisplayMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tracking_table_display_mode', mode);
+    }
+  };
+
+  // Row action dropdown state
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Copy feedback state
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const handleCopy = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  // Download helpers
+  const handleDownloadArsip = (item: any) => {
+    const fileUrl = item.arsipDigitalUrl || item.dokumenUrl || item.buktiBayarUrl;
+    if (fileUrl) {
+      window.open(fileUrl, '_blank');
+    } else {
+      alert(`Mendownload Arsip Digital Berkas (${item.nomorPelayanan || item.nomorPermohonan || item.nop})...`);
+    }
+  };
+
+  const handleDownloadBuktiKirim = (item: any) => {
+    const buktiUrl = item.buktiTandaTerima || activeManifestView?.buktiTandaTerima;
+    if (buktiUrl) {
+      window.open(buktiUrl, '_blank');
+    } else {
+      alert(`Mendownload Bukti Kirim Manifest (${activeManifestView?.nomorManifest || item.nomorPermohonan || 'Pengiriman'})...`);
+    }
+  };
+
   // Document Selected for Visual Stepper Timeline
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
 
@@ -220,7 +286,7 @@ export default function TrackingTab() {
       if (res.success) {
         setManifests(res.manifests || []);
         setLoosePermohonans(res.loosePermohonans || []);
-        
+
         // Auto-expand first manifest if matches found in search
         if (debouncedSearch && res.manifests && res.manifests.length > 0) {
           const firstId = res.manifests[0].id;
@@ -282,8 +348,8 @@ export default function TrackingTab() {
       },
       {
         title: "Dibundling (Peneliti)",
-        desc: selectedDoc.bundleId 
-          ? `Berkas dikelompokkan ke dalam Bundle draf: ${selectedDoc.bundle?.nomorBundle || "—"}.` 
+        desc: selectedDoc.bundleId
+          ? `Berkas dikelompokkan ke dalam Bundle draf: ${selectedDoc.bundle?.nomorBundle || "—"}.`
           : "Berkas sedang menunggu giliran untuk dimasukkan ke dalam bundle operasional.",
         date: selectedDoc.bundle?.createdAt || null,
         done: !!selectedDoc.bundleId,
@@ -309,8 +375,8 @@ export default function TrackingTab() {
         desc: selectedDoc.status === "COMPLETED"
           ? "Layanan selesai diproses secara keseluruhan, produk diterbitkan ke WP."
           : selectedDoc.status === "REJECTED"
-          ? "Berkas ditolak pada proses peninjauan akhir."
-          : "Sedang dalam tahap verifikasi akhir sebelum penutupan berkas.",
+            ? "Berkas ditolak pada proses peninjauan akhir."
+            : "Sedang dalam tahap verifikasi akhir sebelum penutupan berkas.",
         date: selectedDoc.status === "COMPLETED" || selectedDoc.status === "REJECTED" ? selectedDoc.updatedAt : null,
         done: selectedDoc.status === "COMPLETED" || selectedDoc.status === "REJECTED",
       }
@@ -319,28 +385,122 @@ export default function TrackingTab() {
     return steps;
   }, [selectedDoc]);
 
+  // Transform permohonan list inside activeBundleView for Mode 3 table display (flatten Mutasi Sebagian fractions when displayMode === 'pemohon')
+  const bundleItemsList = useMemo(() => {
+    if (!activeBundleView || !activeBundleView.permohonan) return [];
+
+    const rawList = activeBundleView.permohonan;
+    const q = debouncedSearch.toLowerCase().trim();
+
+    const filtered = rawList.filter((item: any) => {
+      if (!q) return true;
+      return (
+        (item.namaWajibPajak && item.namaWajibPajak.toLowerCase().includes(q)) ||
+        (item.nop && item.nop.includes(q)) ||
+        (item.nomorPelayanan && item.nomorPelayanan.toLowerCase().includes(q)) ||
+        (item.dataBaru && item.dataBaru.some((db: any) => db.namaPemilikBaru?.toLowerCase().includes(q)))
+      );
+    });
+
+    if (displayMode === 'berkas') {
+      return filtered.map((item: any) => ({
+        ...item,
+        uniqueRowKey: item.id,
+        displayNamaWajibPajak: item.namaWajibPajak,
+        isPecahanRow: false,
+      }));
+    }
+
+    return filtered.flatMap((item: any) => {
+      if (item.jenisPermohonan === 'MUTASI_SEBAGIAN' && item.dataBaru && item.dataBaru.length > 0) {
+        return item.dataBaru.map((db: any, subIdx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}_pecahan_${subIdx}`,
+          displayNamaWajibPajak: db.namaPemilikBaru || item.namaWajibPajak,
+          pecahanIndex: subIdx + 1,
+          totalPecahan: item.dataBaru.length,
+          isPecahanRow: true,
+        }));
+      }
+
+      return [{
+        ...item,
+        uniqueRowKey: item.id,
+        displayNamaWajibPajak: item.namaWajibPajak,
+        isPecahanRow: false,
+      }];
+    });
+  }, [activeBundleView, debouncedSearch, displayMode]);
+
+  // Pagination calculation
+  const totalPages = Math.ceil(bundleItemsList.length / itemsPerPage);
+  const activePage = currentPage > totalPages ? 1 : currentPage;
+
+  const paginatedBundleItems = useMemo(() => {
+    return bundleItemsList.slice(
+      (activePage - 1) * itemsPerPage,
+      activePage * itemsPerPage
+    );
+  }, [bundleItemsList, activePage, itemsPerPage]);
+
   return (
     <div className="w-full flex flex-col gap-6 font-sans">
-      
-      {/* 1. Header & Search Action */}
-      <div className="bg-[#dde3ea] border border-slate-200/60 p-5 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 select-none">
+
+      {/* 1. Single Unified Command Bar Header dengan Navigasi Breadcrumb Interaktif */}
+      <div className="bg-white border border-slate-200/90 p-4 rounded-md shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-4 select-none font-sans">
         <div>
-          <h2 className="font-extrabold text-[13px] capitalize tracking-wider text-slate-700 font-display flex items-center gap-1.5">
-            <Boxes className="w-4 h-4 text-indigo-500" /> Pusat Riwayat Pelacakan Berkas
-          </h2>
-          <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-            Lacak status dokumen PBB, bundle operasional, dan log pengiriman manifest secara transparan lintas seluruh unit role.
-          </p>
+          {!activeManifestView ? (
+            <div>
+              <h2 className="text-[13px] font-normal text-slate-800 font-sans capitalize flex items-center gap-1.5">
+                Lacak Permohonan
+              </h2>
+            </div>
+          ) : !activeBundleView ? (
+            <div className="flex items-center gap-1.5 flex-wrap font-sans select-none text-[13px] font-normal text-slate-800 capitalize">
+              <button
+                type="button"
+                onClick={() => { setActiveManifestView(null); setActiveBundleView(null); }}
+                className="text-slate-600 hover:text-slate-900 underline underline-offset-2 cursor-pointer font-sans transition-colors"
+                title="Klik untuk kembali ke Daftar Manifest"
+              >
+                Lacak Permohonan
+              </button>
+              <span className="text-slate-400 font-sans">/</span>
+              <span className="text-slate-800 font-mono font-normal font-sans">
+                {activeManifestView.nomorManifest}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 flex-wrap font-sans select-none text-[13px] font-normal text-slate-800 capitalize">
+              <button
+                type="button"
+                onClick={() => { setActiveManifestView(null); setActiveBundleView(null); }}
+                className="text-slate-600 hover:text-slate-900 underline underline-offset-2 cursor-pointer font-sans transition-colors"
+                title="Klik untuk kembali ke Daftar Manifest"
+              >
+                Lacak Permohonan
+              </button>
+              <span className="text-slate-400 font-sans">/</span>
+              <button
+                type="button"
+                onClick={() => setActiveBundleView(null)}
+                className="text-slate-600 hover:text-slate-900 underline underline-offset-2 font-mono cursor-pointer font-sans transition-colors"
+                title="Klik untuk kembali ke Daftar Bundle"
+              >
+                {activeManifestView.nomorManifest}
+              </button>
+              <span className="text-slate-400 font-sans">/</span>
+              <span className="text-slate-800 font-mono font-normal font-sans">
+                {activeBundleView.nomorBundle}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto self-end md:self-auto">
-          {/* Search bar with glow and badge shortcut */}
-          <div className={`relative flex-1 md:flex-none md:w-80 p-[1.5px] rounded-lg transition-all duration-300 ${
-            isSearchFocused
-              ? "bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] shadow-xs"
-              : "bg-slate-200/90"
-          }`}>
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 z-10" />
+        <div className="flex items-center gap-2 shrink-0 font-sans">
+          {/* Search input (Identik dengan Peneliti Workspace) */}
+          <div className="relative w-full md:w-[403px] max-w-full font-sans">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
@@ -348,467 +508,518 @@ export default function TrackingTab() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
-              className="w-full pl-7.5 pr-12 py-1 bg-white border-transparent rounded-[7px] text-[11px] font-semibold text-gray-755 placeholder-gray-400 focus:outline-none transition-all"
-              placeholder="Cari No. Pelayanan, NOP, Nama."
+              className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
+              placeholder="Cari nomor manifest, NOP, atau nama..."
             />
             {!isSearchFocused && !searchQuery && (
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 select-none pointer-events-none">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200/80 select-none pointer-events-none font-sans">
                 Ctrl+K
               </span>
             )}
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-655 z-10 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer font-bold"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
+          {/* Refresh Button (Identik dengan Peneliti Workspace) */}
           <button
             onClick={() => loadData(true)}
             disabled={loading || refreshing}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition-all cursor-pointer border border-slate-200/80 bg-white"
+            className="p-2.5 h-10 w-10 rounded-md border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
             title="Refresh Data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-indigo-500" : ""}`} />
+            <RefreshCw className={`w-4 h-4 transition-all duration-300 ${refreshing ? "animate-spin text-[#00a389]" : ""}`} />
           </button>
         </div>
       </div>
 
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
-        {/* Left Side: Manifests & Loose Documents Lists (65% space) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          
-          {loading ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
-              <div className="w-7 h-7 rounded-full border-2 border-indigo-600/30 border-t-indigo-600 animate-spin" />
-              <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">Menghubungkan ke database...</span>
-            </div>
-          ) : manifests.length === 0 && loosePermohonans.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center justify-center gap-4 shadow-xs select-none">
-              <FishingAnimation isSearch={!!debouncedSearch} />
-              <div className="flex flex-col gap-1 max-w-sm">
-                <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider">
-                  {debouncedSearch ? "Hasil Pencarian Tidak Ditemukan" : "Pelacakan Kosong"}
-                </h5>
-                <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4">
-                  {debouncedSearch 
-                    ? "Kami tidak menemukan manifest, bundle, NOP, atau nama pemohon yang sesuai dengan kata kunci."
-                    : "Belum ada log permohonan atau pengiriman berkas di sistem saat ini."}
-                </p>
-              </div>
-              {debouncedSearch && (
+      {/* Main Content Container: Tampilan Card Manifest / Card Bundle / Tabel Permohonan */}
+      <div className="w-full font-sans">
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+            <div className="w-7 h-7 rounded-full border-2 border-indigo-600/30 border-t-indigo-600 animate-spin" />
+            <span className="text-[10px] text-gray-400 font-extrabold capitalize tracking-wider animate-pulse">Menghubungkan ke database...</span>
+          </div>
+        ) : activeBundleView ? (
+          /* ==================== VIEW MODE 3: TABEL PERMOHONAN BERKAS (Identik Penginput Workspace) ==================== */
+          <div className="flex flex-col gap-3 font-sans animate-fadeIn">
+            {/* Toolbar Atas Tabel: Mode Switcher ('Nopel' vs 'Pemohon') */}
+            <div className="flex items-center justify-between select-none font-sans">
+              <span className="text-[13px] font-normal text-slate-600 font-sans">
+                Daftar Berkas dalam Bundle <strong className="font-mono text-slate-800">{activeBundleView.nomorBundle}</strong>
+              </span>
+
+              {/* Right Side: Tab Mode Switcher (Nopel & Pemohon) */}
+              <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
                 <button
-                  onClick={() => setSearchQuery("")}
-                  className="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-3xs"
+                  type="button"
+                  onClick={() => handleSwitchDisplayMode('berkas')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 font-sans ${displayMode === 'berkas'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
                 >
-                  Reset Pencarian
+                  <span>Nopel</span>
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => handleSwitchDisplayMode('pemohon')}
+                  className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 font-sans ${displayMode === 'pemohon'
+                    ? 'bg-white text-slate-900 shadow-3xs font-normal'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+                >
+                  <span>Pemohon</span>
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              
-              {/* Manifests List Container */}
-              {manifests.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 select-none">Log Manifest Pengiriman ({manifests.length})</h3>
-                  
-                  <div className="flex flex-col gap-3">
-                    {manifests.map((m) => {
-                      const isExpanded = !!expandedManifests[m.id];
-                      const totalBundles = m.bundle?.length || 0;
-                      const hasReceipt = !!m.buktiTandaTerima;
 
-                      return (
-                        <div key={m.id} className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs hover:shadow-xs transition-all">
-                          
-                          {/* Manifest Header */}
-                          <div 
-                            onClick={() => toggleManifest(m.id)}
-                            className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors select-none"
+            {/* Enterprise Canvas & Table */}
+            <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[450px] font-sans">
+              <div className="overflow-x-auto scrollbar-thin flex-1">
+                <table className="w-full text-left border-collapse font-sans">
+                  <thead>
+                    <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans whitespace-nowrap">
+                      <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
+                        <span>No</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-2 text-center select-none w-10 min-w-[40px] relative font-normal text-slate-600">
+                        <span>⭐</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                        <span>Tgl. Input</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
+                        <span>Petugas Input</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                        <span>Tgl. Nopel</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
+                        <span>Tgl. Selesai</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[160px] relative font-normal text-slate-600">
+                        <span>No. Pelayanan</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
+                        <span>Nomor Objek Pajak</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
+                        <span>Nama Pemohon</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 min-w-[130px] relative font-normal text-slate-600">
+                        <span>Jenis Layanan</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 text-center min-w-[130px] relative font-normal text-slate-600">
+                        <span>Status</span>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
+                      </th>
+                      <th className="py-3 px-4 text-center min-w-[70px] relative font-normal text-slate-600">
+                        <span>Aksi</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans">
+                    {paginatedBundleItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="py-12 text-center text-slate-400 font-normal italic font-sans">
+                          Tidak ada permohonan dalam bundle ini.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedBundleItems.map((item: any, idx: number) => {
+                        const globalIdx = (activePage - 1) * itemsPerPage + idx + 1;
+                        const noPelayanan = item.nomorPelayanan || item.nomorPermohonan || "—";
+                        const inputDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : "—";
+                        const nopelDate = item.tanggalNoPelayanan ? new Date(item.tanggalNoPelayanan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : "—";
+                        const selesaiDate = item.tanggalPenyelesaian ? new Date(item.tanggalPenyelesaian).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : "—";
+                        const penginputName = item.penginput?.name || "Petugas Input";
+
+                        return (
+                          <tr
+                            key={item.uniqueRowKey || item.id || idx}
+                            onClick={() => setGlobalSelectedRequest(item)}
+                            className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer text-[12px] font-normal font-sans text-slate-600 h-11 ${
+                              item.isPecahanRow ? 'border-l-3 border-l-[#00a389] bg-[#00a389]/5' : ''
+                            }`}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-500 shrink-0">
-                                <Send className="w-4 h-4" />
+                            <td className="py-2.5 px-4 text-center text-slate-600 font-sans">{globalIdx}</td>
+                            <td className="py-2.5 px-2 text-center">
+                              <Star className={`w-4 h-4 mx-auto ${item.isFavorite ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{inputDate}</td>
+                            <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{penginputName}</td>
+                            <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{nopelDate}</td>
+                            <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{selesaiDate}</td>
+                            <td className="py-2.5 px-4 min-w-[150px] group/cell relative">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-normal text-slate-800">{noPelayanan}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopy(e, noPelayanan)}
+                                  className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer"
+                                  title="Salin Nomor"
+                                >
+                                  {copiedText === noPelayanan ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                                </button>
                               </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1">Manifest Pengiriman</span>
-                                <span className="text-xs font-extrabold text-slate-800 font-mono tracking-tight">{m.nomorManifest}</span>
+                            </td>
+                            <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-normal text-slate-800">{formatNop(item.nop)}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopy(e, item.nop)}
+                                  className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer"
+                                  title="Salin NOP"
+                                >
+                                  {copiedText === item.nop ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                                </button>
                               </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 shrink-0">
-                              <span className={`text-[8.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                                m.status === 'SENT' ? 'bg-emerald-50 text-emerald-700 border-emerald-150' : 'bg-slate-100 text-slate-600 border-slate-200'
-                              }`}>
-                                {getStatusLabel(m.status)}
-                              </span>
-                              
-                              {m.status === 'SENT' ? (
-                                hasReceipt ? (
-                                  <a 
-                                    href={m.buktiTandaTerima}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="px-2.5 py-1 text-[9px] font-extrabold text-emerald-750 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100/60 flex items-center gap-1 cursor-pointer shadow-3xs"
-                                    title="Lihat manifest fisik bertanda tangan yang telah terupload"
-                                  >
-                                    <FileText className="w-3 h-3 text-emerald-600" />
-                                    <span>Tanda Terima: Terunggah</span>
-                                  </a>
-                                ) : (
-                                  <span 
-                                    className="px-2.5 py-1 text-[9px] font-extrabold text-amber-750 bg-amber-50 border border-amber-200/60 rounded-lg flex items-center gap-1 shadow-3xs select-none"
-                                    title="Manifest ini sudah dikirim tetapi bukti tanda terima bertanda tangan belum diunggah oleh Pengirim"
-                                  >
-                                    <Clock className="w-3 h-3 text-amber-500" />
-                                    <span>Tanda Terima: Belum Diunggah</span>
+                            </td>
+                            <td className="py-2.5 px-4 min-w-[170px]">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="font-normal text-slate-800 capitalize">{item.displayNamaWajibPajak || item.namaWajibPajak}</span>
+                                {item.isPecahanRow && (
+                                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
+                                    #{item.pecahanIndex}/{item.totalPecahan}
                                   </span>
-                                )
-                              ) : null}
-
-                              <div className="text-slate-400">
-                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                )}
                               </div>
-                            </div>
-                          </div>
-
-                          {/* Manifest Content (Bundles List) */}
-                          {isExpanded && (
-                            <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/20 flex flex-col gap-3 animate-fadeIn">
-                              <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold border-b border-slate-100 pb-1.5 select-none">
-                                <span>BERISI {totalBundles} BUNDLE OPERASIONAL:</span>
-                                <span>PENGIRIM: {(m.pengirim?.name || "ADMIN").toUpperCase()}</span>
-                              </div>
-
-                              {totalBundles === 0 ? (
-                                <div className="text-center py-6 text-xs text-slate-400 italic">Manifest ini belum memiliki bundle berkas.</div>
-                              ) : (
-                                <div className="flex flex-col gap-2.5">
-                                  {m.bundle.map((b: any) => {
-                                    const isBundleExpanded = !!expandedBundles[b.id];
-                                    const permohonansCount = b.permohonan?.length || 0;
-
-                                    return (
-                                      <div key={b.id} className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-3xs">
-                                        
-                                        {/* Bundle Header */}
-                                        <div 
-                                          onClick={() => toggleBundle(b.id)}
-                                          className="p-3 bg-slate-50/40 hover:bg-slate-50 flex items-center justify-between gap-3 cursor-pointer select-none"
-                                        >
-                                          <div className="flex items-center gap-2.5 min-w-0">
-                                            <Boxes className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                            <div className="flex flex-col min-w-0">
-                                              <span className="text-[11px] font-bold text-slate-700 font-mono">{b.nomorBundle}</span>
-                                              <span className="text-[9px] font-semibold text-slate-400 leading-tight">
-                                                Tipe: {b.jenisPermohonan ? b.jenisPermohonan.replace(/_/g, ' ') : "Campuran"}
-                                              </span>
-                                            </div>
-                                          </div>
-
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full select-none">
-                                              {permohonansCount} Berkas
-                                            </span>
-                                            <div className="text-slate-400">
-                                              {isBundleExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        {/* Bundle Content (Applications Table) */}
-                                        {isBundleExpanded && (
-                                          <div className="overflow-x-auto scrollbar-thin border-t border-slate-100 p-2 bg-white animate-fadeIn">
-                                            <table className="w-full text-left border-collapse text-xs">
-                                              <thead>
-                                                <tr className="bg-slate-50/50 text-[9px] font-bold text-slate-500 uppercase border-b border-slate-100 select-none">
-                                                  <th className="py-2 px-3">Tgl. Input</th>
-                                                  <th className="py-2 px-3">Petugas Input</th>
-                                                  <th className="py-2 px-3">NOP</th>
-                                                  <th className="py-2 px-3">No. Pelayanan</th>
-                                                  <th className="py-2 px-3">Nama Pemohon</th>
-                                                  <th className="py-2 px-3 text-center">Status</th>
-                                                  <th className="py-2 px-3 text-right">Aksi</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-slate-100 text-xs">
-                                                {permohonansCount === 0 ? (
-                                                  <tr>
-                                                    <td colSpan={7} className="py-4 text-center text-slate-400 italic">Bundle ini kosong.</td>
-                                                  </tr>
-                                                ) : (
-                                                  b.permohonan.map((p: any) => {
-                                                    const isSelected = selectedDoc?.id === p.id;
-                                                    const archiveUrl = p.arsipDigital?.[0]?.urlBlob;
-                                                    
-                                                    // Map the bundle details context to Permohonan object for Stepper
-                                                    const mappedPermohonan = { ...p, bundle: { ...b, manifest: m } };
-
-                                                    return (
-                                                      <tr 
-                                                        key={p.id} 
-                                                        onClick={() => setSelectedDoc(mappedPermohonan)}
-                                                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                                                          isSelected ? 'bg-indigo-50/40 font-semibold text-slate-900' : 'text-slate-700'
-                                                        }`}
-                                                      >
-                                                        <td className="py-2 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                                                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                                                        </td>
-                                                        <td className="py-2 px-3 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
-                                                          <div className="flex items-center gap-1 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                                            <span className="truncate max-w-[120px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
-                                                          </div>
-                                                        </td>
-                                                        <td className="py-3 px-3 font-mono font-bold text-slate-700">{formatNop(p.nop)}</td>
-                                                        <td className="py-3 px-3 font-mono font-bold text-indigo-750">{p.nomorPelayanan || p.nomorPermohonan}</td>
-                                                        <td className="py-3 px-3 text-slate-600 truncate max-w-[120px] uppercase font-bold">{p.namaWajibPajak}</td>
-                                                        <td className="py-3 px-3 text-center">
-                                                          <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(p.status)}`}>
-                                                            {getStatusLabel(p.status)}
-                                                          </span>
-                                                        </td>
-                                                        <td className="py-3 px-3 text-right">
-                                                          <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
-                                                            {archiveUrl && (
-                                                              <a 
-                                                                href={archiveUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="p-1 rounded bg-slate-50 border border-slate-200 text-indigo-650 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center shadow-3xs"
-                                                                title="Lihat Dokumen Arsip Scan PDF"
-                                                              >
-                                                                <ExternalLink className="w-3.5 h-3.5" />
-                                                              </a>
-                                                            )}
-                                                            <button 
-                                                              onClick={() => setGlobalSelectedRequest(mappedPermohonan)}
-                                                              className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 rounded-lg text-[9px] font-black text-slate-600 transition-all cursor-pointer shadow-3xs"
-                                                              title="Detail lengkap"
-                                                            >
-                                                              Tinjau
-                                                            </button>
-                                                          </div>
-                                                        </td>
-                                                      </tr>
-                                                    );
-                                                  })
-                                                )}
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Loose Documents List Container */}
-              {loosePermohonans.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 select-none">
-                    Arsip Belum Masuk Manifest ({loosePermohonans.length})
-                  </h3>
-                  
-                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                    <div className="overflow-x-auto scrollbar-thin p-2">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-slate-50/50 text-[9px] font-bold text-slate-500 uppercase border-b border-slate-100 select-none">
-                            <th className="py-2.5 px-3">Tgl. Input</th>
-                            <th className="py-2.5 px-3">Petugas Input</th>
-                            <th className="py-2.5 px-3">NOP</th>
-                            <th className="py-2.5 px-3">No. Pelayanan</th>
-                            <th className="py-2.5 px-3">Nama Pemohon</th>
-                            <th className="py-2.5 px-3">Status Operasional</th>
-                            <th className="py-2.5 px-3 text-right">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-xs bg-white">
-                          {loosePermohonans.map((p) => {
-                            const isSelected = selectedDoc?.id === p.id;
-                            const archiveUrl = p.arsipDigital?.[0]?.urlBlob;
-                            const isBundled = !!p.bundleId;
-
-                            return (
-                              <tr 
-                                key={p.id} 
-                                onClick={() => setSelectedDoc(p)}
-                                className={`hover:bg-slate-50/60 transition-colors cursor-pointer ${
-                                  isSelected ? 'bg-indigo-50/30 font-bold' : ''
-                                }`}
+                            </td>
+                            <td className="py-2.5 px-4 min-w-[130px]">
+                              <span className="px-2 py-0.5 rounded-md border text-[11px] font-normal bg-emerald-50 text-[#008f78] border-emerald-200 capitalize font-sans">
+                                {item.jenisPermohonan ? getAbbreviatedJenis(item.jenisPermohonan) : '—'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-center min-w-[130px]">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-normal border leading-none capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+                                {getStatusLabel(item.status)}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-center min-w-[70px] relative font-sans" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdownId(openDropdownId === (item.uniqueRowKey || item.id) ? null : (item.uniqueRowKey || item.id));
+                                }}
+                                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer inline-flex items-center justify-center font-sans"
+                                title="Opsi Pilihan"
                               >
-                                <td className="py-3 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                                </td>
-                                 <td className="py-3 px-3 text-slate-700 text-xs font-bold whitespace-nowrap uppercase">
-                                   <div className="flex items-center gap-1 min-w-0" title={p.penginput?.name || "Petugas Input"}>
-                                     <span className="truncate max-w-[120px] uppercase">{p.penginput?.name || "Petugas Input"}</span>
-                                   </div>
-                                 </td>
-                                <td className="py-3 px-3 font-mono font-bold text-slate-700">{formatNop(p.nop)}</td>
-                                <td className="py-3 px-3 font-mono font-bold text-indigo-750">{p.nomorPelayanan || p.nomorPermohonan}</td>
-                                <td className="py-3 px-3 text-slate-600 truncate max-w-[120px] uppercase font-bold">{p.namaWajibPajak}</td>
-                                <td className="py-3 px-3">
-                                  <div className="flex flex-col gap-0.5 items-start">
-                                    <span className={`inline-block text-[9px] font-extrabold px-2 py-0.2 rounded border ${getStatusBadgeClass(p.status)}`}>
-                                      {p.status}
-                                    </span>
-                                    {isBundled ? (
-                                      <span className="text-[8px] font-bold text-indigo-650 tracking-tight">
-                                        Bundle: {p.bundle?.nomorBundle}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[8px] font-semibold text-slate-400 italic">Belum Bundling</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3 text-right">
-                                  <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
-                                    {archiveUrl && (
-                                      <a 
-                                        href={archiveUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 rounded bg-slate-50 border border-slate-200 text-indigo-650 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center shadow-3xs"
-                                        title="Lihat Dokumen Arsip Scan PDF"
-                                      >
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                      </a>
-                                    )}
-                                    <button 
-                                      onClick={() => setGlobalSelectedRequest(p)}
-                                      className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-350 hover:bg-slate-50 rounded-lg text-[9px] font-black text-slate-600 transition-all cursor-pointer shadow-3xs"
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+
+                              {openDropdownId === (item.uniqueRowKey || item.id) && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-20"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenDropdownId(null);
+                                    }}
+                                  />
+                                  <div className="absolute right-3 mt-1 w-52 bg-white rounded-md shadow-md border border-slate-200/90 py-1 z-30 font-sans text-left animate-fadeIn">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenDropdownId(null);
+                                        handleDownloadArsip(item);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-[12px] text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-2 font-normal transition-colors cursor-pointer font-sans"
                                     >
-                                      Tinjau
+                                      <Download className="w-3.5 h-3.5 text-indigo-500" />
+                                      <span>Download Arsip</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenDropdownId(null);
+                                        handleDownloadBuktiKirim(item);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-[12px] text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-2 font-normal transition-colors cursor-pointer font-sans"
+                                    >
+                                      <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>Download Bukti Kirim</span>
                                     </button>
                                   </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Visual Timeline Stepper (35% space) */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col gap-5 select-none min-h-[400px]">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-2">
-            Visual Pelacakan Proses
-          </h3>
-
-          {selectedDoc ? (
-            <div className="flex flex-col gap-6 animate-fadeIn">
-              
-              {/* Stepper Header Summary */}
-              <div className="p-3.5 bg-slate-50 border border-slate-150 rounded-xl space-y-1.5">
-                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest block leading-none">Dokumen Terpilih</span>
-                <span className="text-xs font-black text-slate-800 font-mono tracking-tight block">
-                  {selectedDoc.nomorPelayanan || selectedDoc.nomorPermohonan}
-                </span>
-                <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/50 text-[10px]">
-                  <p className="text-slate-500 font-semibold">NOP: <strong className="text-slate-700 font-mono font-bold">{formatNop(selectedDoc.nop)}</strong></p>
-                  <p className="text-slate-500 font-semibold">WP: <strong className="text-slate-700 font-bold uppercase">{selectedDoc.namaWajibPajak}</strong></p>
-                </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
 
-              {/* Stepper Flow Elements */}
-              <div className="relative pl-6 border-l-2 border-slate-150/70 ml-2 space-y-6 py-2">
-                {timelineSteps.map((step, idx) => {
-                  const isDone = step.done;
-                  
-                  return (
-                    <div key={idx} className="relative">
-                      {/* Circle Dot Marker */}
-                      <span className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isDone 
-                          ? "bg-indigo-500 border-indigo-500 text-white shadow-[0_0_8px_rgba(99,102,241,0.55)] scale-110" 
-                          : "bg-white border-slate-300 text-slate-400"
-                      }`}>
-                        {isDone ? (
-                          <CheckCircle className="w-2.5 h-2.5 fill-white stroke-indigo-500 stroke-[3]" />
+              {/* Table Footer / Enterprise Pagination */}
+              <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 mt-auto font-sans">
+                <div className="flex items-center gap-3 font-sans">
+                  <span className="text-[11px] font-semibold text-slate-500 font-sans">
+                    {bundleItemsList.length > 0
+                      ? `Menampilkan ${((activePage - 1) * itemsPerPage) + 1}–${Math.min(activePage * itemsPerPage, bundleItemsList.length)} dari ${bundleItemsList.length} ${displayMode === 'pemohon' ? 'entri pemohon' : 'permohonan'}`
+                      : 'Tidak ada data'}
+                  </span>
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 shadow-3xs font-sans">
+                    {[10, 20, 50].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => { setItemsPerPage(n); setCurrentPage(1); }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer font-sans ${itemsPerPage === n
+                          ? 'bg-[#00a389] text-white shadow-3xs'
+                          : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <span className="text-[10px] text-slate-400 font-semibold pl-0.5 font-sans">/hal</span>
+                  </div>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1 font-sans">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={activePage === 1}
+                      className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center font-sans"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => page === 1 || page === totalPages || Math.abs(page - activePage) <= 1)
+                      .reduce((acc: (number | string)[], page, idx, arr) => {
+                        if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                        acc.push(page);
+                        return acc;
+                      }, [])
+                      .map((page, idx) =>
+                        page === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs font-sans">…</span>
                         ) : (
-                          <span className="w-1 h-1 bg-slate-400 rounded-full" />
-                        )}
-                      </span>
+                          <button
+                            key={page}
+                            type="button"
+                            onClick={() => setCurrentPage(page as number)}
+                            className={`w-7 h-7 rounded-md text-xs font-bold transition-all cursor-pointer font-sans ${activePage === page
+                              ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105 z-10'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={activePage === totalPages}
+                      className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center font-sans"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : activeManifestView ? (
+          /* ==================== VIEW MODE 2: CARD BUNDLE (Setelalh Card Manifest diklik) ==================== */
+          <div className="flex flex-col gap-4 font-sans animate-fadeIn">
+            {/* Grid Card Bundle (Identik dengan Peneliti Workspace) */}
+            {(!activeManifestView.bundle || activeManifestView.bundle.length === 0) ? (
+              <div className="bg-white rounded-md border border-slate-200/90 p-16 text-center text-[13px] text-slate-400 font-normal italic font-sans">
+                Manifest ini belum memiliki bundle berkas.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+                {activeManifestView.bundle.map((b: any) => {
+                  const berkasCount = b.permohonan?.length || 0;
+                  const pemohonCount = (b.permohonan || []).reduce((acc: number, p: any) => {
+                    if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
+                      return acc + (p.dataBaru?.length || 1);
+                    }
+                    return acc + 1;
+                  }, 0);
 
-                      {/* Step Text Info */}
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-[11px] font-black tracking-tight leading-none ${
-                          isDone ? "text-slate-800" : "text-slate-400"
-                        }`}>
-                          {step.title}
+                  const penelitiName = b.peneliti?.name || "Peneliti";
+                  const penelitiInitials = penelitiName
+                    ? penelitiName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+                    : "PN";
+
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => setActiveBundleView(b)}
+                      className="p-4 rounded-xl border bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-3.5 select-none min-h-[140px] font-sans cursor-pointer group"
+                    >
+                      {/* Baris 1: Nomor Bundle */}
+                      <div className="flex items-center justify-between gap-2 w-full font-sans">
+                        <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate block font-sans" title={b.nomorBundle}>
+                          {b.nomorBundle}
                         </span>
-                        
-                        <p className={`text-[10px] leading-normal font-medium max-w-[210px] ${
-                          isDone ? "text-slate-500" : "text-slate-350"
-                        }`}>
-                          {step.desc}
-                        </p>
+                      </div>
 
-                        {isDone && step.date && (
-                          <span className="text-[8.5px] font-semibold text-slate-400/80 font-mono mt-0.5">
-                            Tanggal: {new Date(step.date).toLocaleString("id-ID", {
-                              day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
-                            })}
-                          </span>
-                        )}
+                      {/* Baris 2: Jenis Layanan Tag | Status Badge | Pemohon Count */}
+                      <div className="flex items-center justify-center gap-1.5 w-full py-1 flex-wrap text-[12px] font-normal font-sans">
+                        <span className="px-2 py-0.5 rounded-md border text-[11px] font-normal bg-emerald-50 text-[#008f78] border-emerald-200 capitalize font-sans">
+                          {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : 'Umum'}
+                        </span>
+
+                        <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-normal border capitalize font-sans ${b.status === 'LOCKED'
+                          ? 'bg-slate-900 text-slate-100 border-slate-800'
+                          : b.status === 'IN_MANIFEST'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-emerald-50 text-[#008f78] border-emerald-200'
+                          }`}>
+                          {getStatusLabel(b.status || 'LOCKED')}
+                        </span>
+
+                        <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+
+                        <span className="bg-[#f25c54] text-white text-[11px] font-normal px-2 py-0.5 rounded-md shrink-0 font-sans">
+                          {pemohonCount} Pemohon
+                        </span>
+                      </div>
+
+                      {/* Baris 3 (Footer): Peneliti Avatar + Tanggal */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[12px] font-normal text-slate-600 font-sans mt-auto">
+                        <div className="flex items-center gap-1.5 min-w-0 font-sans" title={`Pembuat: ${penelitiName}`}>
+                          <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
+                            {penelitiInitials}
+                          </div>
+                          <span className="text-[12px] font-normal text-slate-600 truncate font-sans uppercase">{penelitiName}</span>
+                        </div>
+
+                        <span className="font-mono text-[12px] text-slate-500 font-normal shrink-0 font-sans">
+                          {b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
+            )}
+          </div>
+        ) : manifests.length === 0 ? (
+          /* ==================== EMPTY STATE ==================== */
+          <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center justify-center gap-4 shadow-xs select-none font-sans">
+            <FishingAnimation isSearch={!!debouncedSearch} />
+            <div className="flex flex-col gap-1 max-w-sm font-sans">
+              <h5 className="text-[11px] font-extrabold text-slate-700 capitalize tracking-wider font-sans">
+                {debouncedSearch ? "Hasil Pencarian Tidak Ditemukan" : "Pelacakan Kosong"}
+              </h5>
+              <p className="text-[10px] font-semibold text-slate-400 leading-relaxed px-4 font-sans">
+                {debouncedSearch
+                  ? "Kami tidak menemukan manifest yang sesuai dengan kata kunci."
+                  : "Belum ada log pengiriman manifest di sistem saat ini."}
+              </p>
+            </div>
+            {debouncedSearch && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-extrabold text-[10px] rounded-xl transition-all cursor-pointer shadow-3xs font-sans"
+              >
+                Reset Pencarian
+              </button>
+            )}
+          </div>
+        ) : (
+          /* ==================== VIEW MODE 1: GRID CARD MANIFEST ==================== */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans animate-fadeIn">
+            {manifests.map((m) => {
+              const totalBundles = m.bundle?.length || 0;
+              const totalPecahanCount = (m.bundle || []).reduce((bAcc: number, b: any) => {
+                const bPecahan = (b.permohonan || []).reduce((pAcc: number, p: any) => {
+                  if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
+                    return pAcc + (p.dataBaru?.length || 1);
+                  }
+                  return pAcc + 1;
+                }, 0);
+                return bAcc + bPecahan;
+              }, 0);
+              const pengirimName = m.pengirim?.name || "PETUGAS PENGIRIM";
+              const pengirimInitials = pengirimName
+                ? pengirimName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+                : "PG";
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => setGlobalSelectedRequest(selectedDoc)}
-                  className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-150 hover:bg-indigo-100/30 text-indigo-700 font-extrabold text-[10px] rounded-xl shadow-3xs transition-all flex items-center gap-1 cursor-pointer w-full justify-center"
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => setActiveManifestView(m)}
+                  className="p-4 rounded-xl border bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden group select-none min-h-[140px] font-sans flex flex-col justify-between gap-3.5"
                 >
-                  <span>Buka Detail Lengkap</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+                  {/* Baris 1 (Header): Nomor Manifest & Badge Status */}
+                  <div className="flex items-center justify-between gap-2 w-full font-sans">
+                    <span className="font-mono text-[13px] font-normal text-slate-800 tracking-tight truncate font-sans">
+                      {m.nomorManifest}
+                    </span>
 
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-3 select-none">
-              <div className="w-14 h-14 bg-indigo-50 border border-indigo-100/50 rounded-2xl flex items-center justify-center text-indigo-500 shadow-3xs animate-pulse">
-                <FolderOpen className="w-7 h-7 stroke-[1.5]" />
-              </div>
-              <div className="space-y-1">
-                <h5 className="text-[11px] font-extrabold text-slate-700 capitalize">Pilih Berkas</h5>
-                <p className="text-[10px] text-slate-400 font-semibold leading-relaxed max-w-[200px] mx-auto">
-                  Klik salah satu permohonan di tabel untuk melihat visualisasi status permohonan dan riwayat pemrosesan berkas.
-                </p>
-              </div>
-            </div>
-          )}
+                    <span className={`px-2.5 py-0.5 rounded-full text-[12px] font-normal border leading-none capitalize tracking-wider shrink-0 font-sans ${m.status === 'LOCKED'
+                      ? 'bg-slate-900 text-slate-100 border-slate-800'
+                      : m.status === 'SENT'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
+                      <span>{getStatusLabel(m.status)}</span>
+                    </span>
+                  </div>
 
-        </div>
+                  {/* Baris 2 (Body): 2 Columns divided by vertical line separator */}
+                  <div className="py-2 px-1 bg-slate-50 rounded-md border border-slate-100 flex items-center text-[12px] font-normal font-sans">
+                    <div className="flex-1 flex items-center justify-center font-normal text-[#008f78] font-sans">
+                      <span>{totalBundles} Bundle</span>
+                    </div>
+                    <div className="w-px h-3.5 bg-slate-200/90 shrink-0" />
+                    <div className="flex-1 flex items-center justify-center font-normal text-slate-600 font-sans">
+                      <span>{totalPecahanCount} Pemohon</span>
+                    </div>
+                  </div>
 
+                  {/* Baris 3 (Footer): Pengirim avatar + tanggal */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 font-sans mt-auto">
+                    <div className="flex items-center gap-2 min-w-0 font-sans">
+                      <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-3xs" title={pengirimName}>
+                        {pengirimInitials}
+                      </div>
+                      <span className="text-[12px] font-normal text-slate-600 truncate font-sans uppercase">{pengirimName}</span>
+                    </div>
+
+                    <span className="text-[12px] font-normal text-slate-500 flex items-center gap-1 shrink-0 font-sans">
+                      {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

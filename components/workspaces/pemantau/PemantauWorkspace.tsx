@@ -609,26 +609,24 @@ export default function PemantauWorkspace() {
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
           >
-            Daftar Pantau & Detail
+            Selesaikan Permohonan
           </button>
         </div>
 
         {/* Error & Success Banners */}
         {error && (
           <div className="bg-rose-50/90 border border-rose-200 text-rose-800 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError("")} className="text-rose-400 hover:text-rose-600 shrink-0 cursor-pointer">
-              <X className="w-3.5 h-3.5" />
+            <button onClick={() => setError("")} className="text-rose-400 hover:text-rose-600 shrink-0 cursor-pointer font-bold">
+              ✕
             </button>
           </div>
         )}
         {success && (
           <div className="bg-emerald-50/90 border border-emerald-200 text-[#008f78] text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
             <span className="flex-1">{success}</span>
-            <button onClick={() => setSuccess("")} className="text-emerald-500 hover:text-emerald-700 shrink-0 cursor-pointer">
-              <X className="w-3.5 h-3.5" />
+            <button onClick={() => setSuccess("")} className="text-emerald-500 hover:text-emerald-700 shrink-0 cursor-pointer font-bold">
+              ✕
             </button>
           </div>
         )}
@@ -641,7 +639,6 @@ export default function PemantauWorkspace() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
                 {/* Search input for Bundles */}
                 <div className="relative w-full md:w-[403px] max-w-full">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                   <input
                     type="text"
                     ref={searchBundleInputRef}
@@ -649,7 +646,7 @@ export default function PemantauWorkspace() {
                     onChange={(e) => setSearchBundleQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    className="w-full h-10 pl-10 pr-14 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
+                    className="w-full h-10 px-3.5 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
                     placeholder="Cari nomor bundle..."
                   />
                   {!isSearchFocused && !searchBundleQuery && (
@@ -660,9 +657,9 @@ export default function PemantauWorkspace() {
                   {searchBundleQuery && (
                     <button
                       onClick={() => setSearchBundleQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors font-bold"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      ✕
                     </button>
                   )}
                 </div>
@@ -671,10 +668,10 @@ export default function PemantauWorkspace() {
                 <button
                   onClick={() => fetchData(true)}
                   disabled={isRefreshing}
-                  className="p-2.5 h-10 w-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
+                  className="px-3 h-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-600 text-[13px] font-normal shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
                   title="Refresh Data"
                 >
-                  <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                  <span>{isRefreshing ? "Memuat..." : "Refresh"}</span>
                 </button>
               </div>
 
@@ -766,8 +763,8 @@ export default function PemantauWorkspace() {
                         setSelectedPermohonan(null);
                       }}
                       className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none font-sans ${isSelected
-                          ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-                          : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
+                        ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+                        : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
                         }`}
                     >
                       {/* Top Row: Number & Count Badge */}
@@ -819,7 +816,6 @@ export default function PemantauWorkspace() {
                         </div>
                         {tanggalDibuat && (
                           <span className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 shrink-0">
-                            <Calendar className="w-3 h-3 text-slate-400" />
                             {tanggalDibuat}
                           </span>
                         )}
@@ -865,9 +861,9 @@ export default function PemantauWorkspace() {
                     type="button"
                     onClick={() => setCurrentBundlePage(prev => Math.max(prev - 1, 1))}
                     disabled={activeBundlePage === 1}
-                    className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                    className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
+                    ‹
                   </button>
                   {Array.from({ length: totalBundlePages }, (_, i) => i + 1).map(page => (
                     <button
@@ -886,9 +882,9 @@ export default function PemantauWorkspace() {
                     type="button"
                     onClick={() => setCurrentBundlePage(prev => Math.min(prev + 1, totalBundlePages))}
                     disabled={activeBundlePage === totalBundlePages}
-                    className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center"
+                    className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
                   >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    ›
                   </button>
                 </div>
               )}
@@ -901,9 +897,6 @@ export default function PemantauWorkspace() {
           <div className="w-full">
             {!selectedBundle ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-8 select-none bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[300px]">
-                <div className="w-14 h-14 bg-[#00a389]/10 border border-[#00a389]/20 rounded-md flex items-center justify-center mb-4 shadow-3xs">
-                  <Layers className="w-7 h-7 text-[#00a389]" />
-                </div>
                 <h3 className="text-sm font-bold text-slate-800 mb-1">Pilih Bundle Terlebih Dahulu</h3>
                 <p className="text-xs text-slate-400 font-semibold max-w-sm leading-relaxed mb-4">
                   Silakan pilih salah satu bundle di tab <strong>Daftar Bundle</strong> terlebih dahulu untuk melihat daftar permohonan yang harus dipantau.
@@ -912,7 +905,6 @@ export default function PemantauWorkspace() {
                   onClick={() => handleSwitchTab("daftar-bundle")}
                   className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <Boxes className="w-3.5 h-3.5" />
                   <span>Ke Daftar Bundle</span>
                 </button>
               </div>
@@ -923,35 +915,11 @@ export default function PemantauWorkspace() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none font-sans">
                   <div>
                     <h2 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-2">
-                      <span>Daftar Permohonan:</span>
                       <span className="font-mono font-bold text-slate-900 text-[13px]">{selectedBundle.nomorBundle}</span>
                     </h2>
-                    <p className="text-[13px] font-normal text-slate-500 capitalize font-sans mt-0.5">
-                      Pilih permohonan pada panel kiri untuk meninjau detail riwayat dan melakukan verifikasi penyelesaian.
-                    </p>
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-                    {/* Search */}
-                    <div className="relative w-full sm:w-64 max-w-full">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-9 pl-9 pr-8 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#00a389] rounded-md text-[13px] font-normal text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-3xs font-sans"
-                        placeholder="Cari NOP, Nama Pemohon..."
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => setSearchQuery("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-
                     <button
                       onClick={() => fetchData(true)}
                       disabled={isRefreshing}
@@ -963,14 +931,14 @@ export default function PemantauWorkspace() {
                   </div>
                 </div>
 
-                {/* 2-PANEL LAYOUT: PANEL KIRI (Daftar Sticky) & PANEL KANAN (Detail Permohonan Alami) */}
-                <div className="flex flex-col lg:flex-row items-start gap-5 w-full font-sans">
+                {/* 2-PANEL LAYOUT: PANEL ATAS (Daftar Permohonan) & PANEL BAWAH (Detail Permohonan) */}
+                <div className="flex flex-col items-start gap-5 w-full font-sans">
 
-                  {/* PANEL KIRI: 1-Column List of Permohonan (Sticky on Desktop) */}
-                  <div className="w-full lg:w-96 shrink-0 bg-white border border-slate-200/90 rounded-md p-4 shadow-3xs flex flex-col gap-3 lg:sticky lg:top-20">
+                  {/* PANEL ATAS: 1-Column List of Permohonan */}
+                  <div className="w-full bg-white border border-slate-200/90 rounded-md p-4 shadow-3xs flex flex-col gap-3">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                       <h4 className="text-[13px] font-normal text-slate-700 capitalize font-sans select-none flex items-center gap-2">
-                        <span>📋 Permohonan</span>
+                        <span>Permohonan</span>
                         <span className="bg-emerald-50 text-[#008f78] text-[10px] font-semibold px-2 py-0.5 rounded-md border border-emerald-200">
                           {filteredPantauList.length}
                         </span>
@@ -984,17 +952,17 @@ export default function PemantauWorkspace() {
                               type="button"
                               onClick={() => setCurrentPantauPage((prev) => Math.max(prev - 1, 1))}
                               disabled={activePantauPage === 1}
-                              className="p-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-3xs"
+                              className="p-1 px-2 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-3xs text-xs font-bold"
                             >
-                              <ChevronLeft className="w-3.5 h-3.5" />
+                              ‹
                             </button>
                             <button
                               type="button"
                               onClick={() => setCurrentPantauPage((prev) => Math.min(prev + 1, totalPantauPages))}
                               disabled={activePantauPage === totalPantauPages}
-                              className="p-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-3xs"
+                              className="p-1 px-2 rounded-md bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-3xs text-xs font-bold"
                             >
-                              <ChevronRight className="w-3.5 h-3.5" />
+                              ›
                             </button>
                           </div>
                         </div>
@@ -1048,19 +1016,18 @@ export default function PemantauWorkspace() {
                                 <span className="text-[13px] font-normal text-slate-800 font-mono truncate">
                                   {formatNop(p.nop)}
                                 </span>
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8px] font-extrabold border leading-none shrink-0 ${sc.badgeBg} ${sc.badgeText} ${sc.badgeBorder}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${sc.bg} ${sc.pulse ? 'animate-pulse' : ''}`} />
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none shrink-0 ${sc.badgeBg} ${sc.badgeText} ${sc.badgeBorder}`}>
                                   {sc.label}
                                 </span>
                               </div>
 
                               <div className="flex items-center justify-between gap-2 pl-1 text-[13px]">
-                                <span className="text-[13px] font-normal text-slate-600 capitalize truncate max-w-[130px] font-sans" title={p.namaWajibPajak}>
+                                <span className="text-[13px] font-normal text-slate-600 capitalize truncate max-w-md font-sans" title={p.namaWajibPajak}>
                                   {p.namaWajibPajak?.toLowerCase()}
                                 </span>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   {p.jenisPermohonan === 'MUTASI_SEBAGIAN' && (
-                                    <span className={`inline-flex px-1.5 py-0.2 rounded-md text-[8px] font-extrabold border leading-none uppercase ${pVerifiedPecahan === pTotalPecahan
+                                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none ${pVerifiedPecahan === pTotalPecahan
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       : pVerifiedPecahan > 0
                                         ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -1069,7 +1036,7 @@ export default function PemantauWorkspace() {
                                       {pVerifiedPecahan}/{pTotalPecahan} Verified
                                     </span>
                                   )}
-                                  <span className="inline-flex px-1.5 py-0.2 rounded-md text-[8px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 uppercase">
+                                  <span className="inline-flex px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none bg-emerald-50 text-[#008f78] border-emerald-200">
                                     {getAbbreviatedJenis(p.jenisPermohonan || selectedBundle.jenisPermohonan)}
                                   </span>
                                 </div>
@@ -1085,31 +1052,13 @@ export default function PemantauWorkspace() {
                   <div className="flex-1 min-w-0 w-full bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-5 relative">
                     {selectedPermohonan ? (
                       <div className="flex flex-col gap-5 animate-fadeIn">
-                        {/* Detail Header */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none font-sans">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <h3 className="font-mono text-[13px] font-normal text-slate-800 font-sans capitalize">
-                              {selectedPermohonan.nomorPelayanan || selectedPermohonan.nomorPermohonan}
-                            </h3>
-                          </div>
-
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-extrabold capitalize shrink-0 select-none ${selectedPermohonan.status === "COMPLETED"
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            : "bg-sky-100 text-sky-850 border border-sky-200"
-                            }`}>
-                            <span className={`w-2 h-2 rounded-full ${selectedPermohonan.status === "COMPLETED" ? "bg-emerald-500" : "bg-sky-500"}`} />
-                            {selectedPermohonan.status === "COMPLETED" ? "Layanan Selesai" : "Arsip Terverifikasi"}
-                          </span>
-                        </div>
-
                         {/* Frozen Alert Banner */}
                         {selectedPermohonan.permintaanKoreksi && selectedPermohonan.permintaanKoreksi.length > 0 && (
-                          <div className="bg-amber-50/70 border border-amber-200 text-amber-800 p-4 rounded-md text-xs font-semibold select-none flex flex-col gap-1.5 animate-fadeIn shrink-0 shadow-3xs">
-                            <p className="flex items-center gap-1.5 font-bold">
-                              <ShieldAlert className="w-4 h-4 text-amber-500 animate-bounce" />
+                          <div className="bg-amber-50/70 border border-amber-200 text-amber-800 p-4 rounded-md text-[13px] font-normal select-none flex flex-col gap-1.5 animate-fadeIn shrink-0 shadow-3xs">
+                            <p className="flex items-center gap-1.5 font-normal">
                               Permohonan ini dibekukan (LOCKED)
                             </p>
-                            <p className="text-[10px] text-amber-700 leading-relaxed pl-5 font-semibold">
+                            <p className="text-[13px] text-amber-700 leading-relaxed pl-5 font-normal">
                               Tindakan koreksi pembatalan selesai (<strong>Rollback</strong>) telah diajukan dan sedang menunggu persetujuan dari Supervisor sebelum status berkas dapat dipulihkan ke Terarsip.
                               Catatan: "{selectedPermohonan.permintaanKoreksi[0].catatanPengaju}"
                             </p>
@@ -1126,8 +1075,7 @@ export default function PemantauWorkspace() {
                               actorName: selectedPermohonan.penginput?.name || "Petugas Penginput",
                               dateStr: selectedPermohonan.createdAt
                                 ? new Date(selectedPermohonan.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—",
-                              icon: PlusCircle
+                                : "—"
                             },
                             {
                               label: "Diteliti",
@@ -1136,8 +1084,7 @@ export default function PemantauWorkspace() {
                               actorName: selectedPermohonan.bundle?.peneliti?.name || "Petugas Peneliti",
                               dateStr: selectedPermohonan.bundle?.createdAt
                                 ? new Date(selectedPermohonan.bundle.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—",
-                              icon: Search
+                                : "—"
                             },
                             {
                               label: "Diarsip",
@@ -1146,8 +1093,7 @@ export default function PemantauWorkspace() {
                               actorName: selectedPermohonan.arsipDigital?.[0]?.pengarsip?.name || "Petugas Pengarsip",
                               dateStr: selectedPermohonan.arsipDigital?.[0]?.createdAt
                                 ? new Date(selectedPermohonan.arsipDigital[0].createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—",
-                              icon: FolderOpen
+                                : "—"
                             },
                             {
                               label: "Dikirim",
@@ -1156,8 +1102,7 @@ export default function PemantauWorkspace() {
                               actorName: selectedPermohonan.bundle?.manifest?.pengirim?.name || "Petugas Pengirim",
                               dateStr: selectedPermohonan.bundle?.manifest?.updatedAt
                                 ? new Date(selectedPermohonan.bundle.manifest.updatedAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—",
-                              icon: Truck
+                                : "—"
                             },
                             {
                               label: "Dipantau",
@@ -1166,8 +1111,7 @@ export default function PemantauWorkspace() {
                               actorName: session?.user?.name ? `${session.user.name}` : "Petugas Pemantau",
                               dateStr: selectedPermohonan.bundle?.manifest?.updatedAt
                                 ? new Date(selectedPermohonan.bundle.manifest.updatedAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—",
-                              icon: ShieldCheck
+                                : "—"
                             },
                             {
                               label: "Selesai",
@@ -1178,8 +1122,7 @@ export default function PemantauWorkspace() {
                                 ? new Date(selectedPermohonan.tanggalPenyelesaian).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
                                 : selectedPermohonan.status === "COMPLETED"
                                   ? new Date(selectedPermohonan.updatedAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                  : "—",
-                              icon: CheckCircle2
+                                  : "—"
                             }
                           ];
 
@@ -1188,12 +1131,8 @@ export default function PemantauWorkspace() {
 
                           return (
                             <div className="bg-slate-50/90 p-4 rounded-md border border-slate-200/80 select-none flex flex-col gap-4 shadow-3xs font-sans">
-                              <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
-                                <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
-                                  <History className="w-3.5 h-3.5 text-[#00a389]" />
-                                  Detail Penanggung Jawab & Riwayat Alur Berkas
-                                </h5>
-                                <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                              <div className="flex items-center justify-end border-b border-slate-200/70 pb-2">
+                                <span className="text-[13px] font-normal text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
                                   6 Tahapan Siklus
                                 </span>
                               </div>
@@ -1208,7 +1147,7 @@ export default function PemantauWorkspace() {
                                     <React.Fragment key={step.key}>
                                       <div className="flex flex-col items-center gap-1 shrink-0 z-10 min-w-[60px] text-center">
                                         <div
-                                          className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isDone
+                                          className={`w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-normal transition-all duration-300 ${isDone
                                             ? "bg-[#00a389] text-white shadow-3xs"
                                             : isCurrent
                                               ? "bg-[#00a389] text-white shadow-md ring-4 ring-[#00a389]/20 scale-105"
@@ -1216,7 +1155,7 @@ export default function PemantauWorkspace() {
                                             }`}
                                         >
                                           {isDone ? (
-                                            <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                                            <span>✓</span>
                                           ) : isCurrent ? (
                                             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                                           ) : (
@@ -1224,16 +1163,16 @@ export default function PemantauWorkspace() {
                                           )}
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold whitespace-nowrap ${isDone
+                                          className={`text-[13px] font-normal whitespace-nowrap ${isDone
                                             ? "text-[#008f78]"
                                             : isCurrent
-                                              ? "text-[#008f78] font-extrabold"
+                                              ? "text-[#008f78]"
                                               : "text-slate-400"
                                             }`}
                                         >
                                           {step.label}
                                         </span>
-                                        <span className="text-[8px] font-semibold text-slate-500 truncate max-w-[70px]" title={step.actorName}>
+                                        <span className="text-[13px] font-normal text-slate-500 truncate max-w-[70px]" title={step.actorName}>
                                           {step.actorName.split(" ")[0]}
                                         </span>
                                       </div>
@@ -1253,284 +1192,189 @@ export default function PemantauWorkspace() {
                                 })}
                               </div>
 
-                              {/* Grid Detail Penanggung Jawab & Waktu */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-200/70">
-                                {stepsData.map((step, i) => {
-                                  const isDone = isAllCompleted || i <= activeIndex;
-                                  const StepIcon = step.icon;
-
-                                  return (
-                                    <div
-                                      key={`detail-${step.key}`}
-                                      className={`p-2.5 rounded-md border flex flex-col gap-1 transition-all ${isDone
-                                        ? "bg-white border-slate-200/90 shadow-3xs"
-                                        : "bg-slate-100/50 border-slate-200/40 opacity-60"
-                                        }`}
-                                    >
-                                      <div className="flex items-center justify-between gap-1">
-                                        <span className="text-[10px] font-extrabold text-slate-700 flex items-center gap-1 truncate">
-                                          <StepIcon className={`w-3 h-3 ${isDone ? "text-[#00a389]" : "text-slate-400"}`} />
-                                          {step.label}
-                                        </span>
-                                        <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 uppercase border border-slate-200/80">
-                                          {step.roleLabel}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex flex-col text-[10px] mt-0.5">
-                                        <span className="font-bold text-slate-800 truncate" title={step.actorName}>
-                                          👤 {step.actorName}
-                                        </span>
-                                        <span className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
-                                          <Calendar className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                                          {step.dateStr}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
                             </div>
                           );
                         })()}
 
-                        {/* Ringkasan Data Utama & Logistik Pengiriman */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs select-none font-sans">
+                        {/* Row Top: Data Utama Permohonan & Data Objek Lama Berjejer (Side by Side) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full items-start font-sans">
 
-                          {/* Card 1: Data Utama Wajib Pajak */}
-                          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5">
+                          {/* Card 1: Data Utama Permohonan */}
+                          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full">
                             <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
-                              <span>📄 Data Utama Permohonan</span>
-                              <span className="text-[8px] font-bold text-[#008f78] bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md uppercase">
-                                {getAbbreviatedJenis(selectedPermohonan.jenisPermohonan || selectedBundle.jenisPermohonan)}
-                              </span>
+                              <span>Data Utama</span>
                             </h5>
-                            <div className="grid grid-cols-[100px_8px_1fr] gap-y-1.5 text-[11px] items-baseline bg-white p-3 rounded-md border border-slate-200/60 shadow-3xs">
-                              <span className="text-slate-400 font-medium">NOP</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-800 font-bold font-mono">{formatNop(selectedPermohonan.nop)}</span>
+                            <div className="grid grid-cols-[120px_8px_1fr] gap-y-2 text-[13px] font-normal items-baseline bg-white p-3.5 rounded-md border border-slate-200/60 shadow-3xs">
+                              <span className="text-slate-500 font-normal">NOP</span>
+                              <span className="text-slate-400 font-normal">:</span>
+                              <span className="text-slate-800 font-normal font-mono">{formatNop(selectedPermohonan.nop)}</span>
 
-                              <span className="text-slate-400 font-medium">Nama WP</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-800 font-semibold uppercase">{selectedPermohonan.namaWajibPajak}</span>
+                              <span className="text-slate-500 font-normal">Nama WP</span>
+                              <span className="text-slate-400 font-normal">:</span>
+                              <span className="text-slate-800 font-normal uppercase">{selectedPermohonan.namaWajibPajak}</span>
 
-                              <span className="text-slate-400 font-medium">Alamat WP</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-700 font-semibold">{selectedPermohonan.alamat}</span>
+                              <span className="text-slate-500 font-normal">Alamat WP</span>
+                              <span className="text-slate-400 font-normal">:</span>
+                              <span className="text-slate-700 font-normal">{selectedPermohonan.alamat}</span>
 
-                              <span className="text-slate-400 font-medium">No. WhatsApp</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-700 font-semibold">{selectedPermohonan.noWhatsapp}</span>
+                              <span className="text-slate-500 font-normal">No. WhatsApp</span>
+                              <span className="text-slate-400 font-normal">:</span>
+                              <span className="text-slate-700 font-normal">{selectedPermohonan.noWhatsapp}</span>
                             </div>
                           </div>
 
-                          {/* Card 2: Informasi Logistik Pengiriman */}
-                          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5">
-                            <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
-                              <span>🚚 Informasi Logistik Pengiriman</span>
-                              <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md uppercase">
-                                TERKIRIM
-                              </span>
-                            </h5>
-                            <div className="grid grid-cols-[100px_8px_1fr] gap-y-1.5 text-[11px] items-baseline bg-white p-3 rounded-md border border-slate-200/60 shadow-3xs">
-                              <span className="text-slate-400 font-medium">Nomor Bundle</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-800 font-bold font-mono">{selectedPermohonan.bundle?.nomorBundle || "-"}</span>
+                          {/* Card 2: Data Objek Lama (Berjejer dengan Data Utama) */}
+                          {selectedPermohonan.namaPemilikLama && (
+                            <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full">
+                              <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5">
+                                Data Lama (Asal)
+                              </h5>
+                              <div className="grid grid-cols-[120px_8px_1fr] gap-y-2 text-[13px] font-normal items-baseline bg-white p-3.5 rounded-md border border-slate-200/70 shadow-3xs">
+                                <span className="text-slate-500 font-normal">Pemilik Lama</span>
+                                <span className="text-slate-400 font-normal">:</span>
+                                <span className="text-slate-700 font-normal uppercase">{selectedPermohonan.namaPemilikLama}</span>
 
-                              <span className="text-slate-400 font-medium">Nomor Manifest</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-800 font-bold font-mono">{selectedPermohonan.bundle?.manifest?.nomorManifest || "-"}</span>
+                                {selectedPermohonan.luasTanahLama !== undefined && selectedPermohonan.luasTanahLama !== null && (
+                                  <>
+                                    <span className="text-slate-500 font-normal">Luas Tanah</span>
+                                    <span className="text-slate-400 font-normal">:</span>
+                                    <span className="text-slate-700 font-normal">{selectedPermohonan.luasTanahLama} m²</span>
+                                  </>
+                                )}
 
-                              <span className="text-slate-400 font-medium">Pengirim</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-700 font-semibold uppercase">{selectedPermohonan.bundle?.manifest?.pengirim?.name || "-"}</span>
+                                {selectedPermohonan.luasBangunanLama !== undefined && selectedPermohonan.luasBangunanLama !== null && (
+                                  <>
+                                    <span className="text-slate-500 font-normal">Luas Bangunan</span>
+                                    <span className="text-slate-400 font-normal">:</span>
+                                    <span className="text-slate-700 font-normal">{selectedPermohonan.luasBangunanLama} m²</span>
+                                  </>
+                                )}
 
-                              <span className="text-slate-400 font-medium">Tanggal Kirim</span>
-                              <span className="text-slate-400 font-medium">:</span>
-                              <span className="text-slate-700 font-semibold">{selectedPermohonan.bundle?.manifest?.updatedAt ? new Date(selectedPermohonan.bundle.manifest.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</span>
+                                {selectedPermohonan.sertifikatLama && (
+                                  <>
+                                    <span className="text-slate-500 font-normal">Sertifikat</span>
+                                    <span className="text-slate-400 font-normal">:</span>
+                                    <span className="text-slate-700 font-normal uppercase">{selectedPermohonan.sertifikatLama}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
                         </div>
 
-                        {/* Section Rincian Data Objek Pajak */}
-                        <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 select-none flex flex-col gap-3 font-sans">
-                          <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                            <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
-                              <Boxes className="w-3.5 h-3.5 text-[#00a389]" />
-                              Rincian Objek Pajak (Data Lama & Data Baru / Pecahan)
-                            </h5>
+                        {/* Section Data Objek Baru (Kondisional Pecahan vs Objek Baru) */}
+                        {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0 && (
+                          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 select-none flex flex-col gap-3 font-sans w-full">
+                            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                              <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
+                                Data Baru {selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN" && selectedPermohonan.dataBaru.length > 1 ? `(${selectedPermohonan.dataBaru.length} Pecahan)` : ''}
+                              </h5>
 
-                            {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 1 && selectedPermohonan.status !== "COMPLETED" && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                                  {Object.values(checkedPecahanMap).filter(Boolean).length}/{selectedPermohonan.dataBaru.length} Terverifikasi
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={handleVerifyAllPecahan}
-                                  className="text-[9px] font-extrabold text-white bg-[#00a389] hover:bg-[#008f78] px-2 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-3xs"
-                                >
-                                  ✓ Verifikasi Semua
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
-                            {selectedPermohonan.namaPemilikLama && (
-                              <div className="flex flex-col gap-1.5">
-                                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans flex items-center gap-1">
-                                  <span>🏛️ Data Objek Lama</span>
-                                </span>
-                                <div className="grid grid-cols-[100px_8px_1fr] gap-y-1.5 text-[11px] items-baseline bg-white p-3 rounded-md border border-slate-200/70 shadow-3xs">
-                                  <span className="text-slate-400 font-medium">Pemilik Lama</span>
-                                  <span className="text-slate-400 font-medium">:</span>
-                                  <span className="text-slate-700 font-semibold uppercase">{selectedPermohonan.namaPemilikLama}</span>
-
-                                  {selectedPermohonan.luasTanahLama !== undefined && selectedPermohonan.luasTanahLama !== null && (
-                                    <>
-                                      <span className="text-slate-400 font-medium">Luas Tanah</span>
-                                      <span className="text-slate-400 font-medium">:</span>
-                                      <span className="text-slate-700 font-semibold">{selectedPermohonan.luasTanahLama} m²</span>
-                                    </>
-                                  )}
-
-                                  {selectedPermohonan.luasBangunanLama !== undefined && selectedPermohonan.luasBangunanLama !== null && (
-                                    <>
-                                      <span className="text-slate-400 font-medium">Luas Bangunan</span>
-                                      <span className="text-slate-400 font-medium">:</span>
-                                      <span className="text-slate-700 font-semibold">{selectedPermohonan.luasBangunanLama} m²</span>
-                                    </>
-                                  )}
-
-                                  {selectedPermohonan.sertifikatLama && (
-                                    <>
-                                      <span className="text-slate-400 font-medium">Sertifikat</span>
-                                      <span className="text-slate-400 font-medium">:</span>
-                                      <span className="text-slate-700 font-semibold uppercase">{selectedPermohonan.sertifikatLama}</span>
-                                    </>
-                                  )}
+                              {selectedPermohonan.dataBaru.length > 1 && selectedPermohonan.status !== "COMPLETED" && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[13px] font-normal text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                    {Object.values(checkedPecahanMap).filter(Boolean).length}/{selectedPermohonan.dataBaru.length} Terverifikasi
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleVerifyAllPecahan}
+                                    className="text-[13px] font-normal text-white bg-[#00a389] hover:bg-[#008f78] px-2.5 py-1 rounded-md transition-all active:scale-95 cursor-pointer shadow-3xs"
+                                  >
+                                    Selesaikan Semua
+                                  </button>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
 
-                            {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0 && (
-                              <div className={`flex flex-col gap-1.5 ${!selectedPermohonan.namaPemilikLama ? 'col-span-full' : ''}`}>
-                                <span className="text-[13px] font-normal text-slate-600 capitalize font-sans flex items-center justify-between">
-                                  <span>✨ Data Objek Baru {selectedPermohonan.dataBaru.length > 1 ? `(${selectedPermohonan.dataBaru.length} Pecahan)` : ''}</span>
-                                </span>
+                            {/* Grid Objek Baru / Pecahan Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+                              {selectedPermohonan.dataBaru.map((db: any, idx: number) => {
+                                const itemKey = db.id || `pecahan_${idx}`;
+                                const isChecked = selectedPermohonan.status === "COMPLETED" || !!checkedPecahanMap[itemKey];
+                                const isMutasiSebagian = selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN";
 
-                                <div className="flex flex-col gap-2.5">
-                                  {selectedPermohonan.dataBaru.map((db: any, idx: number) => {
-                                    const itemKey = db.id || `pecahan_${idx}`;
-                                    const isChecked = selectedPermohonan.status === "COMPLETED" || !!checkedPecahanMap[itemKey];
-
-                                    return (
-                                      <div
-                                        key={itemKey}
-                                        className={`grid grid-cols-[100px_8px_1fr] gap-y-1.5 text-[11px] items-baseline p-3 rounded-md border transition-all shadow-3xs ${isChecked
-                                          ? "bg-emerald-50/40 border-emerald-200/90 ring-1 ring-emerald-500/10"
-                                          : "bg-white border-slate-200/80 hover:border-slate-300"
-                                          }`}
-                                      >
-                                        <div className="col-span-3 flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1 select-none">
-                                          <span className="text-[9.5px] font-black text-slate-800 flex items-center gap-1.5">
-                                            <span className="w-4 h-4 rounded-full bg-emerald-50 text-[#008f78] border border-emerald-200 text-[8px] flex items-center justify-center font-black shrink-0">
-                                              {idx + 1}
-                                            </span>
-                                            Pecahan Objek #{idx + 1}
+                                return (
+                                  <div
+                                    key={itemKey}
+                                    className={`grid grid-cols-[120px_8px_1fr] gap-y-2 text-[13px] font-normal items-baseline p-3.5 rounded-md border transition-all shadow-3xs ${isChecked
+                                      ? "bg-emerald-50/40 border-emerald-200/90 ring-1 ring-emerald-500/10"
+                                      : "bg-white border-slate-200/80 hover:border-slate-300"
+                                      }`}
+                                  >
+                                    <div className="col-span-3 flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1 select-none">
+                                      <span className="text-[13px] font-normal text-slate-800 flex items-center gap-1.5">
+                                        {isMutasiSebagian && (
+                                          <span className="w-4 h-4 rounded-full bg-emerald-50 text-[#008f78] border border-emerald-200 text-[10px] flex items-center justify-center font-normal shrink-0">
+                                            {idx + 1}
                                           </span>
-
-                                          {selectedPermohonan.status !== "COMPLETED" ? (
-                                            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-3xs hover:bg-slate-50">
-                                              <input
-                                                type="checkbox"
-                                                checked={!!checkedPecahanMap[itemKey]}
-                                                onChange={(e) => handleTogglePecahanVerified(db.id, itemKey, e.target.checked)}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                                              />
-                                              <span className={`text-[9px] font-extrabold ${checkedPecahanMap[itemKey] ? "text-emerald-700" : "text-slate-500"}`}>
-                                                {checkedPecahanMap[itemKey] ? "✓ Verified" : "Verifikasi"}
-                                              </span>
-                                            </label>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                              ✓ Selesai
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        <span className="text-slate-400 font-medium">Pemilik Baru</span>
-                                        <span className="text-slate-400 font-medium">:</span>
-                                        <span className="text-slate-800 font-semibold uppercase">{db.namaPemilikBaru}</span>
-
-                                        {db.alamatPemilikBaru && (
-                                          <>
-                                            <span className="text-slate-400 font-medium">Alamat</span>
-                                            <span className="text-slate-400 font-medium">:</span>
-                                            <span className="text-slate-700 font-medium">{db.alamatPemilikBaru}</span>
-                                          </>
                                         )}
+                                        {isMutasiSebagian
+                                          ? `Pecahan Objek #${idx + 1}`
+                                          : selectedPermohonan.dataBaru.length > 1
+                                            ? `Objek Baru #${idx + 1}`
+                                            : "Data Objek Baru"
+                                        }
+                                      </span>
 
-                                        {db.luasTanahBaru !== undefined && db.luasTanahBaru !== null && (
-                                          <>
-                                            <span className="text-slate-400 font-medium">Luas Tanah</span>
-                                            <span className="text-slate-400 font-medium">:</span>
-                                            <span className="text-slate-700 font-semibold">{db.luasTanahBaru} m²</span>
-                                          </>
-                                        )}
+                                      {selectedPermohonan.status !== "COMPLETED" ? (
+                                        <label className="inline-flex items-center gap-1.5 cursor-pointer select-none bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-3xs hover:bg-slate-50">
+                                          <input
+                                            type="checkbox"
+                                            checked={!!checkedPecahanMap[itemKey]}
+                                            onChange={(e) => handleTogglePecahanVerified(db.id, itemKey, e.target.checked)}
+                                            className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                          />
+                                          <span className={`text-[13px] font-normal ${checkedPecahanMap[itemKey] ? "text-emerald-700" : "text-slate-500"}`}>
+                                            {checkedPecahanMap[itemKey] ? "Selesai" : "Selesaikan"}
+                                          </span>
+                                        </label>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 text-[13px] font-normal px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                          Selesai
+                                        </span>
+                                      )}
+                                    </div>
 
-                                        {db.luasBangunanBaru !== undefined && db.luasBangunanBaru !== null && (
-                                          <>
-                                            <span className="text-slate-400 font-medium">Luas Bangunan</span>
-                                            <span className="text-slate-400 font-medium">:</span>
-                                            <span className="text-slate-700 font-semibold">{db.luasBangunanBaru} m²</span>
-                                          </>
-                                        )}
+                                    <span className="text-slate-500 font-normal">Pemilik Baru</span>
+                                    <span className="text-slate-400 font-normal">:</span>
+                                    <span className="text-slate-800 font-normal uppercase">{db.namaPemilikBaru}</span>
 
-                                        {db.sertifikatBaru && (
-                                          <>
-                                            <span className="text-slate-400 font-medium">Sertifikat</span>
-                                            <span className="text-slate-400 font-medium">:</span>
-                                            <span className="text-slate-700 font-semibold uppercase">{db.sertifikatBaru}</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                                    {db.alamatPemilikBaru && (
+                                      <>
+                                        <span className="text-slate-500 font-normal">Alamat</span>
+                                        <span className="text-slate-400 font-normal">:</span>
+                                        <span className="text-slate-700 font-normal">{db.alamatPemilikBaru}</span>
+                                      </>
+                                    )}
 
-                        {/* Scanned Archive view */}
-                        {selectedPermohonan.arsipDigital && selectedPermohonan.arsipDigital.length > 0 && (
-                          <div className="bg-slate-50/70 p-3.5 rounded-md border border-slate-100 flex items-center justify-between gap-4 text-xs select-none">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 bg-emerald-500/10 text-emerald-600 rounded-md flex items-center justify-center shrink-0">
-                                <FileCheck className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-800 block text-[11px]">
-                                  Dokumen Arsip Digital (PDF v{selectedPermohonan.arsipDigital[0].versi})
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-semibold block">
-                                  Diunggah: {new Date(selectedPermohonan.arsipDigital[0].createdAt).toLocaleString("id-ID")}
-                                </span>
-                              </div>
+                                    {db.luasTanahBaru !== undefined && db.luasTanahBaru !== null && (
+                                      <>
+                                        <span className="text-slate-500 font-normal">Luas Tanah</span>
+                                        <span className="text-slate-400 font-normal">:</span>
+                                        <span className="text-slate-700 font-normal">{db.luasTanahBaru} m²</span>
+                                      </>
+                                    )}
+
+                                    {db.luasBangunanBaru !== undefined && db.luasBangunanBaru !== null && (
+                                      <>
+                                        <span className="text-slate-500 font-normal">Luas Bangunan</span>
+                                        <span className="text-slate-400 font-normal">:</span>
+                                        <span className="text-slate-700 font-normal">{db.luasBangunanBaru} m²</span>
+                                      </>
+                                    )}
+
+                                    {db.sertifikatBaru && (
+                                      <>
+                                        <span className="text-slate-500 font-normal">Sertifikat</span>
+                                        <span className="text-slate-400 font-normal">:</span>
+                                        <span className="text-slate-700 font-normal uppercase">{db.sertifikatBaru}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-
-                            <a
-                              href={selectedPermohonan.arsipDigital[0].urlBlob}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 py-1 px-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-[#008f78] font-bold text-[10px] rounded-md transition-all shrink-0 cursor-pointer shadow-3xs"
-                              title="Lihat dokumen PDF asli di tab baru"
-                            >
-                              Lihat berkas <ExternalLink className="w-3 h-3 shrink-0" />
-                            </a>
                           </div>
                         )}
 
@@ -1539,15 +1383,16 @@ export default function PemantauWorkspace() {
                           const totalPecahanCount = selectedPermohonan.dataBaru?.length || 0;
                           const verifiedCount = Object.values(checkedPecahanMap).filter(Boolean).length;
                           const isAllPecahanVerified = totalPecahanCount <= 1 || verifiedCount >= totalPecahanCount;
+                          const isMutasiSebagian = selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN";
 
                           return (
                             <div className="sticky bottom-4 z-30 bg-white/95 backdrop-blur-md p-4 rounded-md border border-slate-200/90 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none mt-4 animate-slideUp">
-                              <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5">
+                              <div className="text-[13px] text-slate-500 font-normal flex items-center gap-1.5">
                                 {selectedPermohonan.status === "ARCHIVED" && (
                                   <span>
                                     {!isAllPecahanVerified
-                                      ? `⚠️ Harap verifikasi seluruh pecahan (${verifiedCount}/${totalPecahanCount}) untuk mengaktifkan tombol penyelesaian.`
-                                      : "✓ Seluruh pecahan terverifikasi! Klik tombol untuk menandai layanan PBB selesai."}
+                                      ? `⚠️ Harap verifikasi seluruh ${isMutasiSebagian ? 'pecahan' : 'objek baru'} (${verifiedCount}/${totalPecahanCount}) untuk mengaktifkan tombol penyelesaian.`
+                                      : `✓ Seluruh ${isMutasiSebagian ? 'pecahan' : 'objek baru'} terverifikasi! Klik tombol untuk menandai layanan PBB selesai.`}
                                   </span>
                                 )}
                                 {selectedPermohonan.status === "COMPLETED" && (
@@ -1560,10 +1405,9 @@ export default function PemantauWorkspace() {
                                   <button
                                     onClick={() => handleComplete(selectedPermohonan.id, selectedPermohonan.nomorPermohonan)}
                                     disabled={loading || selectedPermohonan.permintaanKoreksi?.length > 0 || !isAllPecahanVerified}
-                                    className="flex items-center gap-1.5 py-2.5 px-4 text-xs font-black text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-1.5 py-2.5 px-4 text-[13px] font-normal text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     title={!isAllPecahanVerified ? `Harap verifikasi seluruh (${totalPecahanCount}) pecahan objek di Data Baru terlebih dahulu` : ""}
                                   >
-                                    <CheckCircle2 className="w-4 h-4" />
                                     Tandai Selesai {!isAllPecahanVerified && `(${verifiedCount}/${totalPecahanCount})`}
                                   </button>
                                 )}
@@ -1572,9 +1416,8 @@ export default function PemantauWorkspace() {
                                   <button
                                     onClick={() => setShowRollbackModal(true)}
                                     disabled={loading || selectedPermohonan.permintaanKoreksi?.length > 0}
-                                    className="flex items-center gap-1.5 py-2.5 px-4.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:scale-95 rounded-md shadow-3xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center gap-1.5 py-2.5 px-4.5 text-[13px] font-normal text-white bg-rose-600 hover:bg-rose-700 active:scale-95 rounded-md shadow-3xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    <RotateCcw className="w-4 h-4" />
                                     Batal Selesai
                                   </button>
                                 )}
@@ -1586,10 +1429,9 @@ export default function PemantauWorkspace() {
                       </div>
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400 p-12 my-auto">
-                        <Layers className="w-10 h-10 text-slate-300 mb-2 animate-pulse" />
-                        <h4 className="text-xs font-bold text-slate-700">Pilih Permohonan</h4>
-                        <p className="text-[11px] text-slate-400 max-w-xs mt-1">
-                          Klik salah satu berkas permohonan di panel kiri untuk menampilkan detail dan tombol aksi.
+                        <h4 className="text-[13px] font-normal text-slate-700 capitalize font-sans">Pilih Permohonan</h4>
+                        <p className="text-[13px] font-normal text-slate-400 capitalize font-sans max-w-xs mt-1">
+                          Klik salah satu berkas permohonan di panel atas untuk menampilkan detail dan tombol aksi.
                         </p>
                       </div>
                     )}
@@ -1609,9 +1451,6 @@ export default function PemantauWorkspace() {
             {/* Modal Header */}
             <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-rose-50 border border-rose-200 p-2 rounded-md shrink-0 flex items-center justify-center">
-                  <RotateCcw className="w-4 h-4 text-rose-600" />
-                </div>
                 <h3 className="text-sm font-black text-slate-900 tracking-tight">
                   Batal Selesai (Rollback)
                 </h3>
@@ -1621,9 +1460,9 @@ export default function PemantauWorkspace() {
                   setShowRollbackModal(false);
                   setRollbackReason("");
                 }}
-                className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer font-bold"
               >
-                <X className="w-4 h-4" />
+                ✕
               </button>
             </div>
 
