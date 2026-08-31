@@ -418,8 +418,6 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
     } else if (stepLabel === 'Data Lama (Asal)') {
       if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
       if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-      if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-      if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
       if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
       if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
       if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
@@ -504,8 +502,6 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
     if (needDataLama) {
       if (!data.namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
       if (!data.alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-      if (!data.kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-      if (!data.desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
       if (!data.alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
       if (!data.kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
       if (!data.desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
@@ -941,7 +937,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Kecamatan Pemilik <span className="text-slate-400 font-normal">(Opsional)</span></label>
                           <input
                             type="text"
                             id="edit_kecamatanPemilikLama"
@@ -954,7 +950,7 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Pemilik <span className="text-rose-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Desa Pemilik <span className="text-slate-400 font-normal">(Opsional)</span></label>
                           <input
                             type="text"
                             id="edit_desaPemilikLama"

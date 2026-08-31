@@ -375,11 +375,11 @@ export default function TrackingTab() {
       {
         title: "Selesai (Pemantau)",
         desc: selectedDoc.status === "COMPLETED"
-          ? "Layanan selesai diproses secara keseluruhan, produk diterbitkan ke WP."
+          ? `Layanan selesai diproses secara keseluruhan${selectedDoc.pemantau?.name ? ` oleh ${selectedDoc.pemantau.name}` : ''}, produk diterbitkan ke WP.`
           : selectedDoc.status === "REJECTED"
             ? "Berkas ditolak pada proses peninjauan akhir."
             : "Sedang dalam tahap verifikasi akhir sebelum penutupan berkas.",
-        date: selectedDoc.status === "COMPLETED" || selectedDoc.status === "REJECTED" ? selectedDoc.updatedAt : null,
+        date: selectedDoc.status === "COMPLETED" ? (selectedDoc.completedAt || selectedDoc.updatedAt) : (selectedDoc.status === "REJECTED" ? selectedDoc.updatedAt : null),
         done: selectedDoc.status === "COMPLETED" || selectedDoc.status === "REJECTED",
       }
     ];

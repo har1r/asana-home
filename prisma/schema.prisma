@@ -28,13 +28,13 @@ enum JenisPermohonan {
 
 enum StatusPermohonan {
   SUBMITTED
-  REVISION
   BUNDLED
   ARCHIVED
   MANIFESTED
   DELIVERED
   COMPLETED
   REJECTED
+  REVISION
 }
 
 enum StatusBundle {
@@ -48,6 +48,7 @@ enum StatusManifest {
   DRAFT
   LOCKED
   SENT
+  VOID
 }
 
 enum StatusArsipDigital {
@@ -63,215 +64,223 @@ enum StatusKoreksi {
 }
 
 model User {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId // ID unik pengguna (MongoDB ObjectId)
-  name         String   // Nama lengkap pengguna/petugas
-  email        String   @unique // Email unik untuk autentikasi login
-  passwordHash String   // Kata sandi terenkripsi (hashed)
-  role         UserRole // Peran pengguna (PENGINPUT, PENELITI, PENGARSIP, PENGIRIM, PEMANTAU, SUPERVISOR)
-  isActive     Boolean  @default(true) // Status keaktifan akun pengguna
-  createdAt    DateTime @default(now()) // Waktu akun pertama kali dibuat
-  updatedAt    DateTime @updatedAt // Waktu pembaruan data akun terakhir
+  id                          String              @id @default(auto()) @map("_id") @db.ObjectId
+  name                        String
+  email                       String              @unique
+  passwordHash                String
+  role                        UserRole
+  isActive                    Boolean             @default(true)
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
 
-  permohonan                  Permohonan[] // Relasi ke permohonan yang diinput oleh user ini
-  bundle                      Bundle[] // Relasi ke bundle yang dibuat oleh peneliti ini
-  manifest                    Manifest[] // Relasi ke manifest yang dibuat oleh pengirim ini
-  arsipDigital                ArsipDigital[] // Relasi ke berkas digital yang diupload oleh pengarsip ini
-  permintaanKoreksiPengaju    PermintaanKoreksi[] @relation(name: "PengajuKoreksi") // Relasi ke koreksi yang diajukan oleh user ini
-  permintaanKoreksiSupervisor PermintaanKoreksi[] @relation(name: "SupervisorKoreksi") // Relasi ke koreksi yang diputuskan oleh supervisor ini
-  inAppNotification           InAppNotification[] // Relasi ke notifikasi aplikasi milik user ini
+  permohonan                  Permohonan[]        @relation(name: "PenginputPermohonan")
+  permohonanDiverifikasi      Permohonan[]        @relation(name: "PemantauPermohonan")
+  bundle                      Bundle[]
+  manifest                    Manifest[]
+  arsipDigital                ArsipDigital[]
+  permintaanKoreksiPengaju    PermintaanKoreksi[] @relation(name: "PengajuKoreksi")
+  permintaanKoreksiSupervisor PermintaanKoreksi[] @relation(name: "SupervisorKoreksi")
+  inAppNotification           InAppNotification[]
 }
 
 model Permohonan {
-  id               String           @id @default(auto()) @map("_id") @db.ObjectId // ID unik permohonan (MongoDB ObjectId)
-  nomorPermohonan  String           @unique // Nomor registrasi unik berkas permohonan
-  jenisPermohonan  JenisPermohonan  // Jenis layanan permohonan (MUTASI_SEBAGIAN, OPB, PEMBETULAN, dll.)
-  status           StatusPermohonan @default(SUBMITTED) // Status tahapan berkas (SUBMITTED, BUNDLED, ARCHIVED, dll.)
-  bundleId         String?          @db.ObjectId // ID bundle pembungkusan (null jika belum dibundel)
-  isFavorite       Boolean          @default(false) // Penanda berkas difavoritkan oleh penginput
+  // 1. Identitas & Status Berkas
+  id                   String           @id @default(auto()) @map("_id") @db.ObjectId
+  nomorPermohonan      String           @unique
+  jenisPermohonan      JenisPermohonan
+  status               StatusPermohonan @default(SUBMITTED)
+  bundleId             String?          @db.ObjectId
+  isFavorite           Boolean          @default(false)
   
-  // Data wajib pajak (dengan namaWajibPajak dan alamat sebagai derived fields)
-  namaWajibPajak   String   // Nama pemohon / wajib pajak utama
-  nop              String   // Nomor Objek Pajak (NOP) utama (derived dari DataLama / DataBaru)
-  noWhatsapp       String   @map("nomorWhatsapp") // Nomor WhatsApp wajib pajak untuk notifikasi
-  alamat           String   // Alamat domisili wajib pajak / alamat objek pajak
-  nomorPelayanan   String?  // Nomor tanda terima pelayanan berkas
-  tanggalNoPelayanan DateTime? @default(now()) // Tanggal penerbitan nomor pelayanan
-  tanggalPenyelesaian DateTime? // Tanggal target batas penyelesaian permohonan
+  // 2. Data Pelayanan & Wajib Pajak Utama
+  nomorPelayanan       String?
+  tanggalNoPelayanan   DateTime?        @default(now())
+  tanggalPenyelesaian  DateTime?
+  namaWajibPajak       String?
+  nop                  String?
+  noWhatsapp           String?          @map("nomorWhatsapp")
+  alamat               String?
 
-  // Data Lama
-  namaPemilikLama      String? // Snapshot nama pemilik NOP asal (untuk berkas tunggal / export)
-  alamatPemilikLama    String? // Snapshot alamat pemilik NOP asal
-  blokPemilikLama      String? // Snapshot blok/nomor pemilik NOP asal
-  rtPemilikLama        String? // Snapshot RT pemilik NOP asal
-  rwPemilikLama        String? // Snapshot RW pemilik NOP asal
-  kecamatanPemilikLama String? // Snapshot kecamatan pemilik NOP asal
-  desaPemilikLama      String? // Snapshot desa/kelurahan pemilik NOP asal
-  alamatObjekLama      String? // Snapshot alamat objek pajak asal
-  blokObjekLama        String? // Snapshot blok/nomor objek pajak asal
-  rtObjekLama          String? // Snapshot RT objek pajak asal
-  rwObjekLama          String? // Snapshot RW objek pajak asal
-  kecamatanObjekLama   String? // Snapshot kecamatan objek pajak asal
-  desaObjekLama        String? // Snapshot desa/kelurahan objek pajak asal
-  luasTanahLama        Float?  // Snapshot luas tanah NOP asal (m²)
-  luasBangunanLama     Float?  // Snapshot luas bangunan NOP asal (m²)
-  sertifikatLama       String? // Snapshot nomor sertifikat tanah NOP asal
+  // 3. Snapshot Data Lama (OP Asal)
+  namaPemilikLama      String?
+  alamatPemilikLama    String?
+  blokPemilikLama      String?
+  rtPemilikLama        String?
+  rwPemilikLama        String?
+  kecamatanPemilikLama String?
+  desaPemilikLama      String?
+  alamatObjekLama      String?
+  blokObjekLama        String?
+  rtObjekLama          String?
+  rwObjekLama          String?
+  kecamatanObjekLama   String?
+  desaObjekLama        String?
+  luasTanahLama        Float?
+  luasBangunanLama     Float?
+  sertifikatLama       String?
 
-  // Relasi Data Lama & Data Baru (One-to-Many)
-  dataLama             DataLama[] // Relasi rinci ke daftar NOP asal/lama (bisa >1 untuk mutasi penggabungan)
-  dataBaru             DataBaru[] // Relasi rinci ke daftar NOP pecahan/baru (bisa >1 untuk mutasi sebagian)
+  // 4. Relasi Rincian Data & Berkas
+  dataLama             DataLama[]
+  dataBaru             DataBaru[]
+  arsipDigital          ArsipDigital[]
+  permintaanKoreksi     PermintaanKoreksi[]
   
-  // Relasi
-  penginputId      String           @db.ObjectId // ID user penginput yang merekam permohonan ini
-  
-  createdAt        DateTime         @default(now()) // Tanggal berkas pertama kali diinput
-  updatedAt        DateTime         @updatedAt // Tanggal terakhir berkas diperbarui
-  
-  arsipDigital      ArsipDigital[] // Relasi ke daftar file PDF scan digital
-  permintaanKoreksi PermintaanKoreksi[] // Relasi ke daftar riwayat pengajuan koreksi/retur
-  bundle            Bundle?          @relation(fields: [bundleId], references: [id]) // Relasi ke objek Bundle pengelompokan
-  penginput         User             @relation(fields: [penginputId], references: [id]) // Relasi ke objek User penginput
+  // 5. Petugas & Waktu
+  penginputId          String           @db.ObjectId
+  pemantauId           String?          @db.ObjectId
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  completedAt          DateTime?
+
+  // 6. Relasi Petugas & Bundle
+  bundle                Bundle?          @relation(fields: [bundleId], references: [id])
+  penginput             User             @relation(name: "PenginputPermohonan", fields: [penginputId], references: [id])
+  pemantau              User?            @relation(name: "PemantauPermohonan", fields: [pemantauId], references: [id])
 }
 
 model DataLama {
-  id                   String     @id @default(auto()) @map("_id") @db.ObjectId // ID unik rincian NOP asal
-  permohonanId         String     @db.ObjectId // ID permohonan pemilik rincian NOP asal ini
-  nopLama              String     // Nomor Objek Pajak (NOP) asal
-  namaPemilikLama      String     // Nama pemilik NOP asal
-  alamatPemilikLama    String     // Alamat pembuat/pemilik NOP asal
-  blokPemilikLama      String?    // Blok alamat pemilik NOP asal
-  rtPemilikLama        String?    // RT alamat pemilik NOP asal
-  rwPemilikLama        String?    // RW alamat pemilik NOP asal
-  kecamatanPemilikLama String?    // Kecamatan alamat pemilik NOP asal
-  desaPemilikLama      String?    // Desa/Kelurahan alamat pemilik NOP asal
-  alamatObjekLama      String?    // Alamat letak objek pajak asal
-  blokObjekLama        String?    // Blok letak objek pajak asal
-  rtObjekLama          String?    // RT letak objek pajak asal
-  rwObjekLama          String?    // RW letak objek pajak asal
-  kecamatanObjekLama   String?    // Kecamatan letak objek pajak asal
-  desaObjekLama        String?    // Desa/Kelurahan letak objek pajak asal
-  luasTanahLama        Float      // Luas tanah NOP asal (m²)
-  luasBangunanLama     Float      // Luas bangunan NOP asal (m²)
-  isUtama              Boolean    @default(false) // Flag penanda NOP asal utama/terbesar
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId         String     @db.ObjectId
+  nopLama              String?
+  namaPemilikLama      String?
+  alamatPemilikLama    String?
+  blokPemilikLama      String?
+  rtPemilikLama        String?
+  rwPemilikLama        String?
+  kecamatanPemilikLama String?
+  desaPemilikLama      String?
+  alamatObjekLama      String?
+  blokObjekLama        String?
+  rtObjekLama          String?
+  rwObjekLama          String?
+  kecamatanObjekLama   String?
+  desaObjekLama        String?
+  luasTanahLama        Float?
+  luasBangunanLama     Float?
+  sertifikatLama       String?
+  isUtama              Boolean    @default(false)
+  catatan              String?
   
-  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade) // Relasi induk ke Permohonan
+  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
 }
 
 model DataBaru {
-  id                   String     @id @default(auto()) @map("_id") @db.ObjectId // ID unik rincian data baru/pecahan
-  permohonanId         String     @db.ObjectId // ID permohonan pemilik data baru ini
-  namaPemilikBaru      String     // Nama pemilik/pembeli NOP baru
-  alamatPemilikBaru    String     // Alamat domisili pemilik NOP baru
-  blokPemilikBaru      String?    // Blok alamat pemilik NOP baru
-  rtPemilikBaru        String?    // RT alamat pemilik NOP baru
-  rwPemilikBaru        String?    // RW alamat pemilik NOP baru
-  kecamatanPemilikBaru String     // Kecamatan domisili pemilik NOP baru
-  desaPemilikBaru      String     // Desa/Kelurahan domisili pemilik NOP baru
-  alamatObjekBaru      String     // Alamat letak objek pajak baru
-  blokObjekBaru        String?    // Blok letak objek pajak baru
-  rtObjekBaru          String?    // RT letak objek pajak baru
-  rwObjekBaru          String?    // RW letak objek pajak baru
-  kecamatanObjekBaru   String     // Kecamatan letak objek pajak baru
-  desaObjekBaru        String     // Desa/Kelurahan letak objek pajak baru
-  luasTanahBaru        Float      // Luas tanah pecahan/baru (m²)
-  luasBangunanBaru     Float      // Luas bangunan pecahan/baru (m²)
-  sertifikatBaru       String     // Nomor sertifikat tanah baru
-  isVerified           Boolean    @default(false) // Status verifikasi centang data pecahan oleh Pemantau
-  catatan              String?    // Catatan tambahan data baru
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId         String     @db.ObjectId
+  nopBaru              String?
+  namaPemilikBaru      String?
+  alamatPemilikBaru    String?
+  blokPemilikBaru      String?
+  rtPemilikBaru        String?
+  rwPemilikBaru        String?
+  kecamatanPemilikBaru String?
+  desaPemilikBaru      String?
+  alamatObjekBaru      String?
+  blokObjekBaru        String?
+  rtObjekBaru          String?
+  rwObjekBaru          String?
+  kecamatanObjekBaru   String?
+  desaObjekBaru        String?
+  luasTanahBaru        Float?
+  luasBangunanBaru     Float?
+  sertifikatBaru       String?
+  isVerified           Boolean    @default(false)
+  catatan              String?
   
-  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade) // Relasi induk ke Permohonan
-  arsipDigital         ArsipDigital[] // Relasi ke arsip digital PDF khusus pecahan ini
+  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
+  arsipDigital         ArsipDigital[]
 }
 
 model Bundle {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId // ID unik bundle (MongoDB ObjectId)
-  nomorBundle     String       @unique // Nomor urut unik berkas bundle (misal: BND/2026/001)
-  status          StatusBundle @default(DRAFT) // Status alur bundle (DRAFT, LOCKED, IN_MANIFEST, VOID)
-  manifestId      String?      @db.ObjectId // ID manifest pengiriman (null jika belum dikirim)
-  jenisPermohonan JenisPermohonan? // Jenis permohonan seragam dalam bundle ini (terkunci setelah terisi)
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  nomorBundle     String           @unique
+  status          StatusBundle     @default(DRAFT)
+  manifestId      String?          @db.ObjectId
+  jenisPermohonan JenisPermohonan?
   
-  penelitiId      String       @db.ObjectId // ID user peneliti yang membuat bundle ini
-  createdAt       DateTime     @default(now()) // Waktu bundle pertama kali dibuat
-  updatedAt       DateTime     @updatedAt // Waktu pembaruan status bundle terakhir
+  penelitiId      String           @db.ObjectId
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   
-  permohonan      Permohonan[] // Relasi ke daftar permohonan yang ada di dalam bundle ini
-  manifest        Manifest?    @relation(fields: [manifestId], references: [id]) // Relasi ke objek Manifest pengiriman
-  peneliti        User         @relation(fields: [penelitiId], references: [id]) // Relasi ke objek User peneliti
+  permohonan      Permohonan[]
+  manifest        Manifest?        @relation(fields: [manifestId], references: [id])
+  peneliti        User             @relation(fields: [penelitiId], references: [id])
 }
 
 model Manifest {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId // ID unik manifest (MongoDB ObjectId)
-  nomorManifest  String         @unique // Nomor unik manifest pengiriman (misal: MNF/2026/001)
-  status         StatusManifest @default(DRAFT) // Status pengiriman (DRAFT, LOCKED, SENT)
-  buktiTandaTerima String?      // URL file PDF/gambar bukti tanda terima pengiriman dari Vercel Blob
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  nomorManifest    String         @unique
+  status           StatusManifest @default(DRAFT)
+  buktiTandaTerima String?
   
-  pengirimId     String         @db.ObjectId // ID user pengirim/logistik yang mengelola manifest ini
-  createdAt      DateTime       @default(now()) // Waktu manifest dibuat
-  updatedAt      DateTime       @updatedAt // Waktu status manifest terakhir diubah
+  pengirimId       String         @db.ObjectId
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   
-  bundle         Bundle[] // Relasi ke daftar bundle yang dikirim dalam manifest ini
-  pengirim       User           @relation(fields: [pengirimId], references: [id]) // Relasi ke objek User pengirim
+  bundle           Bundle[]
+  pengirim         User           @relation(fields: [pengirimId], references: [id])
 }
 
 model ArsipDigital {
-  id            String             @id @default(auto()) @map("_id") @db.ObjectId // ID unik arsip PDF digital
-  permohonanId  String             @db.ObjectId // ID permohonan pemilik file PDF ini
-  urlBlob       String             // Link URL penyimpanan berkas PDF di Vercel Blob Storage
-  status        StatusArsipDigital @default(ACTIVE) // Status arsip (ACTIVE, SUPERSEDED/re-upload, INVALIDATED/batal)
-  versi         Int                // Nomor versi dokumen (berkurang/bertambah saat upload ulang)
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId  String             @db.ObjectId
+  urlBlob       String
+  status        StatusArsipDigital @default(ACTIVE)
+  versi         Int
   
-  pengarsipId   String             @db.ObjectId // ID user pengarsip yang mengunggah file
-  dataBaruId    String?            @db.ObjectId // ID rincian data baru/pecahan (jika PDF khusus per pecahan)
-  createdAt     DateTime           @default(now()) // Tanggal & waktu file diunggah
+  pengarsipId   String             @db.ObjectId
+  dataBaruId    String?            @db.ObjectId
+  createdAt     DateTime           @default(now())
   
-  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id]) // Relasi ke permohonan induk
-  dataBaru      DataBaru?          @relation(fields: [dataBaruId], references: [id]) // Relasi ke rincian data baru
-  pengarsip     User               @relation(fields: [pengarsipId], references: [id]) // Relasi ke user pengarsip
+  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
+  dataBaru      DataBaru?          @relation(fields: [dataBaruId], references: [id])
+  pengarsip     User               @relation(fields: [pengarsipId], references: [id])
 }
 
 model PermintaanKoreksi {
-  id               String        @id @default(auto()) @map("_id") @db.ObjectId // ID unik pengajuan koreksi/retur
-  permohonanId     String        @db.ObjectId // ID permohonan yang diajukan koreksi
-  jenisKoreksi     String        // Jenis aksi koreksi (misal: "KELUARKAN_DARI_BUNDLE", "KEMBALIKAN_KE_PENELITI")
-  status           StatusKoreksi @default(PENDING_APPROVAL) // Status persetujuan (PENDING_APPROVAL, APPROVED, REJECTED)
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  permohonanId      String        @db.ObjectId
+  jenisKoreksi      String
+  status            StatusKoreksi @default(PENDING_APPROVAL)
   
-  pengajuId        String        @db.ObjectId // ID user yang mengajukan koreksi
-  supervisorId     String?       @db.ObjectId // ID supervisor yang mengambil keputusan
-  catatanPengaju   String        // Alasan/catatan dari pengaju koreksi
-  catatanSupervisor String?      // Catatan arahan dari supervisor saat menyetujui/menolak
+  pengajuId         String        @db.ObjectId
+  supervisorId      String?       @db.ObjectId
+  catatanPengaju    String
+  catatanSupervisor String?
   
-  reminderSentAt   DateTime?     // Waktu notifikasi ingatan 72 jam terkirim (untuk cron timeout)
-  escalationSentAt DateTime?     // Waktu eskalasi 168 jam terkirim ke supervisor (untuk cron timeout)
+  reminderSentAt    DateTime?
+  escalationSentAt  DateTime?
   
-  createdAt        DateTime      @default(now()) // Waktu pengajuan koreksi dibuat
-  updatedAt        DateTime      @updatedAt // Waktu pembaruan data koreksi terakhir
-  diputuskanAt     DateTime?     // Waktu kepastian keputusan diberikan oleh supervisor
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  diputuskanAt      DateTime?
 
-  permohonan       Permohonan    @relation(fields: [permohonanId], references: [id]) // Relasi ke permohonan induk
-  pengaju          User          @relation(name: "PengajuKoreksi", fields: [pengajuId], references: [id]) // Relasi ke user pengaju
-  supervisor       User?         @relation(name: "SupervisorKoreksi", fields: [supervisorId], references: [id]) // Relasi ke supervisor
+  permohonan        Permohonan    @relation(fields: [permohonanId], references: [id])
+  pengaju           User          @relation(name: "PengajuKoreksi", fields: [pengajuId], references: [id])
+  supervisor        User?         @relation(name: "SupervisorKoreksi", fields: [supervisorId], references: [id])
 }
 
 model InAppNotification {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId // ID unik notifikasi sistem
-  userId      String   @db.ObjectId // ID user penerima notifikasi
-  judul       String   // Judul notifikasi (misal: "Permohonan Perlu Revisi")
-  pesan       String   // Isi pesan penjelasan notifikasi
-  isRead      Boolean  @default(false) // Penanda apakah notifikasi sudah dibaca oleh user
-  metadata    Json?    // Data tambahan JSON (idPermohonan, idBundle, dll.)
-  createdAt   DateTime @default(now()) // Tanggal & waktu notifikasi dikirim
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  judul     String
+  pesan     String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
   
-  user        User     @relation(fields: [userId], references: [id]) // Relasi ke user penerima
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId // ID unik catatan audit log
-  entityType      String   // Jenis entitas yang diubah ("PERMOHONAN", "BUNDLE", "MANIFEST", "CRON")
-  entityId        String?  @db.ObjectId // ID dari entitas terkait
-  aksi            String   // Deskripsi nama aksi/kegiatan yang dilakukan
-  statusSebelum   String?  // Status entitas sebelum perubahan
-  statusSesudah   String?  // Status entitas setelah perubahan
-  pelakuId        String?  @db.ObjectId // ID user pelaku yang melakukan perubahan
-  correlationId   String?  // ID pelacak transaksi atomik multi-langkah
-  metadata        Json?    // Detail metadata perubahan data dalam format JSON
-  createdAt       DateTime @default(now()) // Tanggal & waktu kejadian direkam
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  entityType    String
+  entityId      String?  @db.ObjectId
+  aksi          String
+  statusSebelum String?
+  statusSesudah String?
+  pelakuId      String?  @db.ObjectId
+  correlationId String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
 }

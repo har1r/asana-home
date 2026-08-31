@@ -37,6 +37,7 @@ const createEmptyDataLamaItem = (isUtama: boolean = false) => ({
   desaObjekLama: '',
   luasTanahLama: '',
   luasBangunanLama: '',
+  sertifikatLama: '',
   isUtama
 });
 
@@ -92,6 +93,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   const [desaObjekLama, setDesaObjekLama] = useState('');
   const [luasTanahLama, setLuasTanahLama] = useState('');
   const [luasBangunanLama, setLuasBangunanLama] = useState('');
+  const [sertifikatLama, setSertifikatLama] = useState('');
 
   // Multi Data Lama state (for MUTASI_PENGGABUNGAN)
   const [dataLama, setDataLama] = useState<any[]>([
@@ -161,6 +163,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     setDesaObjekLama('');
     setLuasTanahLama('');
     setLuasBangunanLama('');
+    setSertifikatLama('');
     setDataLama([createEmptyDataLamaItem(true), createEmptyDataLamaItem(false)]);
     setDataBaru([{ ...createEmptyDataBaruItem(), catatan: '' }]);
     setFormErrors({});
@@ -210,6 +213,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (initialData.desaObjekLama) setDesaObjekLama(initialData.desaObjekLama.toUpperCase());
         setLuasTanahLama(initialData.luasTanahLama !== null && initialData.luasTanahLama !== undefined ? String(initialData.luasTanahLama) : '');
         setLuasBangunanLama(initialData.luasBangunanLama !== null && initialData.luasBangunanLama !== undefined ? String(initialData.luasBangunanLama) : '');
+        if (initialData.sertifikatLama) setSertifikatLama(initialData.sertifikatLama.toUpperCase());
 
         if (initialData.dataLama && initialData.dataLama.length > 0) {
           setDataLama(initialData.dataLama.map((item: any, idx: number) => ({
@@ -229,6 +233,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             desaObjekLama: (item.desaObjekLama || '').toUpperCase(),
             luasTanahLama: item.luasTanahLama !== null && item.luasTanahLama !== undefined ? String(item.luasTanahLama) : '',
             luasBangunanLama: item.luasBangunanLama !== null && item.luasBangunanLama !== undefined ? String(item.luasBangunanLama) : '',
+            sertifikatLama: (item.sertifikatLama || '').toUpperCase(),
             isUtama: item.isUtama ?? idx === 0
           })));
         }
@@ -293,6 +298,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (parsed.desaObjekLama) setDesaObjekLama(parsed.desaObjekLama.toUpperCase());
         if (parsed.luasTanahLama) setLuasTanahLama(parsed.luasTanahLama);
         if (parsed.luasBangunanLama) setLuasBangunanLama(parsed.luasBangunanLama);
+        if (parsed.sertifikatLama) setSertifikatLama(parsed.sertifikatLama.toUpperCase());
 
         if (parsed.dataLama && parsed.dataLama.length > 0) {
           setDataLama(parsed.dataLama);
@@ -342,6 +348,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         desaObjekLama: desaObjekLama.toUpperCase(),
         luasTanahLama,
         luasBangunanLama,
+        sertifikatLama: sertifikatLama.toUpperCase(),
         dataLama,
         dataBaru: dataBaru.map(item => ({
           ...item,
@@ -356,7 +363,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   }, [
     draftLoaded, jenisPermohonan, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
     nopLama, namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
+    alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
     dataLama, dataBaru
   ]);
 
@@ -485,6 +492,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
           if (desaObjekLama.trim() && next.desaObjekLama) { delete next.desaObjekLama; changed = true; }
           if (luasTanahLama.trim() !== '' && Number(luasTanahLama) >= 0 && next.luasTanahLama) { delete next.luasTanahLama; changed = true; }
           if (luasBangunanLama.trim() !== '' && Number(luasBangunanLama) >= 0 && next.luasBangunanLama) { delete next.luasBangunanLama; changed = true; }
+          if (sertifikatLama.trim() && next.sertifikatLama) { delete next.sertifikatLama; changed = true; }
         }
       }
 
@@ -512,7 +520,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   }, [
     nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
     jenisPermohonan, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
+    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
     needDataLama, needDataBaru, dataLama, dataBaru
   ]);
 
@@ -537,10 +545,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             errors[`dataLama.${idx}.nopLama`] = 'NOP Asal harus 18 digit';
           }
           if (!item.namaPemilikLama?.trim()) errors[`dataLama.${idx}.namaPemilikLama`] = 'Nama pemilik lama wajib diisi';
-          if (!item.alamatPemilikLama?.trim()) errors[`dataLama.${idx}.alamatPemilikLama`] = 'Alamat pemilik lama wajib diisi';
-          if (!item.kecamatanPemilikLama?.trim()) errors[`dataLama.${idx}.kecamatanPemilikLama`] = 'Kecamatan pemilik lama wajib diisi';
-          if (!item.desaPemilikLama?.trim()) errors[`dataLama.${idx}.desaPemilikLama`] = 'Desa pemilik lama wajib diisi';
           if (!item.alamatObjekLama?.trim()) errors[`dataLama.${idx}.alamatObjekLama`] = 'Alamat objek lama wajib diisi';
+          if (!item.blokObjekLama?.trim()) errors[`dataLama.${idx}.blokObjekLama`] = 'Blok objek lama wajib diisi';
+          if (!item.rtObjekLama?.trim()) errors[`dataLama.${idx}.rtObjekLama`] = 'RT objek lama wajib diisi';
+          if (!item.rwObjekLama?.trim()) errors[`dataLama.${idx}.rwObjekLama`] = 'RW objek lama wajib diisi';
           if (!item.kecamatanObjekLama?.trim()) errors[`dataLama.${idx}.kecamatanObjekLama`] = 'Kecamatan objek lama wajib diisi';
           if (!item.desaObjekLama?.trim()) errors[`dataLama.${idx}.desaObjekLama`] = 'Desa objek lama wajib diisi';
           if (item.luasTanahLama === undefined || item.luasTanahLama === null || item.luasTanahLama === '' || Number(item.luasTanahLama) < 0) {
@@ -553,10 +561,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       } else {
         if (!nopLama || !/^\d{18}$/.test(nopLama.replace(/[.\-]/g, ''))) errors.nopLama = 'NOP harus tepat 18 digit angka';
         if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
-        if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-        if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-        if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
         if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
+        if (!blokObjekLama?.trim()) errors.blokObjekLama = 'Blok objek lama wajib diisi';
+        if (!rtObjekLama?.trim()) errors.rtObjekLama = 'RT objek lama wajib diisi';
+        if (!rwObjekLama?.trim()) errors.rwObjekLama = 'RW objek lama wajib diisi';
         if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
         if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
         if (luasTanahLama === undefined || luasTanahLama === null || luasTanahLama === '' || Number(luasTanahLama) < 0) {
@@ -565,14 +573,31 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (luasBangunanLama === undefined || luasBangunanLama === null || luasBangunanLama === '' || Number(luasBangunanLama) < 0) {
           errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
         }
+
+        if (jenisPermohonan === 'PENGAKTIFAN' || jenisPermohonan === 'PEMBETULAN') {
+          if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
+          if (!blokPemilikLama?.trim()) errors.blokPemilikLama = 'Blok pemilik lama wajib diisi';
+          if (!rtPemilikLama?.trim()) errors.rtPemilikLama = 'RT pemilik lama wajib diisi';
+          if (!rwPemilikLama?.trim()) errors.rwPemilikLama = 'RW pemilik lama wajib diisi';
+          if (!sertifikatLama?.trim()) errors.sertifikatLama = 'Sertifikat lama wajib diisi';
+        }
       }
     } else if (stepLabel === 'Data Baru') {
       dataBaru.forEach((item, idx) => {
+        if (jenisPermohonan === 'OBJEK_PAJAK_BARU' && (!item.nopBaru || !item.nopBaru.trim())) {
+          errors[`dataBaru.${idx}.nopBaru`] = 'NOP baru wajib diisi untuk Objek Pajak Baru';
+        }
         if (!item.namaPemilikBaru?.trim()) errors[`dataBaru.${idx}.namaPemilikBaru`] = 'Nama pemilik baru wajib diisi';
         if (!item.alamatPemilikBaru?.trim()) errors[`dataBaru.${idx}.alamatPemilikBaru`] = 'Alamat pemilik baru wajib diisi';
+        if (!item.blokPemilikBaru?.trim()) errors[`dataBaru.${idx}.blokPemilikBaru`] = 'Blok pemilik baru wajib diisi';
+        if (!item.rtPemilikBaru?.trim()) errors[`dataBaru.${idx}.rtPemilikBaru`] = 'RT pemilik baru wajib diisi';
+        if (!item.rwPemilikBaru?.trim()) errors[`dataBaru.${idx}.rwPemilikBaru`] = 'RW pemilik baru wajib diisi';
         if (!item.kecamatanPemilikBaru?.trim()) errors[`dataBaru.${idx}.kecamatanPemilikBaru`] = 'Kecamatan pemilik baru wajib diisi';
         if (!item.desaPemilikBaru?.trim()) errors[`dataBaru.${idx}.desaPemilikBaru`] = 'Desa pemilik baru wajib diisi';
         if (!item.alamatObjekBaru?.trim()) errors[`dataBaru.${idx}.alamatObjekBaru`] = 'Alamat objek baru wajib diisi';
+        if (!item.blokObjekBaru?.trim()) errors[`dataBaru.${idx}.blokObjekBaru`] = 'Blok objek baru wajib diisi';
+        if (!item.rtObjekBaru?.trim()) errors[`dataBaru.${idx}.rtObjekBaru`] = 'RT objek baru wajib diisi';
+        if (!item.rwObjekBaru?.trim()) errors[`dataBaru.${idx}.rwObjekBaru`] = 'RW objek baru wajib diisi';
         if (!item.kecamatanObjekBaru?.trim()) errors[`dataBaru.${idx}.kecamatanObjekBaru`] = 'Kecamatan objek baru wajib diisi';
         if (!item.desaObjekBaru?.trim()) errors[`dataBaru.${idx}.desaObjekBaru`] = 'Desa objek baru wajib diisi';
         if (item.luasTanahBaru === undefined || item.luasTanahBaru === null || item.luasTanahBaru === '' || Number(item.luasTanahBaru) < 0) {
@@ -588,8 +613,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     return errors;
   }, [
     currentStep, steps, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
-    jenisPermohonan, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, dataLama,
+    jenisPermohonan, nopLama, namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama,
+    kecamatanPemilikLama, desaPemilikLama, alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama,
+    kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama, dataLama,
     dataBaru
   ]);
 
@@ -615,10 +641,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             errors[`dataLama.${idx}.nopLama`] = 'NOP Asal harus 18 digit';
           }
           if (!item.namaPemilikLama?.trim()) errors[`dataLama.${idx}.namaPemilikLama`] = 'Nama pemilik lama wajib diisi';
-          if (!item.alamatPemilikLama?.trim()) errors[`dataLama.${idx}.alamatPemilikLama`] = 'Alamat pemilik lama wajib diisi';
-          if (!item.kecamatanPemilikLama?.trim()) errors[`dataLama.${idx}.kecamatanPemilikLama`] = 'Kecamatan pemilik lama wajib diisi';
-          if (!item.desaPemilikLama?.trim()) errors[`dataLama.${idx}.desaPemilikLama`] = 'Desa pemilik lama wajib diisi';
           if (!item.alamatObjekLama?.trim()) errors[`dataLama.${idx}.alamatObjekLama`] = 'Alamat objek lama wajib diisi';
+          if (!item.blokObjekLama?.trim()) errors[`dataLama.${idx}.blokObjekLama`] = 'Blok objek lama wajib diisi';
+          if (!item.rtObjekLama?.trim()) errors[`dataLama.${idx}.rtObjekLama`] = 'RT objek lama wajib diisi';
+          if (!item.rwObjekLama?.trim()) errors[`dataLama.${idx}.rwObjekLama`] = 'RW objek lama wajib diisi';
           if (!item.kecamatanObjekLama?.trim()) errors[`dataLama.${idx}.kecamatanObjekLama`] = 'Kecamatan objek lama wajib diisi';
           if (!item.desaObjekLama?.trim()) errors[`dataLama.${idx}.desaObjekLama`] = 'Desa objek lama wajib diisi';
           if (item.luasTanahLama === undefined || item.luasTanahLama === null || item.luasTanahLama === '' || Number(item.luasTanahLama) < 0) {
@@ -631,10 +657,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       } else {
         if (!nopLama || !/^\d{18}$/.test(nopLama.replace(/[.\-]/g, ''))) errors.nopLama = 'NOP harus tepat 18 digit angka';
         if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
-        if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-        if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-        if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
         if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
+        if (!blokObjekLama?.trim()) errors.blokObjekLama = 'Blok objek lama wajib diisi';
+        if (!rtObjekLama?.trim()) errors.rtObjekLama = 'RT objek lama wajib diisi';
+        if (!rwObjekLama?.trim()) errors.rwObjekLama = 'RW objek lama wajib diisi';
         if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
         if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
         if (luasTanahLama === undefined || luasTanahLama === null || luasTanahLama === '' || Number(luasTanahLama) < 0) {
@@ -643,17 +669,34 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (luasBangunanLama === undefined || luasBangunanLama === null || luasBangunanLama === '' || Number(luasBangunanLama) < 0) {
           errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
         }
+
+        if (jenisPermohonan === 'PENGAKTIFAN' || jenisPermohonan === 'PEMBETULAN') {
+          if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
+          if (!blokPemilikLama?.trim()) errors.blokPemilikLama = 'Blok pemilik lama wajib diisi';
+          if (!rtPemilikLama?.trim()) errors.rtPemilikLama = 'RT pemilik lama wajib diisi';
+          if (!rwPemilikLama?.trim()) errors.rwPemilikLama = 'RW pemilik lama wajib diisi';
+          if (!sertifikatLama?.trim()) errors.sertifikatLama = 'Sertifikat lama wajib diisi';
+        }
       }
     }
 
     // Step 3: Data Baru
     if (needDataBaru) {
       dataBaru.forEach((item, idx) => {
+        if (jenisPermohonan === 'OBJEK_PAJAK_BARU' && (!item.nopBaru || !item.nopBaru.trim())) {
+          errors[`dataBaru.${idx}.nopBaru`] = 'NOP baru wajib diisi untuk Objek Pajak Baru';
+        }
         if (!item.namaPemilikBaru?.trim()) errors[`dataBaru.${idx}.namaPemilikBaru`] = 'Nama pemilik baru wajib diisi';
         if (!item.alamatPemilikBaru?.trim()) errors[`dataBaru.${idx}.alamatPemilikBaru`] = 'Alamat pemilik baru wajib diisi';
+        if (!item.blokPemilikBaru?.trim()) errors[`dataBaru.${idx}.blokPemilikBaru`] = 'Blok pemilik baru wajib diisi';
+        if (!item.rtPemilikBaru?.trim()) errors[`dataBaru.${idx}.rtPemilikBaru`] = 'RT pemilik baru wajib diisi';
+        if (!item.rwPemilikBaru?.trim()) errors[`dataBaru.${idx}.rwPemilikBaru`] = 'RW pemilik baru wajib diisi';
         if (!item.kecamatanPemilikBaru?.trim()) errors[`dataBaru.${idx}.kecamatanPemilikBaru`] = 'Kecamatan pemilik baru wajib diisi';
         if (!item.desaPemilikBaru?.trim()) errors[`dataBaru.${idx}.desaPemilikBaru`] = 'Desa pemilik baru wajib diisi';
         if (!item.alamatObjekBaru?.trim()) errors[`dataBaru.${idx}.alamatObjekBaru`] = 'Alamat objek baru wajib diisi';
+        if (!item.blokObjekBaru?.trim()) errors[`dataBaru.${idx}.blokObjekBaru`] = 'Blok objek baru wajib diisi';
+        if (!item.rtObjekBaru?.trim()) errors[`dataBaru.${idx}.rtObjekBaru`] = 'RT objek baru wajib diisi';
+        if (!item.rwObjekBaru?.trim()) errors[`dataBaru.${idx}.rwObjekBaru`] = 'RW objek baru wajib diisi';
         if (!item.kecamatanObjekBaru?.trim()) errors[`dataBaru.${idx}.kecamatanObjekBaru`] = 'Kecamatan objek baru wajib diisi';
         if (!item.desaObjekBaru?.trim()) errors[`dataBaru.${idx}.desaObjekBaru`] = 'Desa objek baru wajib diisi';
         if (item.luasTanahBaru === undefined || item.luasTanahBaru === null || item.luasTanahBaru === '' || Number(item.luasTanahBaru) < 0) {
@@ -669,8 +712,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     return errors;
   }, [
     nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
-    needDataLama, jenisPermohonan, dataLama, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama, alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
-    needDataBaru, dataBaru
+    needDataLama, jenisPermohonan, dataLama, nopLama, namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama,
+    kecamatanPemilikLama, desaPemilikLama, alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama,
+    luasTanahLama, luasBangunanLama, sertifikatLama, needDataBaru, dataBaru
   ]);
 
   const handleNextStep = useCallback((e: React.MouseEvent) => {
@@ -760,41 +804,43 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
     const payloadDataLama = jenisPermohonan === 'MUTASI_PENGGABUNGAN'
       ? dataLama.map((item, idx) => ({
-        nopLama: item.nopLama.replace(/[.\-]/g, ''),
-        namaPemilikLama: item.namaPemilikLama.toUpperCase(),
-        alamatPemilikLama: item.alamatPemilikLama.toUpperCase(),
+        nopLama: item.nopLama ? item.nopLama.replace(/[.\-]/g, '') : null,
+        namaPemilikLama: item.namaPemilikLama ? item.namaPemilikLama.toUpperCase() : null,
+        alamatPemilikLama: item.alamatPemilikLama ? item.alamatPemilikLama.toUpperCase() : null,
         blokPemilikLama: item.blokPemilikLama ? item.blokPemilikLama.toUpperCase() : null,
         rtPemilikLama: item.rtPemilikLama ? item.rtPemilikLama.toUpperCase() : null,
         rwPemilikLama: item.rwPemilikLama ? item.rwPemilikLama.toUpperCase() : null,
-        kecamatanPemilikLama: item.kecamatanPemilikLama.toUpperCase(),
-        desaPemilikLama: item.desaPemilikLama.toUpperCase(),
-        alamatObjekLama: item.alamatObjekLama.toUpperCase(),
+        kecamatanPemilikLama: item.kecamatanPemilikLama ? item.kecamatanPemilikLama.toUpperCase() : null,
+        desaPemilikLama: item.desaPemilikLama ? item.desaPemilikLama.toUpperCase() : null,
+        alamatObjekLama: item.alamatObjekLama ? item.alamatObjekLama.toUpperCase() : null,
         blokObjekLama: item.blokObjekLama ? item.blokObjekLama.toUpperCase() : null,
         rtObjekLama: item.rtObjekLama ? item.rtObjekLama.toUpperCase() : null,
         rwObjekLama: item.rwObjekLama ? item.rwObjekLama.toUpperCase() : null,
-        kecamatanObjekLama: item.kecamatanObjekLama.toUpperCase(),
-        desaObjekLama: item.desaObjekLama.toUpperCase(),
+        kecamatanObjekLama: item.kecamatanObjekLama ? item.kecamatanObjekLama.toUpperCase() : null,
+        desaObjekLama: item.desaObjekLama ? item.desaObjekLama.toUpperCase() : null,
         luasTanahLama: Number(item.luasTanahLama) || 0,
         luasBangunanLama: Number(item.luasBangunanLama) || 0,
+        sertifikatLama: item.sertifikatLama ? item.sertifikatLama.toUpperCase() : null,
         isUtama: idx === 0
       }))
       : (needDataLama ? [{
-        nopLama: nopLama.replace(/[.\-]/g, ''),
-        namaPemilikLama: namaPemilikLama.toUpperCase(),
-        alamatPemilikLama: alamatPemilikLama.toUpperCase(),
+        nopLama: nopLama ? nopLama.replace(/[.\-]/g, '') : null,
+        namaPemilikLama: namaPemilikLama ? namaPemilikLama.toUpperCase() : null,
+        alamatPemilikLama: alamatPemilikLama ? alamatPemilikLama.toUpperCase() : null,
         blokPemilikLama: blokPemilikLama ? blokPemilikLama.toUpperCase() : null,
         rtPemilikLama: rtPemilikLama ? rtPemilikLama.toUpperCase() : null,
         rwPemilikLama: rwPemilikLama ? rwPemilikLama.toUpperCase() : null,
-        kecamatanPemilikLama: kecamatanPemilikLama.toUpperCase(),
-        desaPemilikLama: desaPemilikLama.toUpperCase(),
-        alamatObjekLama: alamatObjekLama.toUpperCase(),
+        kecamatanPemilikLama: kecamatanPemilikLama ? kecamatanPemilikLama.toUpperCase() : null,
+        desaPemilikLama: desaPemilikLama ? desaPemilikLama.toUpperCase() : null,
+        alamatObjekLama: alamatObjekLama ? alamatObjekLama.toUpperCase() : null,
         blokObjekLama: blokObjekLama ? blokObjekLama.toUpperCase() : null,
         rtObjekLama: rtObjekLama ? rtObjekLama.toUpperCase() : null,
         rwObjekLama: rwObjekLama ? rwObjekLama.toUpperCase() : null,
-        kecamatanObjekLama: kecamatanObjekLama.toUpperCase(),
-        desaObjekLama: desaObjekLama.toUpperCase(),
+        kecamatanObjekLama: kecamatanObjekLama ? kecamatanObjekLama.toUpperCase() : null,
+        desaObjekLama: desaObjekLama ? desaObjekLama.toUpperCase() : null,
         luasTanahLama: Number(luasTanahLama) || 0,
         luasBangunanLama: Number(luasBangunanLama) || 0,
+        sertifikatLama: sertifikatLama ? sertifikatLama.toUpperCase() : null,
         isUtama: true
       }] : []);
 
@@ -822,24 +868,26 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       desaObjekLama: firstLama.desaObjekLama || null,
       luasTanahLama: firstLama.luasTanahLama ?? null,
       luasBangunanLama: firstLama.luasBangunanLama ?? null,
+      sertifikatLama: firstLama.sertifikatLama || null,
       dataLama: payloadDataLama,
       dataBaru: needDataBaru ? dataBaru.map(item => ({
-        namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
-        alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
+        nopBaru: item.nopBaru ? item.nopBaru.replace(/[.\-]/g, '') : null,
+        namaPemilikBaru: item.namaPemilikBaru ? item.namaPemilikBaru.toUpperCase() : null,
+        alamatPemilikBaru: item.alamatPemilikBaru ? item.alamatPemilikBaru.toUpperCase() : null,
         blokPemilikBaru: item.blokPemilikBaru ? item.blokPemilikBaru.toUpperCase() : null,
         rtPemilikBaru: item.rtPemilikBaru ? item.rtPemilikBaru.toUpperCase() : null,
         rwPemilikBaru: item.rwPemilikBaru ? item.rwPemilikBaru.toUpperCase() : null,
-        kecamatanPemilikBaru: item.kecamatanPemilikBaru.toUpperCase(),
-        desaPemilikBaru: item.desaPemilikBaru.toUpperCase(),
-        alamatObjekBaru: item.alamatObjekBaru.toUpperCase(),
+        kecamatanPemilikBaru: item.kecamatanPemilikBaru ? item.kecamatanPemilikBaru.toUpperCase() : null,
+        desaPemilikBaru: item.desaPemilikBaru ? item.desaPemilikBaru.toUpperCase() : null,
+        alamatObjekBaru: item.alamatObjekBaru ? item.alamatObjekBaru.toUpperCase() : null,
         blokObjekBaru: item.blokObjekBaru ? item.blokObjekBaru.toUpperCase() : null,
         rtObjekBaru: item.rtObjekBaru ? item.rtObjekBaru.toUpperCase() : null,
         rwObjekBaru: item.rwObjekBaru ? item.rwObjekBaru.toUpperCase() : null,
-        kecamatanObjekBaru: item.kecamatanObjekBaru.toUpperCase(),
-        desaObjekBaru: item.desaObjekBaru.toUpperCase(),
+        kecamatanObjekBaru: item.kecamatanObjekBaru ? item.kecamatanObjekBaru.toUpperCase() : null,
+        desaObjekBaru: item.desaObjekBaru ? item.desaObjekBaru.toUpperCase() : null,
         luasTanahBaru: item.luasTanahBaru !== '' ? Number(item.luasTanahBaru) : null,
         luasBangunanBaru: item.luasBangunanBaru !== '' ? Number(item.luasBangunanBaru) : null,
-        sertifikatBaru: item.sertifikatBaru.toUpperCase(),
+        sertifikatBaru: item.sertifikatBaru ? item.sertifikatBaru.toUpperCase() : null,
         catatan: item.catatan ? item.catatan.toUpperCase() : null
       })) : []
     };
@@ -851,7 +899,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     setLoading(true);
 
     try {
-      const res = await createPermohonan(formData);
+      const res: any = await createPermohonan(formData);
       if (res.success) {
         setStatusModalTitle('Penyimpanan Berhasil');
         setStatusModalMessage('Data permohonan Anda berhasil disimpan dan didaftarkan ke sistem!');
@@ -862,6 +910,16 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
           console.error(e);
         }
       } else {
+        if (res.issues && Array.isArray(res.issues)) {
+          const backendErrors: Record<string, string> = {};
+          res.issues.forEach((issue: any) => {
+            const key = issue.path ? issue.path.join('.') : 'general';
+            backendErrors[key] = issue.message;
+          });
+          if (Object.keys(backendErrors).length > 0) {
+            setFormErrors(backendErrors);
+          }
+        }
         setStatusModalTitle('Penyimpanan Gagal');
         setStatusModalMessage(res.error || 'Gagal menyimpan data permohonan.');
         setStatusModalStatus('error');
@@ -1212,7 +1270,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik Asal <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik Asal <span className="text-slate-400 font-normal">(Opsional)</span></label>
                               <input
                                 type="text"
                                 id={`dataLama.${idx}.kecamatanPemilikLama`}
@@ -1227,7 +1285,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik Asal <span className="text-red-500">*</span></label>
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik Asal <span className="text-slate-400 font-normal">(Opsional)</span></label>
                               <input
                                 type="text"
                                 id={`dataLama.${idx}.desaPemilikLama`}
@@ -1373,6 +1431,23 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             </div>
                             {formErrors[`dataLama.${idx}.luasBangunanLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.luasBangunanLama`]}</span>}
                           </div>
+                          <div className="flex flex-col gap-1.5 sm:col-span-2 font-sans">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">
+                              No/Jenis Sertifikat Asal <span className="text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              id={`dataLama.${idx}.sertifikatLama`}
+                              autoComplete="off"
+                              placeholder="Contoh: SHM NO. 12345"
+                              value={item.sertifikatLama || ''}
+                              onChange={(e) => handleDataLamaItemChange(idx, 'sertifikatLama', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataLama.${idx}.sertifikatLama`])}
+                            />
+                            {formErrors[`dataLama.${idx}.sertifikatLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.sertifikatLama`]}</span>}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1383,7 +1458,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     {/* NOP Asal (18-digit mask) */}
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-[13px] font-normal text-slate-700 tracking-wide flex items-center justify-between font-sans">
-                        <span>Nomor Objek Pajak (NOP) Asal <span className="text-red-500">*</span></span>
+                        <span>Nomor Objek Pajak<span className="text-red-500">*</span></span>
                         <span className={`text-xs font-mono font-normal pr-1 ${nopLama.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
                           {nopLama.replace(/[^\d]/g, '').length}/18 digit
                           {nopLama.replace(/[^\d]/g, '').length === 18 && ' ✓'}
@@ -1490,7 +1565,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-slate-400 font-normal">(Opsional)</span></label>
                           <input
                             type="text"
                             id="kecamatanPemilikLama"
@@ -1505,7 +1580,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-slate-400 font-normal">(Opsional)</span></label>
                           <input
                             type="text"
                             id="desaPemilikLama"
@@ -1652,6 +1727,29 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       </div>
                       {formErrors.luasBangunanLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasBangunanLama}</span>}
                     </div>
+
+                    <div className="flex flex-col gap-1.5 sm:col-span-2 font-sans">
+                      <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">
+                        No/Jenis Sertifikat Asal{' '}
+                        {(jenisPermohonan === 'PENGAKTIFAN' || jenisPermohonan === 'PEMBETULAN') ? (
+                          <span className="text-red-500">*</span>
+                        ) : (
+                          <span className="text-slate-400 font-normal">(Opsional)</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        id="sertifikatLama"
+                        autoComplete="off"
+                        placeholder="Contoh: SHM NO. 12345"
+                        value={sertifikatLama}
+                        onChange={(e) => setSertifikatLama(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase' }}
+                        disabled={loading}
+                        className={getInputClass(!!formErrors.sertifikatLama)}
+                      />
+                      {formErrors.sertifikatLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.sertifikatLama}</span>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1697,6 +1795,47 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       )}
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
+                        {/* NOP Baru (Wajib untuk Objek Pajak Baru, opsional untuk lainnya) */}
+                        <div className="flex flex-col gap-1.5 sm:col-span-2">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide flex items-center justify-between font-sans">
+                            <span>
+                              NOP Baru{' '}
+                              {jenisPermohonan === 'OBJEK_PAJAK_BARU' ? (
+                                <span className="text-red-500">*</span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">(Opsional jika belum terbit)</span>
+                              )}
+                            </span>
+                            <span className={`text-xs font-mono font-normal pr-1 ${(item.nopBaru || '').replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                              {(item.nopBaru || '').replace(/[^\d]/g, '').length}/18 digit
+                              {(item.nopBaru || '').replace(/[^\d]/g, '').length === 18 && ' ✓'}
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            id={`dataBaru.${idx}.nopBaru`}
+                            autoComplete="off"
+                            maxLength={24}
+                            placeholder="Contoh: 36.19.xxx.xxx.xxx-xxxx.x"
+                            value={item.nopBaru || ''}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
+                              let fmt = '';
+                              if (raw.length <= 2) fmt = raw;
+                              else if (raw.length <= 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
+                              else if (raw.length <= 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
+                              else if (raw.length <= 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
+                              else if (raw.length <= 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
+                              else if (raw.length <= 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
+                              else fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
+                              handleOwnerChange(idx, 'nopBaru', fmt);
+                            }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors[`dataBaru.${idx}.nopBaru`], 'font-mono tracking-wide')}
+                          />
+                          {formErrors[`dataBaru.${idx}.nopBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.nopBaru`]}</span>}
+                        </div>
+
                         {/* Nama pemilik baru */}
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>

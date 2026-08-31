@@ -5,126 +5,12 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendWhatsApp } from '@/lib/fonnte';
 import { notifyAllUsersOfRole } from '@/lib/notifications';
-import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { getGlobalBerandaStats as getGlobalBerandaStatsFromBeranda } from './beranda';
 import { randomInt } from 'crypto';
+import { permohonanSchema } from '@/lib/validations/permohonan';
 
 import { formatAlamatLengkap } from '@/components/workspaces/shared/constants';
-
-/* ============================================================================
- * BAGIAN 1: SKEMA VALIDASI ZOD & SANITASI INPUT DATA
- * ============================================================================ */
-
-/**
- * Skema Validasi Zod untuk setiap item Objek Pajak / Pemohon Baru (Pecahan).
- * Dilengkapi sanitasi otomatis `.trim()` untuk keamanan data.
- */
-const dataBaruItemSchema = z.object({
-  namaPemilikBaru: z.string().trim().min(1, 'Nama pemilik baru wajib diisi'),
-  alamatPemilikBaru: z.string().trim().min(1, 'Alamat pemilik baru wajib diisi'),
-  blokPemilikBaru: z.string().optional().nullable(),
-  rtPemilikBaru: z.string().optional().nullable(),
-  rwPemilikBaru: z.string().optional().nullable(),
-  kecamatanPemilikBaru: z.string().trim().min(1, 'Kecamatan pemilik baru wajib diisi'),
-  desaPemilikBaru: z.string().trim().min(1, 'Desa pemilik baru wajib diisi'),
-  alamatObjekBaru: z.string().trim().min(1, 'Alamat objek baru wajib diisi'),
-  blokObjekBaru: z.string().optional().nullable(),
-  rtObjekBaru: z.string().optional().nullable(),
-  rwObjekBaru: z.string().optional().nullable(),
-  kecamatanObjekBaru: z.string().trim().min(1, 'Kecamatan objek baru wajib diisi'),
-  desaObjekBaru: z.string().trim().min(1, 'Desa objek baru wajib diisi'),
-  luasTanahBaru: z.coerce.number().min(0, 'Luas tanah baru harus >= 0'),
-  luasBangunanBaru: z.coerce.number().min(0, 'Luas bangunan baru harus >= 0'),
-  sertifikatBaru: z.string().trim().min(1, 'Sertifikat baru wajib diisi')
-});
-
-/**
- * Skema Validasi Utama Zod untuk Pembuatan/Penyuntingan Permohonan PBB.
- * Memastikan jenis permohonan, format NOP 18-digit, dan nomor WhatsApp valid.
- */
-const permohonanSchema = z.object({
-  jenisPermohonan: z.enum([
-    'MUTASI_SEBAGIAN',
-    'MUTASI_HABIS_UPDATE',
-    'MUTASI_HABIS_REGULER',
-    'OBJEK_PAJAK_BARU',
-    'PEMBETULAN',
-    'PENGAKTIFAN'
-  ] as const),
-  nomorPelayanan: z.string().trim().min(1, 'Nomor pelayanan wajib diisi'),
-  tanggalNoPelayanan: z.string().trim().min(1, 'Tanggal pelayanan wajib diisi'),
-  tanggalPenyelesaian: z.string().trim().min(1, 'Tanggal penyelesaian wajib diisi'),
-  nop: z.string().trim().regex(/^\d{18}$/, 'NOP harus terdiri dari 18 digit angka'),
-  noWhatsapp: z.string().trim().regex(/^(08|628)\d{8,12}$/, 'Nomor WhatsApp tidak valid (contoh: 08123456789)'),
-
-  // Data Lama
-  namaPemilikLama: z.string().optional().nullable(),
-  alamatPemilikLama: z.string().optional().nullable(),
-  blokPemilikLama: z.string().optional().nullable(),
-  rtPemilikLama: z.string().optional().nullable(),
-  rwPemilikLama: z.string().optional().nullable(),
-  kecamatanPemilikLama: z.string().optional().nullable(),
-  desaPemilikLama: z.string().optional().nullable(),
-  alamatObjekLama: z.string().optional().nullable(),
-  blokObjekLama: z.string().optional().nullable(),
-  rtObjekLama: z.string().optional().nullable(),
-  rwObjekLama: z.string().optional().nullable(),
-  kecamatanObjekLama: z.string().optional().nullable(),
-  desaObjekLama: z.string().optional().nullable(),
-  luasTanahLama: z.coerce.number().optional().nullable(),
-  luasBangunanLama: z.coerce.number().optional().nullable(),
-  sertifikatLama: z.string().optional().nullable(),
-
-  // Data Baru
-  dataBaru: z.array(dataBaruItemSchema).optional()
-}).superRefine((data, ctx) => {
-  const { jenisPermohonan } = data;
-
-  const needDataLama = [
-    'MUTASI_SEBAGIAN',
-    'MUTASI_HABIS_UPDATE',
-    'MUTASI_HABIS_REGULER',
-    'PEMBETULAN',
-    'PENGAKTIFAN'
-  ].includes(jenisPermohonan);
-
-  if (needDataLama) {
-    if (!data.namaPemilikLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Nama pemilik lama wajib diisi', path: ['namaPemilikLama'] });
-    if (!data.alamatPemilikLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Alamat pemilik lama wajib diisi', path: ['alamatPemilikLama'] });
-    if (!data.kecamatanPemilikLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Kecamatan pemilik lama wajib diisi', path: ['kecamatanPemilikLama'] });
-    if (!data.desaPemilikLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Desa pemilik lama wajib diisi', path: ['desaPemilikLama'] });
-    if (!data.alamatObjekLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Alamat objek lama wajib diisi', path: ['alamatObjekLama'] });
-    if (!data.kecamatanObjekLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Kecamatan objek lama wajib diisi', path: ['kecamatanObjekLama'] });
-    if (!data.desaObjekLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Desa objek lama wajib diisi', path: ['desaObjekLama'] });
-    if (data.luasTanahLama === undefined || data.luasTanahLama === null || data.luasTanahLama < 0) {
-      ctx.addIssue({ code: 'custom', message: 'Luas tanah lama harus >= 0', path: ['luasTanahLama'] });
-    }
-    if (data.luasBangunanLama === undefined || data.luasBangunanLama === null || data.luasBangunanLama < 0) {
-      ctx.addIssue({ code: 'custom', message: 'Luas bangunan lama harus >= 0', path: ['luasBangunanLama'] });
-    }
-    if (!data.sertifikatLama?.trim()) ctx.addIssue({ code: 'custom', message: 'Sertifikat lama wajib diisi', path: ['sertifikatLama'] });
-  }
-
-  const needDataBaru = [
-    'MUTASI_SEBAGIAN',
-    'MUTASI_HABIS_UPDATE',
-    'MUTASI_HABIS_REGULER',
-    'PEMBETULAN',
-    'OBJEK_PAJAK_BARU'
-  ].includes(jenisPermohonan);
-
-  if (needDataBaru) {
-    if (!data.dataBaru || data.dataBaru.length === 0) {
-      ctx.addIssue({ code: 'custom', message: 'Minimal 1 data pemilik baru wajib diisi', path: ['dataBaru'] });
-    } else {
-      if (jenisPermohonan !== 'MUTASI_SEBAGIAN' && data.dataBaru.length > 1) {
-        ctx.addIssue({ code: 'custom', message: 'Hanya Mutasi Sebagian yang diperbolehkan memiliki lebih dari 1 pemilik baru', path: ['dataBaru'] });
-      }
-    }
-  }
-});
-
 
 /* ============================================================================
  * BAGIAN 2: HELPER & UTILITY FUNCTIONS
@@ -162,155 +48,911 @@ async function generateUniqueNomorPermohonan(): Promise<string> {
 
 /**
  * Server Action: Membuat permohonan PBB baru ke database.
- * 
- * @param rawInput - Data mentah permohonan dari formulir input
- * @returns Object `{ success: boolean, permohonan?: Permohonan, error?: string }`
+ *
+ * Seluruh validasi bisnis dilakukan oleh permohonanSchema.
+ *
+ * Aturan layanan:
+ *
+ * 1. OBJEK_PAJAK_BARU
+ *    - Data lama: boleh kosong
+ *    - Data baru: wajib, semua field wajib termasuk nopBaru
+ *
+ * 2. PENGAKTIFAN
+ *    - Data lama: semua field wajib
+ *    - Data baru: tidak wajib
+ *
+ * 3. MUTASI_HABIS_UPDATE
+ *    - Data lama: wajib
+ *    - alamatPemilikLama, blokPemilikLama,
+ *      rtPemilikLama, rwPemilikLama, sertifikatLama: optional
+ *    - Data baru: wajib
+ *    - nopBaru: optional
+ *
+ * 4. MUTASI_HABIS_REGULER
+ *    - Data lama: wajib
+ *    - alamatPemilikLama, blokPemilikLama,
+ *      rtPemilikLama, rwPemilikLama, sertifikatLama: optional
+ *    - Data baru: wajib
+ *    - nopBaru: optional
+ *
+ * 5. MUTASI_SEBAGIAN
+ *    - Data lama: wajib
+ *    - alamatPemilikLama, blokPemilikLama,
+ *      rtPemilikLama, rwPemilikLama, sertifikatLama: optional
+ *    - Data baru: wajib
+ *    - nopBaru: optional
+ *    - boleh memiliki lebih dari 1 data baru
+ *
+ * 6. MUTASI_PENGGABUNGAN
+ *    - dataLama: wajib minimal 2 item
+ *    - alamatPemilikLama, blokPemilikLama,
+ *      rtPemilikLama, rwPemilikLama, sertifikatLama: optional
+ *    - dataBaru: wajib
+ *    - nopBaru: optional
+ *    - hanya 1 data baru
+ *
+ * 7. PEMBETULAN
+ *    - Data lama: semua field wajib
+ *    - Data baru: wajib
+ *    - nopBaru: optional
+ *    - hanya 1 data baru
  */
-export async function createPermohonan(rawInput: any) {
+
+export async function createPermohonan(rawInput: unknown) {
+
+  // ============================================================
+  // 1. CEK SESSION & ROLE
+  // ============================================================
+
   const session = await getServerSession(authOptions);
 
-  if (!session || !['PENGINPUT', 'SUPERVISOR'].includes(session.user.role)) {
-    return { success: false, error: 'Unauthorized: Hanya peran PENGINPUT atau SUPERVISOR yang diizinkan menginput data.' };
+  if (
+    !session ||
+    !session.user ||
+    !['PENGINPUT', 'SUPERVISOR'].includes(session.user.role)
+  ) {
+    return {
+      success: false,
+      error:
+        'Unauthorized: Hanya peran PENGINPUT atau SUPERVISOR yang diizinkan menginput data.',
+    };
   }
 
-  // Parse dan validasi data input
-  const validated = permohonanSchema.parse(rawInput);
+
+  // ============================================================
+  // 2. VALIDASI DENGAN ZOD
+  // ============================================================
+  //
+  // permohonanSchema adalah sumber utama seluruh aturan validasi.
+  //
+
+  const validationResult = permohonanSchema.safeParse(rawInput);
+
+  if (!validationResult.success) {
+
+    const firstIssue = validationResult.error.issues[0];
+
+    return {
+      success: false,
+      error: firstIssue?.message || 'Data permohonan tidak valid.',
+      issues: validationResult.error.issues,
+    };
+  }
+
+  const validated = validationResult.data;
+
+
+  // ============================================================
+  // 3. TENTUKAN KEBUTUHAN DATA BERDASARKAN JENIS LAYANAN
+  // ============================================================
+
+  const jenisPermohonan = validated.jenisPermohonan;
+
+  const needDataLama = [
+    'MUTASI_SEBAGIAN',
+    'MUTASI_PENGGABUNGAN',
+    'MUTASI_HABIS_UPDATE',
+    'MUTASI_HABIS_REGULER',
+    'PEMBETULAN',
+    'PENGAKTIFAN',
+  ].includes(jenisPermohonan);
+
+  const needDataBaru = [
+    'MUTASI_SEBAGIAN',
+    'MUTASI_PENGGABUNGAN',
+    'MUTASI_HABIS_UPDATE',
+    'MUTASI_HABIS_REGULER',
+    'PEMBETULAN',
+    'OBJEK_PAJAK_BARU',
+  ].includes(jenisPermohonan);
+
+
   try {
-    // Pengecekan keunikan Nomor Pelayanan (Nopel) untuk mencegah input data duplikat
+
+    // ==========================================================
+    // 4. CEK DUPLIKASI NOMOR PELAYANAN
+    // ==========================================================
+
     const existingNopel = await prisma.permohonan.findFirst({
-      where: { nomorPelayanan: validated.nomorPelayanan },
-      select: { id: true, nomorPelayanan: true }
+      where: {
+        nomorPelayanan: validated.nomorPelayanan,
+      },
+      select: {
+        id: true,
+        nomorPelayanan: true,
+      },
     });
 
     if (existingNopel) {
+
       return {
         success: false,
-        error: `Nomor Pelayanan "${validated.nomorPelayanan}" sudah terdaftar di sistem. Mohon periksa kembali berkas Anda.`
+        error:
+          `Nomor Pelayanan "${validated.nomorPelayanan}" sudah terdaftar di sistem. ` +
+          'Mohon periksa kembali berkas Anda.',
       };
     }
 
-    const nomorPermohonan = await generateUniqueNomorPermohonan();
 
-    const derivedNama = (validated.dataBaru && validated.dataBaru.length > 0)
-      ? validated.dataBaru[0].namaPemilikBaru
-      : (validated.namaPemilikLama || "");
-    const derivedAlamat = (validated.dataBaru && validated.dataBaru.length > 0)
-      ? formatAlamatLengkap({
-        alamat: validated.dataBaru[0].alamatPemilikBaru,
-        blok: validated.dataBaru[0].blokPemilikBaru,
-        rt: validated.dataBaru[0].rtPemilikBaru,
-        rw: validated.dataBaru[0].rwPemilikBaru
-      })
-      : formatAlamatLengkap({
-        alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
-        blok: validated.blokPemilikLama,
-        rt: validated.rtPemilikLama,
-        rw: validated.rwPemilikLama
+    // ==========================================================
+    // 5. GENERATE NOMOR PERMOHONAN
+    // ==========================================================
+
+    const nomorPermohonan =
+      await generateUniqueNomorPermohonan();
+
+
+    // ==========================================================
+    // 6. MENENTUKAN DATA UTAMA PERMOHONAN
+    // ==========================================================
+    //
+    // Parent Permohonan memiliki:
+    //
+    // - namaWajibPajak
+    // - alamat
+    //
+    // Data ini diambil dari hasil/data baru jika tersedia.
+    //
+    // Khusus PENGAKTIFAN, karena dataBaru tidak wajib,
+    // fallback ke data lama.
+    //
+    // Khusus MUTASI_PENGGABUNGAN:
+    // data lama adalah array, sehingga sumber parent untuk
+    // informasi utama tidak boleh bergantung pada
+    // validated.namaPemilikLama.
+    //
+    // Data baru tetap menjadi sumber utama karena merupakan
+    // hasil akhir permohonan.
+    // ==========================================================
+
+    const firstDataBaru =
+      validated.dataBaru &&
+        validated.dataBaru.length > 0
+        ? validated.dataBaru[0]
+        : null;
+
+    const firstDataLama =
+      validated.dataLama &&
+        validated.dataLama.length > 0
+        ? validated.dataLama[0]
+        : null;
+
+
+    // ==========================================================
+    // 7. DERIVED NAMA WAJIB PAJAK
+    // ==========================================================
+
+    let derivedNama = '';
+
+
+    if (firstDataBaru) {
+
+      derivedNama =
+        firstDataBaru.namaPemilikBaru?.trim() || '';
+
+    }
+
+    else if (jenisPermohonan === 'MUTASI_PENGGABUNGAN') {
+
+      derivedNama =
+        firstDataLama?.namaPemilikLama?.trim() || '';
+
+    }
+
+    else {
+
+      derivedNama =
+        validated.namaPemilikLama?.trim() || '';
+
+    }
+
+
+    // ==========================================================
+    // 8. DERIVED ALAMAT
+    // ==========================================================
+
+    let derivedAlamat = '';
+
+
+    if (firstDataBaru) {
+
+      derivedAlamat = formatAlamatLengkap({
+        alamat: firstDataBaru.alamatPemilikBaru,
+        blok: firstDataBaru.blokPemilikBaru,
+        rt: firstDataBaru.rtPemilikBaru,
+        rw: firstDataBaru.rwPemilikBaru,
       });
 
-    const needDataLama = [
-      'MUTASI_SEBAGIAN',
-      'MUTASI_HABIS_UPDATE',
-      'MUTASI_HABIS_REGULER',
-      'PEMBETULAN',
-      'PENGAKTIFAN'
-    ].includes(validated.jenisPermohonan);
+    }
 
-    const needDataBaru = [
-      'MUTASI_SEBAGIAN',
-      'MUTASI_HABIS_UPDATE',
-      'MUTASI_HABIS_REGULER',
-      'PEMBETULAN',
-      'OBJEK_PAJAK_BARU'
-    ].includes(validated.jenisPermohonan);
+    else if (jenisPermohonan === 'MUTASI_PENGGABUNGAN') {
+
+      derivedAlamat = formatAlamatLengkap({
+        alamat: firstDataLama?.alamatPemilikLama || '',
+        blok: firstDataLama?.blokPemilikLama || null,
+        rt: firstDataLama?.rtPemilikLama || null,
+        rw: firstDataLama?.rwPemilikLama || null,
+      });
+
+    }
+
+    else {
+
+      derivedAlamat = formatAlamatLengkap({
+        alamat: validated.alamatPemilikLama || '',
+        blok: validated.blokPemilikLama || null,
+        rt: validated.rtPemilikLama || null,
+        rw: validated.rwPemilikLama || null,
+      });
+
+    }
+
+
+    // ==========================================================
+    // 9. NORMALISASI NOP
+    // ==========================================================
+    //
+    // Schema sudah memvalidasi NOP.
+    //
+    // Untuk OBJEK_PAJAK_BARU:
+    // NOP utama boleh kosong.
+    //
+    // Untuk layanan lainnya:
+    // NOP sudah dipastikan valid oleh schema.
+    // ==========================================================
+
+    const normalizedNop =
+      validated.nop?.trim() || null;
+
+
+    // ==========================================================
+    // 10. NORMALISASI DATA LAMA ARRAY
+    // ==========================================================
+    //
+    // Hanya dataLama[] yang benar-benar dikirim yang dibuat.
+    //
+    // Khusus MUTASI_PENGGABUNGAN:
+    // semua item disimpan.
+    //
+    // Field optional:
+    //
+    // alamatPemilikLama
+    // blokPemilikLama
+    // rtPemilikLama
+    // rwPemilikLama
+    // sertifikatLama
+    //
+    // akan menjadi null jika kosong.
+    // ==========================================================
+
+    const dataLamaCreate =
+      jenisPermohonan === 'MUTASI_PENGGABUNGAN' &&
+      validated.dataLama &&
+      validated.dataLama.length > 0
+        ? validated.dataLama.map((item, index) => ({
+          nopLama:
+            item.nopLama?.trim() || null,
+
+          namaPemilikLama:
+            item.namaPemilikLama?.trim() || null,
+
+          alamatPemilikLama:
+            item.alamatPemilikLama?.trim() || null,
+
+          blokPemilikLama:
+            item.blokPemilikLama?.trim() || null,
+
+          rtPemilikLama:
+            item.rtPemilikLama?.trim() || null,
+
+          rwPemilikLama:
+            item.rwPemilikLama?.trim() || null,
+
+          kecamatanPemilikLama:
+            item.kecamatanPemilikLama?.trim() || null,
+
+          desaPemilikLama:
+            item.desaPemilikLama?.trim() || null,
+
+          alamatObjekLama:
+            item.alamatObjekLama?.trim() || null,
+
+          blokObjekLama:
+            item.blokObjekLama?.trim() || null,
+
+          rtObjekLama:
+            item.rtObjekLama?.trim() || null,
+
+          rwObjekLama:
+            item.rwObjekLama?.trim() || null,
+
+          kecamatanObjekLama:
+            item.kecamatanObjekLama?.trim() || null,
+
+          desaObjekLama:
+            item.desaObjekLama?.trim() || null,
+
+          luasTanahLama:
+            item.luasTanahLama ?? 0,
+
+          luasBangunanLama:
+            item.luasBangunanLama ?? 0,
+
+          sertifikatLama:
+            item.sertifikatLama?.trim() || null,
+
+          isUtama:
+            item.isUtama ?? (index === 0),
+
+          catatan:
+            item.catatan?.trim() || null,
+        }))
+        : undefined;
+
+
+    // ==========================================================
+    // 11. NORMALISASI DATA BARU ARRAY
+    // ==========================================================
+    //
+    // Data baru hanya dibuat jika layanan memang membutuhkan
+    // data baru.
+    //
+    // Semua aturan required/optional sudah diperiksa
+    // oleh permohonanSchema.
+    //
+    // nopBaru:
+    // - OBJEK_PAJAK_BARU -> wajib
+    // - layanan lainnya -> boleh null
+    // ==========================================================
+
+    const dataBaruCreate =
+      needDataBaru &&
+        validated.dataBaru &&
+        validated.dataBaru.length > 0
+        ? validated.dataBaru.map((item) => ({
+          nopBaru:
+            item.nopBaru?.trim() || null,
+
+          namaPemilikBaru:
+            item.namaPemilikBaru?.trim() || null,
+
+          alamatPemilikBaru:
+            item.alamatPemilikBaru?.trim() || null,
+
+          blokPemilikBaru:
+            item.blokPemilikBaru?.trim() || null,
+
+          rtPemilikBaru:
+            item.rtPemilikBaru?.trim() || null,
+
+          rwPemilikBaru:
+            item.rwPemilikBaru?.trim() || null,
+
+          kecamatanPemilikBaru:
+            item.kecamatanPemilikBaru?.trim() || null,
+
+          desaPemilikBaru:
+            item.desaPemilikBaru?.trim() || null,
+
+          alamatObjekBaru:
+            item.alamatObjekBaru?.trim() || null,
+
+          blokObjekBaru:
+            item.blokObjekBaru?.trim() || null,
+
+          rtObjekBaru:
+            item.rtObjekBaru?.trim() || null,
+
+          rwObjekBaru:
+            item.rwObjekBaru?.trim() || null,
+
+          kecamatanObjekBaru:
+            item.kecamatanObjekBaru?.trim() || null,
+
+          desaObjekBaru:
+            item.desaObjekBaru?.trim() || null,
+
+          luasTanahBaru:
+            item.luasTanahBaru ?? 0,
+
+          luasBangunanBaru:
+            item.luasBangunanBaru ?? 0,
+
+          sertifikatBaru:
+            item.sertifikatBaru?.trim() || null,
+
+          catatan:
+            item.catatan?.trim() || null,
+        }))
+        : undefined;
+
+
+    // ==========================================================
+    // 12. DATA LAMA SNAPSHOT PARENT
+    // ==========================================================
+    //
+    // Penting:
+    //
+    // MUTASI_PENGGABUNGAN memiliki data lama berbentuk array.
+    // Karena itu parent snapshot TIDAK mengambil data dari
+    // validated.namaPemilikLama secara sembarangan.
+    //
+    // Untuk penggabungan:
+    // parent snapshot menggunakan item pertama dari dataLama
+    // hanya sebagai snapshot/representasi.
+    //
+    // Data lengkap tetap berada pada dataLama[].
+    // ==========================================================
+
+    let snapshotNamaPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotAlamatPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotBlokPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotRtPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotRwPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotKecamatanPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotDesaPemilikLama:
+      | string
+      | null = null;
+
+    let snapshotAlamatObjekLama:
+      | string
+      | null = null;
+
+    let snapshotBlokObjekLama:
+      | string
+      | null = null;
+
+    let snapshotRtObjekLama:
+      | string
+      | null = null;
+
+    let snapshotRwObjekLama:
+      | string
+      | null = null;
+
+    let snapshotKecamatanObjekLama:
+      | string
+      | null = null;
+
+    let snapshotDesaObjekLama:
+      | string
+      | null = null;
+
+    let snapshotLuasTanahLama:
+      | number
+      | null = null;
+
+    let snapshotLuasBangunanLama:
+      | number
+      | null = null;
+
+    let snapshotSertifikatLama:
+      | string
+      | null = null;
+
+
+    // ==========================================================
+    // 13. SNAPSHOT UNTUK MUTASI PENGGABUNGAN
+    // ==========================================================
+
+    if (
+      jenisPermohonan === 'MUTASI_PENGGABUNGAN' &&
+      firstDataLama
+    ) {
+
+      snapshotNamaPemilikLama =
+        firstDataLama.namaPemilikLama?.trim() || null;
+
+      snapshotAlamatPemilikLama =
+        firstDataLama.alamatPemilikLama?.trim() || null;
+
+      snapshotBlokPemilikLama =
+        firstDataLama.blokPemilikLama?.trim() || null;
+
+      snapshotRtPemilikLama =
+        firstDataLama.rtPemilikLama?.trim() || null;
+
+      snapshotRwPemilikLama =
+        firstDataLama.rwPemilikLama?.trim() || null;
+
+      snapshotKecamatanPemilikLama =
+        firstDataLama.kecamatanPemilikLama?.trim() || null;
+
+      snapshotDesaPemilikLama =
+        firstDataLama.desaPemilikLama?.trim() || null;
+
+      snapshotAlamatObjekLama =
+        firstDataLama.alamatObjekLama?.trim() || null;
+
+      snapshotBlokObjekLama =
+        firstDataLama.blokObjekLama?.trim() || null;
+
+      snapshotRtObjekLama =
+        firstDataLama.rtObjekLama?.trim() || null;
+
+      snapshotRwObjekLama =
+        firstDataLama.rwObjekLama?.trim() || null;
+
+      snapshotKecamatanObjekLama =
+        firstDataLama.kecamatanObjekLama?.trim() || null;
+
+      snapshotDesaObjekLama =
+        firstDataLama.desaObjekLama?.trim() || null;
+
+      snapshotLuasTanahLama =
+        firstDataLama.luasTanahLama ?? null;
+
+      snapshotLuasBangunanLama =
+        firstDataLama.luasBangunanLama ?? null;
+
+      snapshotSertifikatLama =
+        firstDataLama.sertifikatLama?.trim() || null;
+    }
+
+
+    // ==========================================================
+    // 14. SNAPSHOT UNTUK LAYANAN SINGLE DATA LAMA
+    // ==========================================================
+
+    else if (needDataLama) {
+
+      snapshotNamaPemilikLama =
+        validated.namaPemilikLama?.trim() || null;
+
+      snapshotAlamatPemilikLama =
+        validated.alamatPemilikLama?.trim() || null;
+
+      snapshotBlokPemilikLama =
+        validated.blokPemilikLama?.trim() || null;
+
+      snapshotRtPemilikLama =
+        validated.rtPemilikLama?.trim() || null;
+
+      snapshotRwPemilikLama =
+        validated.rwPemilikLama?.trim() || null;
+
+      snapshotKecamatanPemilikLama =
+        validated.kecamatanPemilikLama?.trim() || null;
+
+      snapshotDesaPemilikLama =
+        validated.desaPemilikLama?.trim() || null;
+
+      snapshotAlamatObjekLama =
+        validated.alamatObjekLama?.trim() || null;
+
+      snapshotBlokObjekLama =
+        validated.blokObjekLama?.trim() || null;
+
+      snapshotRtObjekLama =
+        validated.rtObjekLama?.trim() || null;
+
+      snapshotRwObjekLama =
+        validated.rwObjekLama?.trim() || null;
+
+      snapshotKecamatanObjekLama =
+        validated.kecamatanObjekLama?.trim() || null;
+
+      snapshotDesaObjekLama =
+        validated.desaObjekLama?.trim() || null;
+
+      snapshotLuasTanahLama =
+        validated.luasTanahLama ?? null;
+
+      snapshotLuasBangunanLama =
+        validated.luasBangunanLama ?? null;
+
+      snapshotSertifikatLama =
+        validated.sertifikatLama?.trim() || null;
+    }
+
+
+    // ==========================================================
+    // 15. CREATE PERMOHONAN
+    // ==========================================================
 
     const permohonan = await prisma.permohonan.create({
+
       data: {
+
+        // ------------------------------------------------------
+        // IDENTITAS PERMOHONAN
+        // ------------------------------------------------------
+
         nomorPermohonan,
-        jenisPermohonan: validated.jenisPermohonan,
+
+        jenisPermohonan,
+
         status: 'SUBMITTED',
-        namaWajibPajak: derivedNama,
-        nop: validated.nop,
-        noWhatsapp: validated.noWhatsapp,
-        alamat: derivedAlamat,
-        nomorPelayanan: validated.nomorPelayanan,
-        tanggalNoPelayanan: new Date(validated.tanggalNoPelayanan),
-        tanggalPenyelesaian: validated.tanggalPenyelesaian ? new Date(validated.tanggalPenyelesaian) : null,
 
-        // Data Lama
-        namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
-        alamatPemilikLama: needDataLama ? validated.alamatPemilikLama : null,
-        blokPemilikLama: needDataLama ? validated.blokPemilikLama : null,
-        rtPemilikLama: needDataLama ? validated.rtPemilikLama : null,
-        rwPemilikLama: needDataLama ? validated.rwPemilikLama : null,
-        kecamatanPemilikLama: needDataLama ? validated.kecamatanPemilikLama : null,
-        desaPemilikLama: needDataLama ? validated.desaPemilikLama : null,
-        alamatObjekLama: needDataLama ? validated.alamatObjekLama : null,
-        blokObjekLama: needDataLama ? validated.blokObjekLama : null,
-        rtObjekLama: needDataLama ? validated.rtObjekLama : null,
-        rwObjekLama: needDataLama ? validated.rwObjekLama : null,
-        kecamatanObjekLama: needDataLama ? validated.kecamatanObjekLama : null,
-        desaObjekLama: needDataLama ? validated.desaObjekLama : null,
-        luasTanahLama: needDataLama ? validated.luasTanahLama : null,
-        luasBangunanLama: needDataLama ? validated.luasBangunanLama : null,
-        sertifikatLama: needDataLama ? validated.sertifikatLama : null,
+        namaWajibPajak:
+          derivedNama,
 
-        // Data Baru (One-to-Many)
-        dataBaru: needDataBaru && validated.dataBaru ? {
-          create: validated.dataBaru.map(item => ({
-            namaPemilikBaru: item.namaPemilikBaru,
-            alamatPemilikBaru: item.alamatPemilikBaru,
-            blokPemilikBaru: item.blokPemilikBaru || null,
-            rtPemilikBaru: item.rtPemilikBaru || null,
-            rwPemilikBaru: item.rwPemilikBaru || null,
-            kecamatanPemilikBaru: item.kecamatanPemilikBaru,
-            desaPemilikBaru: item.desaPemilikBaru,
-            alamatObjekBaru: item.alamatObjekBaru,
-            blokObjekBaru: item.blokObjekBaru || null,
-            rtObjekBaru: item.rtObjekBaru || null,
-            rwObjekBaru: item.rwObjekBaru || null,
-            kecamatanObjekBaru: item.kecamatanObjekBaru,
-            desaObjekBaru: item.desaObjekBaru,
-            luasTanahBaru: item.luasTanahBaru,
-            luasBangunanBaru: item.luasBangunanBaru,
-            sertifikatBaru: item.sertifikatBaru
-          }))
-        } : undefined,
+        nop:
+          normalizedNop,
 
-        penginputId: session.user.id
+        noWhatsapp:
+          validated.noWhatsapp?.trim() || null,
+
+        alamat:
+          derivedAlamat,
+
+        nomorPelayanan:
+          validated.nomorPelayanan?.trim() || null,
+
+        tanggalNoPelayanan:
+          new Date(validated.tanggalNoPelayanan),
+
+        tanggalPenyelesaian:
+          validated.tanggalPenyelesaian
+            ? new Date(validated.tanggalPenyelesaian)
+            : null,
+
+
+        // ------------------------------------------------------
+        // SNAPSHOT DATA LAMA PADA PARENT
+        // ------------------------------------------------------
+
+        namaPemilikLama:
+          snapshotNamaPemilikLama,
+
+        alamatPemilikLama:
+          snapshotAlamatPemilikLama,
+
+        blokPemilikLama:
+          snapshotBlokPemilikLama,
+
+        rtPemilikLama:
+          snapshotRtPemilikLama,
+
+        rwPemilikLama:
+          snapshotRwPemilikLama,
+
+        kecamatanPemilikLama:
+          snapshotKecamatanPemilikLama,
+
+        desaPemilikLama:
+          snapshotDesaPemilikLama,
+
+        alamatObjekLama:
+          snapshotAlamatObjekLama,
+
+        blokObjekLama:
+          snapshotBlokObjekLama,
+
+        rtObjekLama:
+          snapshotRtObjekLama,
+
+        rwObjekLama:
+          snapshotRwObjekLama,
+
+        kecamatanObjekLama:
+          snapshotKecamatanObjekLama,
+
+        desaObjekLama:
+          snapshotDesaObjekLama,
+
+        luasTanahLama:
+          snapshotLuasTanahLama,
+
+        luasBangunanLama:
+          snapshotLuasBangunanLama,
+
+        sertifikatLama:
+          snapshotSertifikatLama,
+
+
+        // ------------------------------------------------------
+        // RELASI DATA LAMA
+        // ------------------------------------------------------
+
+        dataLama:
+          dataLamaCreate
+            ? {
+              create: dataLamaCreate,
+            }
+            : undefined,
+
+
+        // ------------------------------------------------------
+        // RELASI DATA BARU
+        // ------------------------------------------------------
+
+        dataBaru:
+          dataBaruCreate
+            ? {
+              create: dataBaruCreate,
+            }
+            : undefined,
+
+
+        // ------------------------------------------------------
+        // PENGINPUT
+        // ------------------------------------------------------
+
+        penginputId:
+          session.user.id,
       },
+
       include: {
-        dataBaru: true
-      }
+        dataLama: true,
+        dataBaru: true,
+      },
     });
 
-    // Jalankan efek samping (WhatsApp, Notifikasi In-App, Audit Log) secara paralel
-    const readableJenis = validated.jenisPermohonan.replace(/_/g, ' ');
-    const whatsappMessage = `Permohonan ${readableJenis} Anda dengan nomor ${nomorPermohonan} telah berhasil diajukan dan sedang dalam proses verifikasi.`;
-    const notifTitle = 'Permohonan Baru Diajukan';
-    const notifPesan = `Permohonan ${readableJenis} nomor ${validated.nomorPelayanan || nomorPermohonan} telah diinput dan siap diajukan untuk diteliti.`;
+
+    // ==========================================================
+    // 16. EFEK SAMPING
+    // ==========================================================
+
+    const readableJenis =
+      jenisPermohonan.replace(/_/g, ' ');
+
+
+    const whatsappMessage =
+      `Permohonan ${readableJenis} Anda dengan nomor ` +
+      `${nomorPermohonan} telah berhasil diajukan dan sedang ` +
+      `dalam proses verifikasi.`;
+
+
+    const notifTitle =
+      'Permohonan Baru Diajukan';
+
+
+    const notifPesan =
+      `Permohonan ${readableJenis} nomor ` +
+      `${validated.nomorPelayanan || nomorPermohonan} ` +
+      `telah diinput dan siap diajukan untuk diteliti.`;
+
 
     await Promise.allSettled([
-      sendWhatsApp(validated.noWhatsapp, whatsappMessage),
-      notifyAllUsersOfRole('PENELITI', notifTitle, notifPesan, { permohonanId: permohonan.id }),
+
+      // --------------------------------------------------------
+      // WHATSAPP
+      // --------------------------------------------------------
+
+      sendWhatsApp(
+        validated.noWhatsapp,
+        whatsappMessage
+      ),
+
+
+      // --------------------------------------------------------
+      // NOTIFIKASI PENELITI
+      // --------------------------------------------------------
+
+      notifyAllUsersOfRole(
+        'PENELITI',
+        notifTitle,
+        notifPesan,
+        {
+          permohonanId: permohonan.id,
+        }
+      ),
+
+
+      // --------------------------------------------------------
+      // AUDIT LOG
+      // --------------------------------------------------------
+
       prisma.auditLog.create({
         data: {
           entityType: 'PERMOHONAN',
-          entityId: permohonan.id,
-          aksi: 'Membuat Permohonan Baru PBB',
-          statusSebelum: null,
-          statusSesudah: 'SUBMITTED',
-          pelakuId: session.user.id,
-          metadata: { nomorPermohonan, jenisPermohonan: validated.jenisPermohonan }
-        }
-      })
+
+          entityId:
+            permohonan.id,
+
+          aksi:
+            'Membuat Permohonan Baru PBB',
+
+          statusSebelum:
+            null,
+
+          statusSesudah:
+            'SUBMITTED',
+
+          pelakuId:
+            session.user.id,
+
+          metadata: {
+            nomorPermohonan,
+
+            nomorPelayanan:
+              validated.nomorPelayanan,
+
+            jenisPermohonan:
+              jenisPermohonan,
+          },
+        },
+      }),
+
     ]);
 
+
+    // ==========================================================
+    // 17. REVALIDATE
+    // ==========================================================
+
     revalidatePath('/');
-    return { success: true, permohonan };
-  } catch (error: any) {
-    console.error('[ACTION-CREATE-ERR]', error);
-    return { success: false, error: error.message || 'Gagal menyimpan permohonan ke database.' };
+
+
+    // ==========================================================
+    // 18. RESPONSE SUCCESS
+    // ==========================================================
+
+    return {
+      success: true,
+      permohonan,
+    };
+
+  } catch (error: unknown) {
+    console.error(
+      '[ACTION-CREATE-ERR]',
+      error
+    );
+
+    let clientErrorMessage = 'Gagal menyimpan permohonan ke database.';
+
+    if (error instanceof Error) {
+      const msg = error.message;
+      if (msg.includes('Invalid `prisma.permohonan.create()` invocation:')) {
+        const lines = msg.split('\n').map(l => l.trim()).filter(Boolean);
+        const detailLine = lines.slice().reverse().find(l => 
+          !l.includes('~') && 
+          !l.startsWith('{') && 
+          !l.startsWith('}') && 
+          !l.startsWith(']') && 
+          !l.startsWith('[') && 
+          !l.startsWith('data:') &&
+          !l.includes('invocation:')
+        );
+        clientErrorMessage = detailLine ? `Gagal menyimpan: ${detailLine}` : 'Gagal menyimpan permohonan ke database. Mohon periksa kelengkapan isian.';
+      } else {
+        clientErrorMessage = msg;
+      }
+    }
+
+    return {
+      success: false,
+      error: clientErrorMessage,
+    };
   }
 }
 
@@ -382,6 +1024,7 @@ export async function updatePermohonan(id: string, rawInput: any) {
 
     const needDataLama = [
       'MUTASI_SEBAGIAN',
+      'MUTASI_PENGGABUNGAN',
       'MUTASI_HABIS_UPDATE',
       'MUTASI_HABIS_REGULER',
       'PEMBETULAN',
@@ -390,15 +1033,19 @@ export async function updatePermohonan(id: string, rawInput: any) {
 
     const needDataBaru = [
       'MUTASI_SEBAGIAN',
+      'MUTASI_PENGGABUNGAN',
       'MUTASI_HABIS_UPDATE',
       'MUTASI_HABIS_REGULER',
       'PEMBETULAN',
       'OBJEK_PAJAK_BARU'
     ].includes(validated.jenisPermohonan);
 
-    // Update permohonan dan buat ulang dataBaru menggunakan Prisma Transaction
+    // Update permohonan dan buat ulang dataLama & dataBaru menggunakan Prisma Transaction
     const permohonan = await prisma.$transaction(async (tx) => {
-      // Hapus dataBaru lama
+      // Hapus dataLama & dataBaru lama
+      await tx.dataLama.deleteMany({
+        where: { permohonanId: id }
+      });
       await tx.dataBaru.deleteMany({
         where: { permohonanId: id }
       });
@@ -416,47 +1063,75 @@ export async function updatePermohonan(id: string, rawInput: any) {
           tanggalNoPelayanan: new Date(validated.tanggalNoPelayanan),
           tanggalPenyelesaian: validated.tanggalPenyelesaian ? new Date(validated.tanggalPenyelesaian) : null,
 
-          // Data Lama
-          namaPemilikLama: needDataLama ? validated.namaPemilikLama : null,
-          alamatPemilikLama: needDataLama ? validated.alamatPemilikLama : null,
-          blokPemilikLama: needDataLama ? validated.blokPemilikLama : null,
-          rtPemilikLama: needDataLama ? validated.rtPemilikLama : null,
-          rwPemilikLama: needDataLama ? validated.rwPemilikLama : null,
-          kecamatanPemilikLama: needDataLama ? validated.kecamatanPemilikLama : null,
-          desaPemilikLama: needDataLama ? validated.desaPemilikLama : null,
-          alamatObjekLama: needDataLama ? validated.alamatObjekLama : null,
-          blokObjekLama: needDataLama ? validated.blokObjekLama : null,
-          rtObjekLama: needDataLama ? validated.rtObjekLama : null,
-          rwObjekLama: needDataLama ? validated.rwObjekLama : null,
-          kecamatanObjekLama: needDataLama ? validated.kecamatanObjekLama : null,
-          desaObjekLama: needDataLama ? validated.desaObjekLama : null,
+          // Data Lama Snapshot
+          namaPemilikLama: needDataLama ? (validated.namaPemilikLama?.trim() || null) : null,
+          alamatPemilikLama: needDataLama ? (validated.alamatPemilikLama?.trim() || null) : null,
+          blokPemilikLama: needDataLama ? (validated.blokPemilikLama?.trim() || null) : null,
+          rtPemilikLama: needDataLama ? (validated.rtPemilikLama?.trim() || null) : null,
+          rwPemilikLama: needDataLama ? (validated.rwPemilikLama?.trim() || null) : null,
+          kecamatanPemilikLama: needDataLama ? (validated.kecamatanPemilikLama?.trim() || null) : null,
+          desaPemilikLama: needDataLama ? (validated.desaPemilikLama?.trim() || null) : null,
+          alamatObjekLama: needDataLama ? (validated.alamatObjekLama?.trim() || null) : null,
+          blokObjekLama: needDataLama ? (validated.blokObjekLama?.trim() || null) : null,
+          rtObjekLama: needDataLama ? (validated.rtObjekLama?.trim() || null) : null,
+          rwObjekLama: needDataLama ? (validated.rwObjekLama?.trim() || null) : null,
+          kecamatanObjekLama: needDataLama ? (validated.kecamatanObjekLama?.trim() || null) : null,
+          desaObjekLama: needDataLama ? (validated.desaObjekLama?.trim() || null) : null,
           luasTanahLama: needDataLama ? validated.luasTanahLama : null,
           luasBangunanLama: needDataLama ? validated.luasBangunanLama : null,
-          sertifikatLama: needDataLama ? validated.sertifikatLama : null,
+          sertifikatLama: needDataLama ? (validated.sertifikatLama?.trim() || null) : null,
+
+          // Data Lama (One-to-Many untuk Mutasi Penggabungan)
+          dataLama: validated.dataLama && validated.dataLama.length > 0 ? {
+            create: validated.dataLama.map((item, idx) => ({
+              nopLama: item.nopLama?.trim() || null,
+              namaPemilikLama: item.namaPemilikLama?.trim() || null,
+              alamatPemilikLama: item.alamatPemilikLama?.trim() || null,
+              blokPemilikLama: item.blokPemilikLama?.trim() || null,
+              rtPemilikLama: item.rtPemilikLama?.trim() || null,
+              rwPemilikLama: item.rwPemilikLama?.trim() || null,
+              kecamatanPemilikLama: item.kecamatanPemilikLama?.trim() || null,
+              desaPemilikLama: item.desaPemilikLama?.trim() || null,
+              alamatObjekLama: item.alamatObjekLama?.trim() || null,
+              blokObjekLama: item.blokObjekLama?.trim() || null,
+              rtObjekLama: item.rtObjekLama?.trim() || null,
+              rwObjekLama: item.rwObjekLama?.trim() || null,
+              kecamatanObjekLama: item.kecamatanObjekLama?.trim() || null,
+              desaObjekLama: item.desaObjekLama?.trim() || null,
+              luasTanahLama: item.luasTanahLama ?? 0,
+              luasBangunanLama: item.luasBangunanLama ?? 0,
+              sertifikatLama: item.sertifikatLama?.trim() || null,
+              isUtama: item.isUtama ?? (idx === 0),
+              catatan: item.catatan?.trim() || null
+            }))
+          } : undefined,
 
           // Data Baru
           dataBaru: needDataBaru && validated.dataBaru ? {
             create: validated.dataBaru.map(item => ({
-              namaPemilikBaru: item.namaPemilikBaru,
-              alamatPemilikBaru: item.alamatPemilikBaru,
-              blokPemilikBaru: item.blokPemilikBaru || null,
-              rtPemilikBaru: item.rtPemilikBaru || null,
-              rwPemilikBaru: item.rwPemilikBaru || null,
-              kecamatanPemilikBaru: item.kecamatanPemilikBaru,
-              desaPemilikBaru: item.desaPemilikBaru,
-              alamatObjekBaru: item.alamatObjekBaru,
-              blokObjekBaru: item.blokObjekBaru || null,
-              rtObjekBaru: item.rtObjekBaru || null,
-              rwObjekBaru: item.rwObjekBaru || null,
-              kecamatanObjekBaru: item.kecamatanObjekBaru,
-              desaObjekBaru: item.desaObjekBaru,
-              luasTanahBaru: item.luasTanahBaru,
-              luasBangunanBaru: item.luasBangunanBaru,
-              sertifikatBaru: item.sertifikatBaru
+              nopBaru: item.nopBaru?.trim() || null,
+              namaPemilikBaru: item.namaPemilikBaru?.trim() || null,
+              alamatPemilikBaru: item.alamatPemilikBaru?.trim() || null,
+              blokPemilikBaru: item.blokPemilikBaru?.trim() || null,
+              rtPemilikBaru: item.rtPemilikBaru?.trim() || null,
+              rwPemilikBaru: item.rwPemilikBaru?.trim() || null,
+              kecamatanPemilikBaru: item.kecamatanPemilikBaru?.trim() || null,
+              desaPemilikBaru: item.desaPemilikBaru?.trim() || null,
+              alamatObjekBaru: item.alamatObjekBaru?.trim() || null,
+              blokObjekBaru: item.blokObjekBaru?.trim() || null,
+              rtObjekBaru: item.rtObjekBaru?.trim() || null,
+              rwObjekBaru: item.rwObjekBaru?.trim() || null,
+              kecamatanObjekBaru: item.kecamatanObjekBaru?.trim() || null,
+              desaObjekBaru: item.desaObjekBaru?.trim() || null,
+              luasTanahBaru: item.luasTanahBaru ?? 0,
+              luasBangunanBaru: item.luasBangunanBaru ?? 0,
+              sertifikatBaru: item.sertifikatBaru?.trim() || null,
+              catatan: item.catatan?.trim() || null
             }))
           } : undefined
         },
         include: {
+          dataLama: true,
           dataBaru: true
         }
       });

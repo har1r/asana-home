@@ -31,6 +31,7 @@ export async function getMonitoringPermohonan() {
       },
       include: {
         penginput: { select: { name: true } },
+        pemantau: { select: { name: true, email: true } },
         dataBaru: true,
         bundle: {
           include: {
@@ -131,10 +132,14 @@ export async function completePermohonan(permohonanId: string) {
         throw new Error("Permohonan dibekukan karena sedang menunggu persetujuan Supervisor.");
       }
 
-      // 2. Transition status to COMPLETED and set all dataBaru isVerified = true
+      // 2. Transition status to COMPLETED, record pemantauId & completedAt, and set all dataBaru isVerified = true
       const updated = await tx.permohonan.update({
         where: { id: permohonanId },
-        data: { status: "COMPLETED" }
+        data: {
+          status: "COMPLETED",
+          pemantauId: session.user.id,
+          completedAt: new Date()
+        }
       });
 
       await tx.$runCommandRaw({

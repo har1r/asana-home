@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Phone, Copy, Check } from 'lucide-react';
+import { X, FileText, Phone, Copy, Check, CheckCircle } from 'lucide-react';
 import { formatNop, toTitleCase } from './constants';
 
 interface DetailsModalProps {
@@ -95,6 +95,20 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                   {selectedRequest.jenisPermohonan?.replace(/_/g, ' ').toLowerCase()}
                 </span>
               </div>
+
+              {selectedRequest.status === 'COMPLETED' && (
+                <div className="mt-1 p-2.5 bg-emerald-50/90 border border-emerald-200/90 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[12px] text-emerald-900 font-sans">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-[#008f78] shrink-0" />
+                    <span>Diverifikasi Selesai Oleh: <strong className="font-semibold">{selectedRequest.pemantau?.name || 'Petugas Pemantau'}</strong></span>
+                  </div>
+                  {selectedRequest.completedAt && (
+                    <div className="text-emerald-700 text-[11px] font-mono sm:text-right">
+                      {new Date(selectedRequest.completedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
