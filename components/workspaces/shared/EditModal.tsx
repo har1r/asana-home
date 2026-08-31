@@ -208,18 +208,18 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
     if (rawNop.length >= 10) {
       const kecCode = rawNop.slice(4, 7);
       const desaCode = rawNop.slice(7, 10);
-      
+
       const mapping = NOP_MAPPING[kecCode];
       if (mapping) {
         const kecName = mapping.name;
         const desaName = mapping.villages[desaCode] || "";
-        
+
         // Auto-fill Data Lama
         if (kecName) setKecamatanObjekLama(kecName);
         if (desaName) setDesaObjekLama(desaName);
-        
+
         // Auto-fill Data Baru (for all owners)
-        setDataBaru(prev => 
+        setDataBaru(prev =>
           prev.map(item => ({
             ...item,
             kecamatanObjekBaru: kecName || item.kecamatanObjekBaru,
@@ -712,10 +712,10 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
                         if (stepNum < currentStep || isCompleted) setCurrentStep(stepNum);
                       }}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${isActive
-                          ? 'bg-[#00a389] text-white shadow-3xs'
-                          : isCompleted
-                            ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
-                            : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
+                        ? 'bg-[#00a389] text-white shadow-3xs'
+                        : isCompleted
+                          ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
+                          : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
                         }`}
                     >
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
@@ -819,9 +819,8 @@ export const EditModal: React.FC<EditModalProps> = React.memo(({ editTarget, onC
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[13px] font-normal text-slate-700 capitalize font-sans">Nomor WhatsApp WP <span className="text-rose-500">*</span></label>
-                      <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${
-                        formErrors.noWhatsapp ? 'border-rose-500' : 'border-slate-200/90'
-                      }`}>
+                      <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${formErrors.noWhatsapp ? 'border-rose-500' : 'border-slate-200/90'
+                        }`}>
                         <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
                           <Phone className="w-3.5 h-3.5 text-slate-400" />
                           <span>+62</span>

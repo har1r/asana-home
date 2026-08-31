@@ -231,7 +231,7 @@ const KertasKerjaPdf: React.FC<Props> = ({ permohonan, sisaLT, sisaLB }) => {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  
+
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -265,7 +265,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const stream = await renderToStream(
       <KertasKerjaPdf permohonan={permohonan} sisaLT={sisaLT} sisaLB={sisaLB} />
     );
-    
+
     const safeFilename = `Kertas-Kerja-${permohonan.nomorPermohonan.replace(/\//g, '-')}.pdf`;
 
     return new NextResponse(stream as any, {

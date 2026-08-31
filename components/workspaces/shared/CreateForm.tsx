@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, Plus, Trash2, Check, AlertTriangle, CheckCircle, Phone } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Check, AlertTriangle, CheckCircle, Phone, RotateCcw } from 'lucide-react';
 import { createPermohonan } from '@/app/actions/penginput';
 import { ActionStatusModal } from './ActionStatusModal';
 import {
@@ -20,6 +20,52 @@ interface CreateFormProps {
   initialData?: any;
 }
 
+const createEmptyDataLamaItem = (isUtama: boolean = false) => ({
+  nopLama: '',
+  namaPemilikLama: '',
+  alamatPemilikLama: '',
+  blokPemilikLama: '',
+  rtPemilikLama: '',
+  rwPemilikLama: '',
+  kecamatanPemilikLama: '',
+  desaPemilikLama: '',
+  alamatObjekLama: '',
+  blokObjekLama: '',
+  rtObjekLama: '',
+  rwObjekLama: '',
+  kecamatanObjekLama: '',
+  desaObjekLama: '',
+  luasTanahLama: '',
+  luasBangunanLama: '',
+  isUtama
+});
+
+/**
+ * Reusable Design System helper for Form Input / Select / Textarea styling.
+ * Visual State System:
+ * - background: ALWAYS bg-white (no bg-slate-50, no focus:bg-white)
+ * - normal: border-slate-200/90 focus:border-[#00a389] focus:ring-[#00a389]/10
+ * - error: border-red-500 focus:border-red-500 focus:ring-red-500/10
+ */
+const getInputClass = (hasError?: boolean, extraClass: string = '') => {
+  const stateClass = hasError
+    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+    : 'border-slate-200/90 focus:border-[#00a389] focus:ring-[#00a389]/10';
+
+  return `w-full bg-white border ${stateClass} rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none focus:ring-2 transition-all font-sans ${extraClass}`.trim();
+};
+
+/**
+ * Reusable Design System helper for WhatsApp Composite Input Container.
+ */
+const getWhatsAppContainerClass = (hasError?: boolean) => {
+  const stateClass = hasError
+    ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10'
+    : 'border-slate-200/90 focus-within:border-[#00a389] focus-within:ring-[#00a389]/10';
+
+  return `flex items-center bg-white border ${stateClass} rounded-md overflow-hidden transition-all focus-within:ring-2 font-sans`.trim();
+};
+
 export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, onCancel, initialData }) => {
   const [jenisPermohonan, setJenisPermohonan] = useState<string>('MUTASI_SEBAGIAN');
   const [nomorPelayanan, setNomorPelayanan] = useState('');
@@ -27,10 +73,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     return new Date().toISOString().split('T')[0];
   });
   const [tanggalPenyelesaian, setTanggalPenyelesaian] = useState('');
-  const [nop, setNop] = useState('');
   const [noWhatsapp, setNoWhatsapp] = useState('');
 
-  // Data Lama state
+  // Data Lama state (single item for standard services)
+  const [nopLama, setNopLama] = useState('');
   const [namaPemilikLama, setNamaPemilikLama] = useState('');
   const [alamatPemilikLama, setAlamatPemilikLama] = useState('');
   const [blokPemilikLama, setBlokPemilikLama] = useState('');
@@ -46,7 +92,12 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   const [desaObjekLama, setDesaObjekLama] = useState('');
   const [luasTanahLama, setLuasTanahLama] = useState('');
   const [luasBangunanLama, setLuasBangunanLama] = useState('');
-  const [sertifikatLama, setSertifikatLama] = useState('');
+
+  // Multi Data Lama state (for MUTASI_PENGGABUNGAN)
+  const [dataLama, setDataLama] = useState<any[]>([
+    createEmptyDataLamaItem(true),
+    createEmptyDataLamaItem(false)
+  ]);
 
   // Data Baru state
   const [dataBaru, setDataBaru] = useState<any[]>([]);
@@ -57,8 +108,6 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
   // Stepper State & Copy Feedback State
   const [currentStep, setCurrentStep] = useState(1);
-  const [copiedAlamatObjekIdx, setCopiedAlamatObjekIdx] = useState<number | null>(null);
-  const [copiedAlamatPemilikIdx, setCopiedAlamatPemilikIdx] = useState<number | null>(null);
 
   const [draftLoaded, setDraftLoaded] = useState(false);
 
@@ -85,6 +134,43 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     }
   }, [statusModalStatus, onSuccess, onCancel]);
 
+  // Reset Draft & LocalStorage
+  const handleResetDraft = useCallback(() => {
+    try {
+      localStorage.removeItem('permohonan_form_draft');
+    } catch (e) {
+      console.error('Failed to clear draft', e);
+    }
+    setNomorPelayanan('');
+    setTanggalNoPelayanan(new Date().toISOString().split('T')[0]);
+    setTanggalPenyelesaian('');
+    setNoWhatsapp('');
+    setNopLama('');
+    setNamaPemilikLama('');
+    setAlamatPemilikLama('');
+    setBlokPemilikLama('');
+    setRtPemilikLama('');
+    setRwPemilikLama('');
+    setKecamatanPemilikLama('');
+    setDesaPemilikLama('');
+    setAlamatObjekLama('');
+    setBlokObjekLama('');
+    setRtObjekLama('');
+    setRwObjekLama('');
+    setKecamatanObjekLama('');
+    setDesaObjekLama('');
+    setLuasTanahLama('');
+    setLuasBangunanLama('');
+    setDataLama([createEmptyDataLamaItem(true), createEmptyDataLamaItem(false)]);
+    setDataBaru([{ ...createEmptyDataBaruItem(), catatan: '' }]);
+    setFormErrors({});
+    setError('');
+    setSuccess('');
+    setCurrentStep(1);
+    setDraftModalMessage('Draf formulir dan penyimpanan lokal berhasil dihapus & formulir di-reset!');
+    setDraftModalOpen(true);
+  }, []);
+
   // Restore draft on mount or duplicate initialData
   useEffect(() => {
     if (initialData) {
@@ -98,15 +184,16 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         const rawSelesaiDate = initialData.tanggalPenyelesaian ? new Date(initialData.tanggalPenyelesaian) : null;
         setTanggalPenyelesaian(rawSelesaiDate && !isNaN(rawSelesaiDate.getTime()) ? rawSelesaiDate.toISOString().split('T')[0] : '');
 
+        if (initialData.noWhatsapp) setNoWhatsapp(initialData.noWhatsapp);
+
         if (initialData.nop) {
           const raw = initialData.nop.replace(/[^\d]/g, '');
           if (raw.length === 18) {
-            setNop(`${raw.slice(0, 2)}.${raw.slice(2, 4)}.${raw.slice(4, 7)}.${raw.slice(7, 10)}.${raw.slice(10, 13)}-${raw.slice(13, 17)}.${raw.slice(17)}`);
+            setNopLama(`${raw.slice(0, 2)}.${raw.slice(2, 4)}.${raw.slice(4, 7)}.${raw.slice(7, 10)}.${raw.slice(10, 13)}-${raw.slice(13, 17)}.${raw.slice(17)}`);
           } else {
-            setNop(initialData.nop);
+            setNopLama(initialData.nop);
           }
         }
-        if (initialData.noWhatsapp) setNoWhatsapp(initialData.noWhatsapp);
 
         if (initialData.namaPemilikLama) setNamaPemilikLama(initialData.namaPemilikLama.toUpperCase());
         if (initialData.alamatPemilikLama) setAlamatPemilikLama(initialData.alamatPemilikLama.toUpperCase());
@@ -123,7 +210,28 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (initialData.desaObjekLama) setDesaObjekLama(initialData.desaObjekLama.toUpperCase());
         setLuasTanahLama(initialData.luasTanahLama !== null && initialData.luasTanahLama !== undefined ? String(initialData.luasTanahLama) : '');
         setLuasBangunanLama(initialData.luasBangunanLama !== null && initialData.luasBangunanLama !== undefined ? String(initialData.luasBangunanLama) : '');
-        if (initialData.sertifikatLama) setSertifikatLama(initialData.sertifikatLama.toUpperCase());
+
+        if (initialData.dataLama && initialData.dataLama.length > 0) {
+          setDataLama(initialData.dataLama.map((item: any, idx: number) => ({
+            nopLama: item.nopLama || '',
+            namaPemilikLama: (item.namaPemilikLama || '').toUpperCase(),
+            alamatPemilikLama: (item.alamatPemilikLama || '').toUpperCase(),
+            blokPemilikLama: (item.blokPemilikLama || '').toUpperCase(),
+            rtPemilikLama: (item.rtPemilikLama || '').toUpperCase(),
+            rwPemilikLama: (item.rwPemilikLama || '').toUpperCase(),
+            kecamatanPemilikLama: (item.kecamatanPemilikLama || '').toUpperCase(),
+            desaPemilikLama: (item.desaPemilikLama || '').toUpperCase(),
+            alamatObjekLama: (item.alamatObjekLama || '').toUpperCase(),
+            blokObjekLama: (item.blokObjekLama || '').toUpperCase(),
+            rtObjekLama: (item.rtObjekLama || '').toUpperCase(),
+            rwObjekLama: (item.rwObjekLama || '').toUpperCase(),
+            kecamatanObjekLama: (item.kecamatanObjekLama || '').toUpperCase(),
+            desaObjekLama: (item.desaObjekLama || '').toUpperCase(),
+            luasTanahLama: item.luasTanahLama !== null && item.luasTanahLama !== undefined ? String(item.luasTanahLama) : '',
+            luasBangunanLama: item.luasBangunanLama !== null && item.luasBangunanLama !== undefined ? String(item.luasBangunanLama) : '',
+            isUtama: item.isUtama ?? idx === 0
+          })));
+        }
 
         if (initialData.dataBaru && initialData.dataBaru.length > 0) {
           setDataBaru(initialData.dataBaru.map((item: any) => ({
@@ -142,10 +250,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             desaObjekBaru: (item.desaObjekBaru || '').toUpperCase(),
             luasTanahBaru: item.luasTanahBaru !== null && item.luasTanahBaru !== undefined ? String(item.luasTanahBaru) : '',
             luasBangunanBaru: item.luasBangunanBaru !== null && item.luasBangunanBaru !== undefined ? String(item.luasBangunanBaru) : '',
-            sertifikatBaru: (item.sertifikatBaru || '').toUpperCase()
+            sertifikatBaru: (item.sertifikatBaru || '').toUpperCase(),
+            catatan: (item.catatan || '').toUpperCase()
           })));
         } else {
-          setDataBaru([createEmptyDataBaruItem()]);
+          setDataBaru([{ ...createEmptyDataBaruItem(), catatan: '' }]);
         }
 
         setDraftModalMessage('Draf permohonan berhasil diduplikat untuk formulir baru!');
@@ -166,9 +275,9 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (parsed.nomorPelayanan) setNomorPelayanan(parsed.nomorPelayanan.toUpperCase());
         if (parsed.tanggalNoPelayanan) setTanggalNoPelayanan(parsed.tanggalNoPelayanan);
         if (parsed.tanggalPenyelesaian) setTanggalPenyelesaian(parsed.tanggalPenyelesaian);
-        if (parsed.nop) setNop(parsed.nop);
         if (parsed.noWhatsapp) setNoWhatsapp(parsed.noWhatsapp);
 
+        if (parsed.nopLama) setNopLama(parsed.nopLama);
         if (parsed.namaPemilikLama) setNamaPemilikLama(parsed.namaPemilikLama.toUpperCase());
         if (parsed.alamatPemilikLama) setAlamatPemilikLama(parsed.alamatPemilikLama.toUpperCase());
         if (parsed.blokPemilikLama) setBlokPemilikLama(parsed.blokPemilikLama.toUpperCase());
@@ -184,26 +293,16 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         if (parsed.desaObjekLama) setDesaObjekLama(parsed.desaObjekLama.toUpperCase());
         if (parsed.luasTanahLama) setLuasTanahLama(parsed.luasTanahLama);
         if (parsed.luasBangunanLama) setLuasBangunanLama(parsed.luasBangunanLama);
-        if (parsed.sertifikatLama) setSertifikatLama(parsed.sertifikatLama.toUpperCase());
+
+        if (parsed.dataLama && parsed.dataLama.length > 0) {
+          setDataLama(parsed.dataLama);
+        }
 
         if (parsed.dataBaru && parsed.dataBaru.length > 0) {
           setDataBaru(parsed.dataBaru.map((item: any) => ({
+            ...item,
             namaPemilikBaru: (item.namaPemilikBaru || '').toUpperCase(),
-            alamatPemilikBaru: (item.alamatPemilikBaru || '').toUpperCase(),
-            blokPemilikBaru: (item.blokPemilikBaru || '').toUpperCase(),
-            rtPemilikBaru: (item.rtPemilikBaru || '').toUpperCase(),
-            rwPemilikBaru: (item.rwPemilikBaru || '').toUpperCase(),
-            kecamatanPemilikBaru: (item.kecamatanPemilikBaru || '').toUpperCase(),
-            desaPemilikBaru: (item.desaPemilikBaru || '').toUpperCase(),
-            alamatObjekBaru: (item.alamatObjekBaru || '').toUpperCase(),
-            blokObjekBaru: (item.blokObjekBaru || '').toUpperCase(),
-            rtObjekBaru: (item.rtObjekBaru || '').toUpperCase(),
-            rwObjekBaru: (item.rwObjekBaru || '').toUpperCase(),
-            kecamatanObjekBaru: (item.kecamatanObjekBaru || '').toUpperCase(),
-            desaObjekBaru: (item.desaObjekBaru || '').toUpperCase(),
-            luasTanahBaru: item.luasTanahBaru,
-            luasBangunanBaru: item.luasBangunanBaru,
-            sertifikatBaru: (item.sertifikatBaru || '').toUpperCase()
+            catatan: (item.catatan || '').toUpperCase()
           })));
         }
 
@@ -226,8 +325,8 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         nomorPelayanan: nomorPelayanan.toUpperCase(),
         tanggalNoPelayanan,
         tanggalPenyelesaian,
-        nop,
         noWhatsapp,
+        nopLama,
         namaPemilikLama: namaPemilikLama.toUpperCase(),
         alamatPemilikLama: alamatPemilikLama.toUpperCase(),
         blokPemilikLama: blokPemilikLama.toUpperCase(),
@@ -243,24 +342,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         desaObjekLama: desaObjekLama.toUpperCase(),
         luasTanahLama,
         luasBangunanLama,
-        sertifikatLama: sertifikatLama.toUpperCase(),
+        dataLama,
         dataBaru: dataBaru.map(item => ({
+          ...item,
           namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
-          alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
-          blokPemilikBaru: item.blokPemilikBaru.toUpperCase(),
-          rtPemilikBaru: item.rtPemilikBaru.toUpperCase(),
-          rwPemilikBaru: item.rwPemilikBaru.toUpperCase(),
-          kecamatanPemilikBaru: item.kecamatanPemilikBaru.toUpperCase(),
-          desaPemilikBaru: item.desaPemilikBaru.toUpperCase(),
-          alamatObjekBaru: item.alamatObjekBaru.toUpperCase(),
-          blokObjekBaru: item.blokObjekBaru.toUpperCase(),
-          rtObjekBaru: item.rtObjekBaru.toUpperCase(),
-          rwObjekBaru: item.rwObjekBaru.toUpperCase(),
-          kecamatanObjekBaru: item.kecamatanObjekBaru.toUpperCase(),
-          desaObjekBaru: item.desaObjekBaru.toUpperCase(),
-          luasTanahBaru: item.luasTanahBaru,
-          luasBangunanBaru: item.luasBangunanBaru,
-          sertifikatBaru: item.sertifikatBaru.toUpperCase()
+          catatan: (item.catatan || '').toUpperCase()
         }))
       };
       localStorage.setItem('permohonan_form_draft', JSON.stringify(draft));
@@ -268,39 +354,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       console.error('Failed to save form draft', e);
     }
   }, [
-    draftLoaded, jenisPermohonan, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, nop, noWhatsapp,
-    namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
-    dataBaru
+    draftLoaded, jenisPermohonan, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
+    nopLama, namaPemilikLama, alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama,
+    alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
+    dataLama, dataBaru
   ]);
-
-  // Auto-fill kecamatan and desa objek based on NOP
-  useEffect(() => {
-    const rawNop = nop.replace(/[^\d]/g, '');
-    if (rawNop.length >= 10) {
-      const kecCode = rawNop.slice(4, 7);
-      const desaCode = rawNop.slice(7, 10);
-
-      const mapping = NOP_MAPPING[kecCode];
-      if (mapping) {
-        const kecName = mapping.name;
-        const desaName = mapping.villages[desaCode] || "";
-
-        // Auto-fill Data Lama
-        if (kecName) setKecamatanObjekLama(kecName);
-        if (desaName) setDesaObjekLama(desaName);
-
-        // Auto-fill Data Baru (for all owners)
-        setDataBaru(prev =>
-          prev.map(item => ({
-            ...item,
-            kecamatanObjekBaru: kecName || item.kecamatanObjekBaru,
-            desaObjekBaru: desaName || item.desaObjekBaru
-          }))
-        );
-      }
-    }
-  }, [nop]);
 
   // Conditional Logic Rules
   const needDataLama = SERVICES_NEED_DATA_LAMA.includes(jenisPermohonan);
@@ -330,7 +388,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     const baseDate = new Date(tanggalNoPelayanan);
     if (isNaN(baseDate.getTime())) return;
 
-    let monthsToAdd = 4; // Default: 4 months (Mutasi / Pembetulan)
+    let monthsToAdd = 4;
     if (jenisPermohonan === 'OBJEK_PAJAK_BARU') {
       monthsToAdd = 6;
     } else if (jenisPermohonan === 'PENGAKTIFAN') {
@@ -356,111 +414,30 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   useEffect(() => {
     if (!draftLoaded) return;
     if (needDataBaru && dataBaru.length === 0) {
-      setDataBaru([createEmptyDataBaruItem()]);
+      setDataBaru([{ ...createEmptyDataBaruItem(), catatan: '' }]);
     }
   }, [needDataBaru, dataBaru.length, draftLoaded]);
 
-  // Auto-clear field errors as soon as user types valid inputs
-  useEffect(() => {
-    setFormErrors(prev => {
-      if (Object.keys(prev).length === 0) return prev;
-      const next = { ...prev };
-      let changed = false;
+  // Handlers for Multi Data Lama (MUTASI_PENGGABUNGAN)
+  const handleAddNopAsal = useCallback(() => {
+    setDataLama(prev => [...prev, createEmptyDataLamaItem(false)]);
+  }, []);
 
-      if (nomorPelayanan.trim() && next.nomorPelayanan) {
-        delete next.nomorPelayanan;
-        changed = true;
-      }
-      if (tanggalNoPelayanan.trim() && next.tanggalNoPelayanan) {
-        delete next.tanggalNoPelayanan;
-        changed = true;
-      }
-      if (tanggalPenyelesaian.trim() && next.tanggalPenyelesaian) {
-        delete next.tanggalPenyelesaian;
-        changed = true;
-      }
-      if (nop.replace(/[.\-]/g, '').length === 18 && next.nop) {
-        delete next.nop;
-        changed = true;
-      }
-      if (/^(628)\d{8,12}$/.test(noWhatsapp) && next.noWhatsapp) {
-        delete next.noWhatsapp;
-        changed = true;
-      }
-
-      if (needDataLama) {
-        if (namaPemilikLama.trim() && next.namaPemilikLama) { delete next.namaPemilikLama; changed = true; }
-        if (alamatPemilikLama.trim() && next.alamatPemilikLama) { delete next.alamatPemilikLama; changed = true; }
-        if (kecamatanPemilikLama.trim() && next.kecamatanPemilikLama) { delete next.kecamatanPemilikLama; changed = true; }
-        if (desaPemilikLama.trim() && next.desaPemilikLama) { delete next.desaPemilikLama; changed = true; }
-        if (alamatObjekLama.trim() && next.alamatObjekLama) { delete next.alamatObjekLama; changed = true; }
-        if (kecamatanObjekLama.trim() && next.kecamatanObjekLama) { delete next.kecamatanObjekLama; changed = true; }
-        if (desaObjekLama.trim() && next.desaObjekLama) { delete next.desaObjekLama; changed = true; }
-        if (luasTanahLama.trim() !== '' && Number(luasTanahLama) >= 0 && next.luasTanahLama) { delete next.luasTanahLama; changed = true; }
-        if (luasBangunanLama.trim() !== '' && Number(luasBangunanLama) >= 0 && next.luasBangunanLama) { delete next.luasBangunanLama; changed = true; }
-        if (sertifikatLama.trim() && next.sertifikatLama) { delete next.sertifikatLama; changed = true; }
-      }
-
-      if (needDataBaru) {
-        dataBaru.forEach((item, idx) => {
-          if (item.namaPemilikBaru?.trim() && next[`dataBaru.${idx}.namaPemilikBaru`]) {
-            delete next[`dataBaru.${idx}.namaPemilikBaru`];
-            changed = true;
-          }
-          if (item.alamatPemilikBaru?.trim() && next[`dataBaru.${idx}.alamatPemilikBaru`]) {
-            delete next[`dataBaru.${idx}.alamatPemilikBaru`];
-            changed = true;
-          }
-          if (item.kecamatanPemilikBaru?.trim() && next[`dataBaru.${idx}.kecamatanPemilikBaru`]) {
-            delete next[`dataBaru.${idx}.kecamatanPemilikBaru`];
-            changed = true;
-          }
-          if (item.desaPemilikBaru?.trim() && next[`dataBaru.${idx}.desaPemilikBaru`]) {
-            delete next[`dataBaru.${idx}.desaPemilikBaru`];
-            changed = true;
-          }
-          if (item.alamatObjekBaru?.trim() && next[`dataBaru.${idx}.alamatObjekBaru`]) {
-            delete next[`dataBaru.${idx}.alamatObjekBaru`];
-            changed = true;
-          }
-          if (item.kecamatanObjekBaru?.trim() && next[`dataBaru.${idx}.kecamatanObjekBaru`]) {
-            delete next[`dataBaru.${idx}.kecamatanObjekBaru`];
-            changed = true;
-          }
-          if (item.desaObjekBaru?.trim() && next[`dataBaru.${idx}.desaObjekBaru`]) {
-            delete next[`dataBaru.${idx}.desaObjekBaru`];
-            changed = true;
-          }
-          if (item.luasTanahBaru !== '' && Number(item.luasTanahBaru) >= 0 && next[`dataBaru.${idx}.luasTanahBaru`]) {
-            delete next[`dataBaru.${idx}.luasTanahBaru`];
-            changed = true;
-          }
-          if (item.luasBangunanBaru !== '' && Number(item.luasBangunanBaru) >= 0 && next[`dataBaru.${idx}.luasBangunanBaru`]) {
-            delete next[`dataBaru.${idx}.luasBangunanBaru`];
-            changed = true;
-          }
-          if (item.sertifikatBaru?.trim() && next[`dataBaru.${idx}.sertifikatBaru`]) {
-            delete next[`dataBaru.${idx}.sertifikatBaru`];
-            changed = true;
-          }
-        });
-      }
-
-      if (changed && Object.keys(next).length === 0) {
-        setError('');
-      }
-
-      return changed ? next : prev;
+  const handleRemoveNopAsal = useCallback((index: number) => {
+    setDataLama(prev => {
+      if (prev.length <= 2) return prev;
+      const next = prev.filter((_, i) => i !== index);
+      return next.map((item, i) => ({ ...item, isUtama: i === 0 }));
     });
-  }, [
-    nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, nop, noWhatsapp,
-    namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
-    needDataLama, needDataBaru, dataBaru
-  ]);
+  }, []);
 
+  const handleDataLamaItemChange = useCallback((index: number, field: string, value: any) => {
+    setDataLama(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  }, []);
+
+  // Handlers for Data Baru
   const handleAddOwner = useCallback(() => {
-    setDataBaru(prev => [...prev, createEmptyDataBaruItem()]);
+    setDataBaru(prev => [...prev, { ...createEmptyDataBaruItem(), catatan: '' }]);
   }, []);
 
   const handleRemoveOwner = useCallback((index: number) => {
@@ -471,75 +448,72 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     setDataBaru(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
   }, []);
 
-  // Copy helpers with visual feedback
-  const handleCopyPemilikFromLama = useCallback((idx: number) => {
-    handleOwnerChange(idx, 'alamatPemilikBaru', alamatPemilikLama);
-    handleOwnerChange(idx, 'blokPemilikBaru', blokPemilikLama);
-    handleOwnerChange(idx, 'rtPemilikBaru', rtPemilikLama);
-    handleOwnerChange(idx, 'rwPemilikBaru', rwPemilikLama);
-    handleOwnerChange(idx, 'kecamatanPemilikBaru', kecamatanPemilikLama);
-    handleOwnerChange(idx, 'desaPemilikBaru', desaPemilikLama);
-    setCopiedAlamatPemilikIdx(idx);
-    setTimeout(() => setCopiedAlamatPemilikIdx(null), 1500);
-  }, [alamatPemilikLama, blokPemilikLama, rtPemilikLama, rwPemilikLama, kecamatanPemilikLama, desaPemilikLama, handleOwnerChange]);
+  // Auto-clear field errors as user types valid inputs
+  useEffect(() => {
+    setFormErrors(prev => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next = { ...prev };
+      let changed = false;
 
-  const handleCopyFromLama = useCallback((idx: number) => {
-    handleOwnerChange(idx, 'alamatObjekBaru', alamatObjekLama);
-    handleOwnerChange(idx, 'blokObjekBaru', blokObjekLama);
-    handleOwnerChange(idx, 'rtObjekBaru', rtObjekLama);
-    handleOwnerChange(idx, 'rwObjekBaru', rwObjekLama);
-    handleOwnerChange(idx, 'kecamatanObjekBaru', kecamatanObjekLama);
-    handleOwnerChange(idx, 'desaObjekBaru', desaObjekLama);
-    setCopiedAlamatObjekIdx(idx);
-    setTimeout(() => setCopiedAlamatObjekIdx(null), 1500);
-  }, [alamatObjekLama, blokObjekLama, rtObjekLama, rwObjekLama, kecamatanObjekLama, desaObjekLama, handleOwnerChange]);
+      if (nomorPelayanan.trim() && next.nomorPelayanan) { delete next.nomorPelayanan; changed = true; }
+      if (tanggalNoPelayanan.trim() && next.tanggalNoPelayanan) { delete next.tanggalNoPelayanan; changed = true; }
+      if (tanggalPenyelesaian.trim() && next.tanggalPenyelesaian) { delete next.tanggalPenyelesaian; changed = true; }
+      if (/^(628)\d{8,12}$/.test(noWhatsapp) && next.noWhatsapp) { delete next.noWhatsapp; changed = true; }
 
-  const formProgress = useMemo(() => {
-    let total = 5;
-    let filled = 0;
+      if (needDataLama) {
+        if (jenisPermohonan === 'MUTASI_PENGGABUNGAN') {
+          dataLama.forEach((item, idx) => {
+            if (item.nopLama?.replace(/[.\-]/g, '').length === 18 && next[`dataLama.${idx}.nopLama`]) { delete next[`dataLama.${idx}.nopLama`]; changed = true; }
+            if (item.namaPemilikLama?.trim() && next[`dataLama.${idx}.namaPemilikLama`]) { delete next[`dataLama.${idx}.namaPemilikLama`]; changed = true; }
+            if (item.alamatPemilikLama?.trim() && next[`dataLama.${idx}.alamatPemilikLama`]) { delete next[`dataLama.${idx}.alamatPemilikLama`]; changed = true; }
+            if (item.kecamatanPemilikLama?.trim() && next[`dataLama.${idx}.kecamatanPemilikLama`]) { delete next[`dataLama.${idx}.kecamatanPemilikLama`]; changed = true; }
+            if (item.desaPemilikLama?.trim() && next[`dataLama.${idx}.desaPemilikLama`]) { delete next[`dataLama.${idx}.desaPemilikLama`]; changed = true; }
+            if (item.alamatObjekLama?.trim() && next[`dataLama.${idx}.alamatObjekLama`]) { delete next[`dataLama.${idx}.alamatObjekLama`]; changed = true; }
+            if (item.kecamatanObjekLama?.trim() && next[`dataLama.${idx}.kecamatanObjekLama`]) { delete next[`dataLama.${idx}.kecamatanObjekLama`]; changed = true; }
+            if (item.desaObjekLama?.trim() && next[`dataLama.${idx}.desaObjekLama`]) { delete next[`dataLama.${idx}.desaObjekLama`]; changed = true; }
+            if (item.luasTanahLama !== '' && Number(item.luasTanahLama) >= 0 && next[`dataLama.${idx}.luasTanahLama`]) { delete next[`dataLama.${idx}.luasTanahLama`]; changed = true; }
+            if (item.luasBangunanLama !== '' && Number(item.luasBangunanLama) >= 0 && next[`dataLama.${idx}.luasBangunanLama`]) { delete next[`dataLama.${idx}.luasBangunanLama`]; changed = true; }
+          });
+        } else {
+          if (nopLama.replace(/[.\-]/g, '').length === 18 && next.nopLama) { delete next.nopLama; changed = true; }
+          if (namaPemilikLama.trim() && next.namaPemilikLama) { delete next.namaPemilikLama; changed = true; }
+          if (alamatPemilikLama.trim() && next.alamatPemilikLama) { delete next.alamatPemilikLama; changed = true; }
+          if (kecamatanPemilikLama.trim() && next.kecamatanPemilikLama) { delete next.kecamatanPemilikLama; changed = true; }
+          if (desaPemilikLama.trim() && next.desaPemilikLama) { delete next.desaPemilikLama; changed = true; }
+          if (alamatObjekLama.trim() && next.alamatObjekLama) { delete next.alamatObjekLama; changed = true; }
+          if (kecamatanObjekLama.trim() && next.kecamatanObjekLama) { delete next.kecamatanObjekLama; changed = true; }
+          if (desaObjekLama.trim() && next.desaObjekLama) { delete next.desaObjekLama; changed = true; }
+          if (luasTanahLama.trim() !== '' && Number(luasTanahLama) >= 0 && next.luasTanahLama) { delete next.luasTanahLama; changed = true; }
+          if (luasBangunanLama.trim() !== '' && Number(luasBangunanLama) >= 0 && next.luasBangunanLama) { delete next.luasBangunanLama; changed = true; }
+        }
+      }
 
-    if (nomorPelayanan.trim()) filled++;
-    if (tanggalNoPelayanan.trim()) filled++;
-    if (tanggalPenyelesaian.trim()) filled++;
-    if (nop.replace(/[.\-]/g, '').length === 18) filled++;
-    if (noWhatsapp.trim().length >= 10) filled++;
+      if (needDataBaru) {
+        dataBaru.forEach((item, idx) => {
+          if (item.namaPemilikBaru?.trim() && next[`dataBaru.${idx}.namaPemilikBaru`]) { delete next[`dataBaru.${idx}.namaPemilikBaru`]; changed = true; }
+          if (item.alamatPemilikBaru?.trim() && next[`dataBaru.${idx}.alamatPemilikBaru`]) { delete next[`dataBaru.${idx}.alamatPemilikBaru`]; changed = true; }
+          if (item.kecamatanPemilikBaru?.trim() && next[`dataBaru.${idx}.kecamatanPemilikBaru`]) { delete next[`dataBaru.${idx}.kecamatanPemilikBaru`]; changed = true; }
+          if (item.desaPemilikBaru?.trim() && next[`dataBaru.${idx}.desaPemilikBaru`]) { delete next[`dataBaru.${idx}.desaPemilikBaru`]; changed = true; }
+          if (item.alamatObjekBaru?.trim() && next[`dataBaru.${idx}.alamatObjekBaru`]) { delete next[`dataBaru.${idx}.alamatObjekBaru`]; changed = true; }
+          if (item.kecamatanObjekBaru?.trim() && next[`dataBaru.${idx}.kecamatanObjekBaru`]) { delete next[`dataBaru.${idx}.kecamatanObjekBaru`]; changed = true; }
+          if (item.desaObjekBaru?.trim() && next[`dataBaru.${idx}.desaObjekBaru`]) { delete next[`dataBaru.${idx}.desaObjekBaru`]; changed = true; }
+          if (item.luasTanahBaru !== '' && Number(item.luasTanahBaru) >= 0 && next[`dataBaru.${idx}.luasTanahBaru`]) { delete next[`dataBaru.${idx}.luasTanahBaru`]; changed = true; }
+          if (item.luasBangunanBaru !== '' && Number(item.luasBangunanBaru) >= 0 && next[`dataBaru.${idx}.luasBangunanBaru`]) { delete next[`dataBaru.${idx}.luasBangunanBaru`]; changed = true; }
+          if (item.sertifikatBaru?.trim() && next[`dataBaru.${idx}.sertifikatBaru`]) { delete next[`dataBaru.${idx}.sertifikatBaru`]; changed = true; }
+        });
+      }
 
-    if (needDataLama) {
-      total += 10;
-      if (namaPemilikLama.trim()) filled++;
-      if (alamatPemilikLama.trim()) filled++;
-      if (kecamatanPemilikLama.trim()) filled++;
-      if (desaPemilikLama.trim()) filled++;
-      if (alamatObjekLama.trim()) filled++;
-      if (kecamatanObjekLama.trim()) filled++;
-      if (desaObjekLama.trim()) filled++;
-      if (luasTanahLama.trim() !== '') filled++;
-      if (luasBangunanLama.trim() !== '') filled++;
-      if (sertifikatLama.trim()) filled++;
-    }
+      if (changed && Object.keys(next).length === 0) {
+        setError('');
+      }
 
-    if (needDataBaru) {
-      dataBaru.forEach(item => {
-        total += 10;
-        if (item.namaPemilikBaru.trim()) filled++;
-        if (item.alamatPemilikBaru.trim()) filled++;
-        if (item.kecamatanPemilikBaru.trim()) filled++;
-        if (item.desaPemilikBaru.trim()) filled++;
-        if (item.alamatObjekBaru.trim()) filled++;
-        if (item.kecamatanObjekBaru.trim()) filled++;
-        if (item.desaObjekBaru.trim()) filled++;
-        if (item.luasTanahBaru !== '') filled++;
-        if (item.luasBangunanBaru !== '') filled++;
-        if (item.sertifikatBaru.trim()) filled++;
-      });
-    }
-
-    return { total, filled, percentage: Math.round((filled / total) * 100) };
+      return changed ? next : prev;
+    });
   }, [
-    nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, nop, noWhatsapp,
-    needDataLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
-    needDataBaru, dataBaru
+    nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
+    jenisPermohonan, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
+    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
+    needDataLama, needDataBaru, dataLama, dataBaru
   ]);
 
   const validateCurrentStep = useCallback(() => {
@@ -550,25 +524,48 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
       if (!nomorPelayanan || !nomorPelayanan.trim()) errors.nomorPelayanan = 'Nomor pelayanan wajib diisi';
       if (!tanggalNoPelayanan || !tanggalNoPelayanan.trim()) errors.tanggalNoPelayanan = 'Tanggal pelayanan wajib diisi';
       if (!tanggalPenyelesaian || !tanggalPenyelesaian.trim()) errors.tanggalPenyelesaian = 'Tanggal penyelesaian wajib diisi';
-      if (!nop || !/^\d{18}$/.test(nop.replace(/[.\-]/g, ''))) errors.nop = 'NOP harus tepat 18 digit angka';
       if (!noWhatsapp || !/^(628)\d{8,12}$/.test(noWhatsapp)) {
         errors.noWhatsapp = 'WhatsApp tidak valid (minimal 10 digit angka setelah +62)';
       }
     } else if (stepLabel === 'Data Lama (Asal)') {
-      if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
-      if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-      if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-      if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
-      if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
-      if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
-      if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
-      if (luasTanahLama === undefined || luasTanahLama === null || luasTanahLama === '' || Number(luasTanahLama) < 0) {
-        errors.luasTanahLama = 'Luas tanah lama wajib diisi & >= 0';
+      if (jenisPermohonan === 'MUTASI_PENGGABUNGAN') {
+        if (dataLama.length < 2) {
+          errors.dataLamaGeneral = 'Mutasi penggabungan wajib memiliki minimal 2 NOP Asal';
+        }
+        dataLama.forEach((item, idx) => {
+          if (!item.nopLama || !/^\d{18}$/.test(item.nopLama.replace(/[.\-]/g, ''))) {
+            errors[`dataLama.${idx}.nopLama`] = 'NOP Asal harus 18 digit';
+          }
+          if (!item.namaPemilikLama?.trim()) errors[`dataLama.${idx}.namaPemilikLama`] = 'Nama pemilik lama wajib diisi';
+          if (!item.alamatPemilikLama?.trim()) errors[`dataLama.${idx}.alamatPemilikLama`] = 'Alamat pemilik lama wajib diisi';
+          if (!item.kecamatanPemilikLama?.trim()) errors[`dataLama.${idx}.kecamatanPemilikLama`] = 'Kecamatan pemilik lama wajib diisi';
+          if (!item.desaPemilikLama?.trim()) errors[`dataLama.${idx}.desaPemilikLama`] = 'Desa pemilik lama wajib diisi';
+          if (!item.alamatObjekLama?.trim()) errors[`dataLama.${idx}.alamatObjekLama`] = 'Alamat objek lama wajib diisi';
+          if (!item.kecamatanObjekLama?.trim()) errors[`dataLama.${idx}.kecamatanObjekLama`] = 'Kecamatan objek lama wajib diisi';
+          if (!item.desaObjekLama?.trim()) errors[`dataLama.${idx}.desaObjekLama`] = 'Desa objek lama wajib diisi';
+          if (item.luasTanahLama === undefined || item.luasTanahLama === null || item.luasTanahLama === '' || Number(item.luasTanahLama) < 0) {
+            errors[`dataLama.${idx}.luasTanahLama`] = 'Luas tanah wajib diisi & >= 0';
+          }
+          if (item.luasBangunanLama === undefined || item.luasBangunanLama === null || item.luasBangunanLama === '' || Number(item.luasBangunanLama) < 0) {
+            errors[`dataLama.${idx}.luasBangunanLama`] = 'Luas bangunan wajib diisi & >= 0';
+          }
+        });
+      } else {
+        if (!nopLama || !/^\d{18}$/.test(nopLama.replace(/[.\-]/g, ''))) errors.nopLama = 'NOP harus tepat 18 digit angka';
+        if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
+        if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
+        if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
+        if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
+        if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
+        if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
+        if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
+        if (luasTanahLama === undefined || luasTanahLama === null || luasTanahLama === '' || Number(luasTanahLama) < 0) {
+          errors.luasTanahLama = 'Luas tanah lama wajib diisi & >= 0';
+        }
+        if (luasBangunanLama === undefined || luasBangunanLama === null || luasBangunanLama === '' || Number(luasBangunanLama) < 0) {
+          errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
+        }
       }
-      if (luasBangunanLama === undefined || luasBangunanLama === null || luasBangunanLama === '' || Number(luasBangunanLama) < 0) {
-        errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
-      }
-      if (!sertifikatLama?.trim()) errors.sertifikatLama = 'Sertifikat lama wajib diisi';
     } else if (stepLabel === 'Data Baru') {
       dataBaru.forEach((item, idx) => {
         if (!item.namaPemilikBaru?.trim()) errors[`dataBaru.${idx}.namaPemilikBaru`] = 'Nama pemilik baru wajib diisi';
@@ -590,10 +587,90 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
 
     return errors;
   }, [
-    currentStep, steps, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, nop, noWhatsapp,
-    namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
-    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, sertifikatLama,
+    currentStep, steps, nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
+    jenisPermohonan, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama,
+    alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama, dataLama,
     dataBaru
+  ]);
+
+  const validateFullForm = useCallback(() => {
+    const errors: Record<string, string> = {};
+
+    // Step 1: Data Utama
+    if (!nomorPelayanan || !nomorPelayanan.trim()) errors.nomorPelayanan = 'Nomor pelayanan wajib diisi';
+    if (!tanggalNoPelayanan || !tanggalNoPelayanan.trim()) errors.tanggalNoPelayanan = 'Tanggal pelayanan wajib diisi';
+    if (!tanggalPenyelesaian || !tanggalPenyelesaian.trim()) errors.tanggalPenyelesaian = 'Tanggal penyelesaian wajib diisi';
+    if (!noWhatsapp || !/^(628)\d{8,12}$/.test(noWhatsapp)) {
+      errors.noWhatsapp = 'WhatsApp tidak valid (minimal 10 digit angka setelah +62)';
+    }
+
+    // Step 2: Data Lama
+    if (needDataLama) {
+      if (jenisPermohonan === 'MUTASI_PENGGABUNGAN') {
+        if (dataLama.length < 2) {
+          errors.dataLamaGeneral = 'Mutasi penggabungan wajib memiliki minimal 2 NOP Asal';
+        }
+        dataLama.forEach((item, idx) => {
+          if (!item.nopLama || !/^\d{18}$/.test(item.nopLama.replace(/[.\-]/g, ''))) {
+            errors[`dataLama.${idx}.nopLama`] = 'NOP Asal harus 18 digit';
+          }
+          if (!item.namaPemilikLama?.trim()) errors[`dataLama.${idx}.namaPemilikLama`] = 'Nama pemilik lama wajib diisi';
+          if (!item.alamatPemilikLama?.trim()) errors[`dataLama.${idx}.alamatPemilikLama`] = 'Alamat pemilik lama wajib diisi';
+          if (!item.kecamatanPemilikLama?.trim()) errors[`dataLama.${idx}.kecamatanPemilikLama`] = 'Kecamatan pemilik lama wajib diisi';
+          if (!item.desaPemilikLama?.trim()) errors[`dataLama.${idx}.desaPemilikLama`] = 'Desa pemilik lama wajib diisi';
+          if (!item.alamatObjekLama?.trim()) errors[`dataLama.${idx}.alamatObjekLama`] = 'Alamat objek lama wajib diisi';
+          if (!item.kecamatanObjekLama?.trim()) errors[`dataLama.${idx}.kecamatanObjekLama`] = 'Kecamatan objek lama wajib diisi';
+          if (!item.desaObjekLama?.trim()) errors[`dataLama.${idx}.desaObjekLama`] = 'Desa objek lama wajib diisi';
+          if (item.luasTanahLama === undefined || item.luasTanahLama === null || item.luasTanahLama === '' || Number(item.luasTanahLama) < 0) {
+            errors[`dataLama.${idx}.luasTanahLama`] = 'Luas tanah wajib diisi & >= 0';
+          }
+          if (item.luasBangunanLama === undefined || item.luasBangunanLama === null || item.luasBangunanLama === '' || Number(item.luasBangunanLama) < 0) {
+            errors[`dataLama.${idx}.luasBangunanLama`] = 'Luas bangunan wajib diisi & >= 0';
+          }
+        });
+      } else {
+        if (!nopLama || !/^\d{18}$/.test(nopLama.replace(/[.\-]/g, ''))) errors.nopLama = 'NOP harus tepat 18 digit angka';
+        if (!namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
+        if (!alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
+        if (!kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
+        if (!desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
+        if (!alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
+        if (!kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
+        if (!desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
+        if (luasTanahLama === undefined || luasTanahLama === null || luasTanahLama === '' || Number(luasTanahLama) < 0) {
+          errors.luasTanahLama = 'Luas tanah lama wajib diisi & >= 0';
+        }
+        if (luasBangunanLama === undefined || luasBangunanLama === null || luasBangunanLama === '' || Number(luasBangunanLama) < 0) {
+          errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
+        }
+      }
+    }
+
+    // Step 3: Data Baru
+    if (needDataBaru) {
+      dataBaru.forEach((item, idx) => {
+        if (!item.namaPemilikBaru?.trim()) errors[`dataBaru.${idx}.namaPemilikBaru`] = 'Nama pemilik baru wajib diisi';
+        if (!item.alamatPemilikBaru?.trim()) errors[`dataBaru.${idx}.alamatPemilikBaru`] = 'Alamat pemilik baru wajib diisi';
+        if (!item.kecamatanPemilikBaru?.trim()) errors[`dataBaru.${idx}.kecamatanPemilikBaru`] = 'Kecamatan pemilik baru wajib diisi';
+        if (!item.desaPemilikBaru?.trim()) errors[`dataBaru.${idx}.desaPemilikBaru`] = 'Desa pemilik baru wajib diisi';
+        if (!item.alamatObjekBaru?.trim()) errors[`dataBaru.${idx}.alamatObjekBaru`] = 'Alamat objek baru wajib diisi';
+        if (!item.kecamatanObjekBaru?.trim()) errors[`dataBaru.${idx}.kecamatanObjekBaru`] = 'Kecamatan objek baru wajib diisi';
+        if (!item.desaObjekBaru?.trim()) errors[`dataBaru.${idx}.desaObjekBaru`] = 'Desa objek baru wajib diisi';
+        if (item.luasTanahBaru === undefined || item.luasTanahBaru === null || item.luasTanahBaru === '' || Number(item.luasTanahBaru) < 0) {
+          errors[`dataBaru.${idx}.luasTanahBaru`] = 'Luas tanah baru wajib diisi & >= 0';
+        }
+        if (item.luasBangunanBaru === undefined || item.luasBangunanBaru === null || item.luasBangunanBaru === '' || Number(item.luasBangunanBaru) < 0) {
+          errors[`dataBaru.${idx}.luasBangunanBaru`] = 'Luas bangunan baru wajib diisi & >= 0';
+        }
+        if (!item.sertifikatBaru?.trim()) errors[`dataBaru.${idx}.sertifikatBaru`] = 'Sertifikat baru wajib diisi';
+      });
+    }
+
+    return errors;
+  }, [
+    nomorPelayanan, tanggalNoPelayanan, tanggalPenyelesaian, noWhatsapp,
+    needDataLama, jenisPermohonan, dataLama, nopLama, namaPemilikLama, alamatPemilikLama, kecamatanPemilikLama, desaPemilikLama, alamatObjekLama, kecamatanObjekLama, desaObjekLama, luasTanahLama, luasBangunanLama,
+    needDataBaru, dataBaru
   ]);
 
   const handleNextStep = useCallback((e: React.MouseEvent) => {
@@ -625,96 +702,127 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
     setCurrentStep(prev => Math.max(prev - 1, 1));
   }, []);
 
-  const validateFullForm = (data: any) => {
-    const errors: Record<string, string> = {};
-
-    if (!data.nomorPelayanan || !data.nomorPelayanan.trim()) errors.nomorPelayanan = 'Nomor pelayanan wajib diisi';
-    if (!data.tanggalNoPelayanan || !data.tanggalNoPelayanan.trim()) {
-      errors.tanggalNoPelayanan = 'Tanggal pelayanan wajib diisi';
-    }
-    if (!data.tanggalPenyelesaian || !data.tanggalPenyelesaian.trim()) {
-      errors.tanggalPenyelesaian = 'Tanggal penyelesaian wajib diisi';
-    }
-    if (!data.nop || !/^\d{18}$/.test(data.nop.replace(/[.\-]/g, ''))) errors.nop = 'NOP harus tepat 18 digit angka';
-    if (!data.noWhatsapp || !/^(628)\d{8,12}$/.test(data.noWhatsapp)) {
-      errors.noWhatsapp = 'WhatsApp tidak valid (minimal 10 digit angka setelah +62)';
-    }
-
-    if (needDataLama) {
-      if (!data.namaPemilikLama?.trim()) errors.namaPemilikLama = 'Nama pemilik lama wajib diisi';
-      if (!data.alamatPemilikLama?.trim()) errors.alamatPemilikLama = 'Alamat pemilik lama wajib diisi';
-      if (!data.kecamatanPemilikLama?.trim()) errors.kecamatanPemilikLama = 'Kecamatan pemilik lama wajib diisi';
-      if (!data.desaPemilikLama?.trim()) errors.desaPemilikLama = 'Desa pemilik lama wajib diisi';
-      if (!data.alamatObjekLama?.trim()) errors.alamatObjekLama = 'Alamat objek lama wajib diisi';
-      if (!data.kecamatanObjekLama?.trim()) errors.kecamatanObjekLama = 'Kecamatan objek lama wajib diisi';
-      if (!data.desaObjekLama?.trim()) errors.desaObjekLama = 'Desa objek lama wajib diisi';
-      if (data.luasTanahLama === undefined || data.luasTanahLama === null || data.luasTanahLama === '' || Number(data.luasTanahLama) < 0) {
-        errors.luasTanahLama = 'Luas tanah lama wajib diisi & >= 0';
-      }
-      if (data.luasBangunanLama === undefined || data.luasBangunanLama === null || data.luasBangunanLama === '' || Number(data.luasBangunanLama) < 0) {
-        errors.luasBangunanLama = 'Luas bangunan lama wajib diisi & >= 0';
-      }
-      if (!data.sertifikatLama || !data.sertifikatLama.trim()) {
-        errors.sertifikatLama = 'Sertifikat lama wajib diisi';
-      }
-    }
-
-    if (needDataBaru) {
-      if (!data.dataBaru || data.dataBaru.length === 0) {
-        errors.dataBaru = 'Minimal 1 data pemilik baru wajib diisi';
-      } else {
-        data.dataBaru.forEach((item: any, idx: number) => {
-          if (!item.namaPemilikBaru?.trim()) errors[`dataBaru.${idx}.namaPemilikBaru`] = 'Nama pemilik baru wajib diisi';
-          if (!item.alamatPemilikBaru?.trim()) errors[`dataBaru.${idx}.alamatPemilikBaru`] = 'Alamat pemilik baru wajib diisi';
-          if (!item.kecamatanPemilikBaru?.trim()) errors[`dataBaru.${idx}.kecamatanPemilikBaru`] = 'Kecamatan pemilik baru wajib diisi';
-          if (!item.desaPemilikBaru?.trim()) errors[`dataBaru.${idx}.desaPemilikBaru`] = 'Desa pemilik baru wajib diisi';
-          if (!item.alamatObjekBaru?.trim()) errors[`dataBaru.${idx}.alamatObjekBaru`] = 'Alamat objek baru wajib diisi';
-          if (!item.kecamatanObjekBaru?.trim()) errors[`dataBaru.${idx}.kecamatanObjekBaru`] = 'Kecamatan objek baru wajib diisi';
-          if (!item.desaObjekBaru?.trim()) errors[`dataBaru.${idx}.desaObjekBaru`] = 'Desa objek baru wajib diisi';
-          if (item.luasTanahBaru === undefined || item.luasTanahBaru === null || item.luasTanahBaru === '' || Number(item.luasTanahBaru) < 0) {
-            errors[`dataBaru.${idx}.luasTanahBaru`] = 'Luas tanah baru wajib diisi & >= 0';
-          }
-          if (item.luasBangunanBaru === undefined || item.luasBangunanBaru === null || item.luasBangunanBaru === '' || Number(item.luasBangunanBaru) < 0) {
-            errors[`dataBaru.${idx}.luasBangunanBaru`] = 'Luas bangunan baru wajib diisi & >= 0';
-          }
-          if (!item.sertifikatBaru || !item.sertifikatBaru.trim()) {
-            errors[`dataBaru.${idx}.sertifikatBaru`] = 'Sertifikat baru wajib diisi';
-          }
-        });
-      }
-    }
-
-    return errors;
-  };
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Validate ALL fields across full form before submitting
+    const errors = validateFullForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError('Formulir belum lengkap. Harap periksa dan lengkapi bagian berpembatas merah.');
+
+      const firstKey = Object.keys(errors)[0];
+      const currentLabel = steps[currentStep - 1]?.label;
+
+      if (firstKey.startsWith('dataBaru.') && currentLabel !== 'Data Baru') {
+        const stepIdx = steps.findIndex(s => s.label === 'Data Baru');
+        if (stepIdx !== -1) setCurrentStep(stepIdx + 1);
+      } else if (firstKey.startsWith('dataLama.') && currentLabel !== 'Data Lama (Asal)') {
+        const stepIdx = steps.findIndex(s => s.label === 'Data Lama (Asal)');
+        if (stepIdx !== -1) setCurrentStep(stepIdx + 1);
+      } else if ((firstKey === 'nomorPelayanan' || firstKey === 'tanggalNoPelayanan' || firstKey === 'tanggalPenyelesaian' || firstKey === 'noWhatsapp') && currentLabel !== 'Data Utama') {
+        setCurrentStep(1);
+      }
+
+      setTimeout(() => {
+        const element = document.getElementById(firstKey);
+        if (element) {
+          element.focus();
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+
+      return;
+    }
+
+    // Determine derived NOP
+    let derivedNop = '';
+    if (jenisPermohonan === 'MUTASI_PENGGABUNGAN' && dataLama.length > 0) {
+      let maxLt = -1;
+      let selectedItem = dataLama[0];
+      dataLama.forEach(item => {
+        const lt = Number(item.luasTanahLama) || 0;
+        if (lt > maxLt) {
+          maxLt = lt;
+          selectedItem = item;
+        }
+      });
+      derivedNop = selectedItem.nopLama?.replace(/[.\-]/g, '') || '';
+    } else if (needDataLama) {
+      derivedNop = nopLama.replace(/[.\-]/g, '');
+    } else if (dataBaru.length > 0) {
+      derivedNop = dataBaru[0].nopBaru?.replace(/[.\-]/g, '') || '-';
+    } else {
+      derivedNop = '-';
+    }
+
+    const payloadDataLama = jenisPermohonan === 'MUTASI_PENGGABUNGAN'
+      ? dataLama.map((item, idx) => ({
+        nopLama: item.nopLama.replace(/[.\-]/g, ''),
+        namaPemilikLama: item.namaPemilikLama.toUpperCase(),
+        alamatPemilikLama: item.alamatPemilikLama.toUpperCase(),
+        blokPemilikLama: item.blokPemilikLama ? item.blokPemilikLama.toUpperCase() : null,
+        rtPemilikLama: item.rtPemilikLama ? item.rtPemilikLama.toUpperCase() : null,
+        rwPemilikLama: item.rwPemilikLama ? item.rwPemilikLama.toUpperCase() : null,
+        kecamatanPemilikLama: item.kecamatanPemilikLama.toUpperCase(),
+        desaPemilikLama: item.desaPemilikLama.toUpperCase(),
+        alamatObjekLama: item.alamatObjekLama.toUpperCase(),
+        blokObjekLama: item.blokObjekLama ? item.blokObjekLama.toUpperCase() : null,
+        rtObjekLama: item.rtObjekLama ? item.rtObjekLama.toUpperCase() : null,
+        rwObjekLama: item.rwObjekLama ? item.rwObjekLama.toUpperCase() : null,
+        kecamatanObjekLama: item.kecamatanObjekLama.toUpperCase(),
+        desaObjekLama: item.desaObjekLama.toUpperCase(),
+        luasTanahLama: Number(item.luasTanahLama) || 0,
+        luasBangunanLama: Number(item.luasBangunanLama) || 0,
+        isUtama: idx === 0
+      }))
+      : (needDataLama ? [{
+        nopLama: nopLama.replace(/[.\-]/g, ''),
+        namaPemilikLama: namaPemilikLama.toUpperCase(),
+        alamatPemilikLama: alamatPemilikLama.toUpperCase(),
+        blokPemilikLama: blokPemilikLama ? blokPemilikLama.toUpperCase() : null,
+        rtPemilikLama: rtPemilikLama ? rtPemilikLama.toUpperCase() : null,
+        rwPemilikLama: rwPemilikLama ? rwPemilikLama.toUpperCase() : null,
+        kecamatanPemilikLama: kecamatanPemilikLama.toUpperCase(),
+        desaPemilikLama: desaPemilikLama.toUpperCase(),
+        alamatObjekLama: alamatObjekLama.toUpperCase(),
+        blokObjekLama: blokObjekLama ? blokObjekLama.toUpperCase() : null,
+        rtObjekLama: rtObjekLama ? rtObjekLama.toUpperCase() : null,
+        rwObjekLama: rwObjekLama ? rwObjekLama.toUpperCase() : null,
+        kecamatanObjekLama: kecamatanObjekLama.toUpperCase(),
+        desaObjekLama: desaObjekLama.toUpperCase(),
+        luasTanahLama: Number(luasTanahLama) || 0,
+        luasBangunanLama: Number(luasBangunanLama) || 0,
+        isUtama: true
+      }] : []);
+
+    const firstLama: any = payloadDataLama[0] || {};
 
     const formData = {
       jenisPermohonan,
       nomorPelayanan: nomorPelayanan.toUpperCase(),
       tanggalNoPelayanan,
       tanggalPenyelesaian: tanggalPenyelesaian || null,
-      nop: nop.replace(/[.\-]/g, ''),
+      nop: derivedNop,
       noWhatsapp,
-      namaPemilikLama: needDataLama ? namaPemilikLama.toUpperCase() : null,
-      alamatPemilikLama: needDataLama ? alamatPemilikLama.toUpperCase() : null,
-      blokPemilikLama: needDataLama && blokPemilikLama ? blokPemilikLama.toUpperCase() : null,
-      rtPemilikLama: needDataLama && rtPemilikLama ? rtPemilikLama.toUpperCase() : null,
-      rwPemilikLama: needDataLama && rwPemilikLama ? rwPemilikLama.toUpperCase() : null,
-      kecamatanPemilikLama: needDataLama ? kecamatanPemilikLama.toUpperCase() : null,
-      desaPemilikLama: needDataLama ? desaPemilikLama.toUpperCase() : null,
-      alamatObjekLama: needDataLama ? alamatObjekLama.toUpperCase() : null,
-      blokObjekLama: needDataLama && blokObjekLama ? blokObjekLama.toUpperCase() : null,
-      rtObjekLama: needDataLama && rtObjekLama ? rtObjekLama.toUpperCase() : null,
-      rwObjekLama: needDataLama && rwObjekLama ? rwObjekLama.toUpperCase() : null,
-      kecamatanObjekLama: needDataLama ? kecamatanObjekLama.toUpperCase() : null,
-      desaObjekLama: needDataLama ? desaObjekLama.toUpperCase() : null,
-      luasTanahLama: needDataLama && luasTanahLama !== '' ? Number(luasTanahLama) : null,
-      luasBangunanLama: needDataLama && luasBangunanLama !== '' ? Number(luasBangunanLama) : null,
-      sertifikatLama: needDataLama ? sertifikatLama.toUpperCase() : null,
+      namaPemilikLama: firstLama.namaPemilikLama || null,
+      alamatPemilikLama: firstLama.alamatPemilikLama || null,
+      blokPemilikLama: firstLama.blokPemilikLama || null,
+      rtPemilikLama: firstLama.rtPemilikLama || null,
+      rwPemilikLama: firstLama.rwPemilikLama || null,
+      kecamatanPemilikLama: firstLama.kecamatanPemilikLama || null,
+      desaPemilikLama: firstLama.desaPemilikLama || null,
+      alamatObjekLama: firstLama.alamatObjekLama || null,
+      blokObjekLama: firstLama.blokObjekLama || null,
+      rtObjekLama: firstLama.rtObjekLama || null,
+      rwObjekLama: firstLama.rwObjekLama || null,
+      kecamatanObjekLama: firstLama.kecamatanObjekLama || null,
+      desaObjekLama: firstLama.desaObjekLama || null,
+      luasTanahLama: firstLama.luasTanahLama ?? null,
+      luasBangunanLama: firstLama.luasBangunanLama ?? null,
+      dataLama: payloadDataLama,
       dataBaru: needDataBaru ? dataBaru.map(item => ({
         namaPemilikBaru: item.namaPemilikBaru.toUpperCase(),
         alamatPemilikBaru: item.alamatPemilikBaru.toUpperCase(),
@@ -731,27 +839,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         desaObjekBaru: item.desaObjekBaru.toUpperCase(),
         luasTanahBaru: item.luasTanahBaru !== '' ? Number(item.luasTanahBaru) : null,
         luasBangunanBaru: item.luasBangunanBaru !== '' ? Number(item.luasBangunanBaru) : null,
-        sertifikatBaru: item.sertifikatBaru.toUpperCase()
+        sertifikatBaru: item.sertifikatBaru.toUpperCase(),
+        catatan: item.catatan ? item.catatan.toUpperCase() : null
       })) : []
     };
 
-    const errors = validateFullForm(formData);
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      setError('Form kurang lengkap. Harap periksa detail isian merah di bawah.');
-
-      setTimeout(() => {
-        const firstErrorKey = Object.keys(errors)[0];
-        const element = document.getElementById(firstErrorKey);
-        if (element) {
-          element.focus();
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 50);
-
-      return;
-    }
-    setFormErrors({});
     setStatusModalTitle('Menyimpan Permohonan');
     setStatusModalMessage('Sedang memproses dan menyimpan data permohonan ke server...');
     setStatusModalStatus('loading');
@@ -799,20 +891,29 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
   return (
     <div className="w-full bg-transparent animate-fadeIn">
       {/* Full-width Stepper Card Container */}
-      <div className="w-full bg-white rounded-lg border border-slate-200/90 shadow-xs flex flex-col overflow-hidden">
+      <div className="w-full bg-white rounded-md border border-slate-200/90 shadow-xs flex flex-col overflow-hidden">
 
-        {/* Top Header Bar: Back Button + Live Completion Widget + Auto-Save */}
-        <div className="px-6 py-3.5 border-b border-slate-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="h-10 px-3.5 rounded-md border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-2 shrink-0"
-            >
-              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-              <span>Kembali</span>
-            </button>
-          </div>
+        {/* Top Header Bar: Back & Reset Draft Buttons */}
+        <div className="px-6 py-3.5 border-b border-slate-200/80 bg-white flex flex-row items-center justify-between gap-3 select-none">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-9 px-3.5 rounded-md border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-2 shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+            <span>Kembali</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetDraft}
+            disabled={loading}
+            className="h-9 px-3 rounded-md border border-red-200/90 bg-red-50/60 hover:bg-red-100/80 text-red-600 font-normal text-[12px] font-sans transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+            title="Hapus draf dari penyimpanan lokal dan reset formulir"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Form & Draf</span>
+          </button>
         </div>
 
         {/* Labeled Multi-Step Stepper Bar */}
@@ -836,10 +937,10 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                         if (stepNum < currentStep) setCurrentStep(stepNum);
                       }}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${isActive
-                          ? 'bg-[#00a389] text-white shadow-3xs'
-                          : isCompleted
-                            ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
-                            : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
+                        ? 'bg-[#00a389] text-white shadow-3xs'
+                        : isCompleted
+                          ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
+                          : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
                         }`}
                     >
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
@@ -859,20 +960,20 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         <div className="p-6 sm:p-8 flex flex-col gap-6">
 
           {error && (
-            <div className="bg-red-50/80 border border-red-200/65 text-red-750 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2.5 animate-fadeIn shrink-0">
+            <div className="bg-red-50/80 border border-red-200/65 text-red-750 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2.5 animate-fadeIn shrink-0">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="bg-emerald-50/80 border border-emerald-200/65 text-emerald-800 text-xs font-bold rounded-xl px-4 py-3 flex items-start gap-2.5 animate-fadeIn shrink-0">
+            <div className="bg-emerald-50/80 border border-emerald-200/65 text-emerald-800 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2.5 animate-fadeIn shrink-0">
               <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
               <span>{success}</span>
             </div>
           )}
 
-          <form onSubmit={handleCreate} className="flex flex-col gap-6">
+          <form onSubmit={handleCreate} className="flex flex-col gap-6" autoComplete="off">
 
             {/* STEP 1: DATA UTAMA */}
             {currentStepLabel === 'Data Utama' && (
@@ -886,7 +987,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       value={jenisPermohonan}
                       onChange={(e) => setJenisPermohonan(e.target.value)}
                       disabled={loading}
-                      className="w-full bg-slate-50 border border-slate-200/90 rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans"
+                      className={getInputClass(false, 'cursor-pointer')}
                     >
                       {JENIS_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -899,63 +1000,32 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     <input
                       type="text"
                       id="nomorPelayanan"
+                      autoComplete="off"
                       value={nomorPelayanan}
                       onChange={(e) => setNomorPelayanan(e.target.value.toUpperCase())}
                       style={{ textTransform: 'uppercase' }}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal font-mono text-slate-900 tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nomorPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={getInputClass(!!formErrors.nomorPelayanan, 'font-mono tracking-wide')}
                     />
                     {formErrors.nomorPelayanan && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nomorPelayanan}</span>}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-normal text-slate-700 tracking-wide flex items-center justify-between font-sans">
-                      <span>Nomor Objek Pajak (NOP) <span className="text-red-500">*</span></span>
-                      <span className={`text-xs font-mono font-normal pr-1 ${nop.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
-                        {nop.replace(/[^\d]/g, '').length}/18 digit
-                        {nop.replace(/[^\d]/g, '').length === 18 && ' ✓'}
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      id="nop"
-                      maxLength={24}
-                      placeholder="Contoh: 36.19.xxx.xxx.xxx-xxxx.x"
-                      value={nop}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
-                        let fmt = '';
-                        if (raw.length <= 2) fmt = raw;
-                        else if (raw.length <= 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
-                        else if (raw.length <= 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
-                        else if (raw.length <= 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
-                        else if (raw.length <= 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
-                        else if (raw.length <= 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
-                        else fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
-                        setNop(fmt);
-                      }}
-                      disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 font-mono tracking-wide focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.nop ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                    />
-                    {formErrors.nop && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nop}</span>}
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor WhatsApp WP <span className="text-red-500">*</span></label>
-                    <div className={`flex items-center bg-slate-50 border rounded-md overflow-hidden transition-all focus-within:bg-white focus-within:border-[#00a389] focus-within:ring-2 focus-within:ring-[#00a389]/10 ${formErrors.noWhatsapp ? 'border-red-500' : 'border-slate-200/90'
-                      }`}>
-                      <span className="bg-slate-100/80 border-r border-slate-200 px-3 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
+                    <div className={getWhatsAppContainerClass(!!formErrors.noWhatsapp)}>
+                      <span className="bg-slate-50 border-r border-slate-200 px-3.5 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
                         <span>+62</span>
                       </span>
                       <input
                         type="text"
                         id="noWhatsapp"
+                        autoComplete="off"
                         placeholder="81234567890"
                         value={noWhatsapp.startsWith('62') ? noWhatsapp.slice(2) : noWhatsapp}
                         onChange={handleWhatsappChange}
                         disabled={loading}
-                        className="w-full px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none bg-transparent font-sans"
+                        className="w-full px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none bg-white font-sans"
                       />
                     </div>
                     {formErrors.noWhatsapp && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.noWhatsapp}</span>}
@@ -966,10 +1036,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     <input
                       type="date"
                       id="tanggalNoPelayanan"
+                      autoComplete="off"
                       value={tanggalNoPelayanan}
                       onChange={(e) => setTanggalNoPelayanan(e.target.value)}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalNoPelayanan ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={getInputClass(!!formErrors.tanggalNoPelayanan)}
                     />
                     {formErrors.tanggalNoPelayanan && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalNoPelayanan}</span>}
                   </div>
@@ -979,10 +1050,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     <input
                       type="date"
                       id="tanggalPenyelesaian"
+                      autoComplete="off"
                       value={tanggalPenyelesaian}
                       onChange={(e) => setTanggalPenyelesaian(e.target.value)}
                       disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.tanggalPenyelesaian ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                      className={getInputClass(!!formErrors.tanggalPenyelesaian)}
                     />
                     {formErrors.tanggalPenyelesaian && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.tanggalPenyelesaian}</span>}
                   </div>
@@ -993,264 +1065,595 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
             {/* STEP 2: DATA LAMA */}
             {currentStepLabel === 'Data Lama (Asal)' && needDataLama && (
               <div className="flex flex-col gap-5 bg-transparent animate-fadeIn font-sans">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* 1. Nama pemilik lama (Full Width) */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      id="namaPemilikLama"
-                      value={namaPemilikLama}
-                      onChange={(e) => setNamaPemilikLama(e.target.value.toUpperCase())}
-                      style={{ textTransform: 'uppercase' }}
-                      disabled={loading}
-                      className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.namaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                    />
-                    {formErrors.namaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.namaPemilikLama}</span>}
-                  </div>
 
-                  {/* KELOMPOK ALAMAT, KECAMATAN, DESA */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
-                    {/* Kiri: Pemilik */}
-                    <div className="flex flex-col gap-5">
-                      {/* 2. Alamat pemilik lama */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          id="alamatPemilikLama"
-                          value={alamatPemilikLama}
-                          onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        />
-                        {formErrors.alamatPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
-                      </div>
-
-                      {/* Blok, RT, RW Pemilik Lama */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
-                          <input
-                            type="text"
-                            placeholder="A4"
-                            value={blokPemilikLama}
-                            onChange={(e) => setBlokPemilikLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
-                          <input
-                            type="text"
-                            placeholder="001"
-                            value={rtPemilikLama}
-                            onChange={(e) => setRtPemilikLama(e.target.value)}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
-                          <input
-                            type="text"
-                            placeholder="005"
-                            value={rwPemilikLama}
-                            onChange={(e) => setRwPemilikLama(e.target.value)}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                      </div>
-
-                      {/* 3. Kecamatan pemilik */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          id="kecamatanPemilikLama"
-                          value={kecamatanPemilikLama}
-                          onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.kecamatanPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        />
-                        {formErrors.kecamatanPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanPemilikLama}</span>}
-                      </div>
-
-                      {/* 4. Desa pemilik */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          id="desaPemilikLama"
-                          value={desaPemilikLama}
-                          onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.desaPemilikLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        />
-                        {formErrors.desaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaPemilikLama}</span>}
-                      </div>
-                    </div>
-
-                    {/* Kanan: Objek */}
-                    <div className="flex flex-col gap-5">
-                      {/* 5. Alamat objek pajak */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Pajak <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          id="alamatObjekLama"
-                          value={alamatObjekLama}
-                          onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
-                          style={{ textTransform: 'uppercase' }}
-                          disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.alamatObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        />
-                        {formErrors.alamatObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
-                      </div>
-
-                      {/* Blok, RT, RW Objek Lama */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
-                          <input
-                            type="text"
-                            placeholder="B2"
-                            value={blokObjekLama}
-                            onChange={(e) => setBlokObjekLama(e.target.value.toUpperCase())}
-                            style={{ textTransform: 'uppercase' }}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
-                          <input
-                            type="text"
-                            placeholder="001"
-                            value={rtObjekLama}
-                            onChange={(e) => setRtObjekLama(e.target.value)}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
-                          <input
-                            type="text"
-                            placeholder="005"
-                            value={rwObjekLama}
-                            onChange={(e) => setRwObjekLama(e.target.value)}
-                            disabled={loading}
-                            className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                          />
-                        </div>
-                      </div>
-
-                      {/* 7. Kecamatan objek */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
-                        <select
-                          id="kecamatanObjekLama"
-                          value={kecamatanObjekLama}
-                          onChange={(e) => {
-                            setKecamatanObjekLama(e.target.value);
-                            setDesaObjekLama(''); // Reset desa
-                          }}
-                          disabled={loading}
-                          className={`w-full bg-slate-50 border rounded-lg px-3 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors.kecamatanObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        >
-                          <option value="">Pilih Kecamatan Objek</option>
-                          {Object.keys(KECAMATAN_DATA).map(kec => (
-                            <option key={kec} value={kec}>{kec}</option>
-                          ))}
-                        </select>
-                        {formErrors.kecamatanObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanObjekLama}</span>}
-                      </div>
-
-                      {/* 8. Desa objek */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek <span className="text-red-500">*</span></label>
-                        <select
-                          id="desaObjekLama"
-                          value={desaObjekLama}
-                          onChange={(e) => setDesaObjekLama(e.target.value)}
-                          disabled={loading || !kecamatanObjekLama}
-                          className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors.desaObjekLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                        >
-                          <option value="">
-                            {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
-                          </option>
-                          {kecamatanObjekLama && KECAMATAN_DATA[kecamatanObjekLama]?.map(desa => (
-                            <option key={desa} value={desa}>{desa}</option>
-                          ))}
-                        </select>
-                        {formErrors.desaObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaObjekLama}</span>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 9. Luas tanah asal (Kiri) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah Asal <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="luasTanahLama"
-                        value={luasTanahLama}
-                        onChange={(e) => setLuasTanahLama(e.target.value)}
+                {/* SPECIAL UI FOR MUTASI_PENGGABUNGAN (MULTI NOP ASAL) */}
+                {jenisPermohonan === 'MUTASI_PENGGABUNGAN' ? (
+                  <div className="flex flex-col gap-6 font-sans">
+                    <div className="flex items-center justify-end select-none mb-1">
+                      <button
+                        type="button"
+                        onClick={handleAddNopAsal}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasTanahLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                      />
-                      <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
-                        m²
-                      </span>
+                        className="h-8 px-3.5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 font-sans"
+                      >
+                        <Plus className="w-4 h-4 stroke-[3]" /> Tambah NOP Asal
+                      </button>
                     </div>
-                    {formErrors.luasTanahLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasTanahLama}</span>}
-                  </div>
 
-                  {/* 10. Luas bangunan asal (Kanan) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan Asal <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="luasBangunanLama"
-                        value={luasBangunanLama}
-                        onChange={(e) => setLuasBangunanLama(e.target.value)}
-                        disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.luasBangunanLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                      />
-                      <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
-                        m²
-                      </span>
-                    </div>
-                    {formErrors.luasBangunanLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasBangunanLama}</span>}
-                  </div>
+                    {formErrors.dataLamaGeneral && (
+                      <span className="text-xs text-red-600 font-normal">{formErrors.dataLamaGeneral}</span>
+                    )}
 
-                  {/* 6. Nomor/Jenis sertifikat lama */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
-                    <div className="relative">
+                    {dataLama.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex flex-col gap-4 relative p-5 border border-slate-200/80 rounded-md pt-10 shadow-3xs bg-white`}
+                      >
+                        <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
+                          <span className="text-[13px] font-normal text-[#008f78] tracking-wide font-sans">NOP Asal #{idx + 1}</span>
+                          <div className="flex items-center gap-2">
+                            {idx === 0 && (
+                              <span className="px-2 py-0.5 text-[10px] font-medium bg-[#00a389] text-white rounded-md">NOP Utama</span>
+                            )}
+
+                            {dataLama.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveNopAsal(idx)}
+                                disabled={loading}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
+                          {/* NOP Asal */}
+                          <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor Objek Pajak <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataLama.${idx}.nopLama`}
+                              autoComplete="off"
+                              maxLength={24}
+                              placeholder="36.19.xxx.xxx.xxx-xxxx.x"
+                              value={item.nopLama}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
+                                let fmt = '';
+                                if (raw.length <= 2) fmt = raw;
+                                else if (raw.length <= 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
+                                else if (raw.length <= 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
+                                else if (raw.length <= 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
+                                else if (raw.length <= 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
+                                else if (raw.length <= 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
+                                else fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
+                                handleDataLamaItemChange(idx, 'nopLama', fmt);
+                              }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataLama.${idx}.nopLama`], 'font-mono tracking-wide')}
+                            />
+                            {formErrors[`dataLama.${idx}.nopLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.nopLama`]}</span>}
+                          </div>
+
+                          {/* Nama Pemilik */}
+                          <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik Asal <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataLama.${idx}.namaPemilikLama`}
+                              autoComplete="off"
+                              value={item.namaPemilikLama}
+                              onChange={(e) => handleDataLamaItemChange(idx, 'namaPemilikLama', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataLama.${idx}.namaPemilikLama`])}
+                            />
+                            {formErrors[`dataLama.${idx}.namaPemilikLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.namaPemilikLama`]}</span>}
+                          </div>
+
+                          {/* Alamat, Kecamatan, Desa Pemilik Asal */}
+                          <div className="flex flex-col gap-5">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik Asal <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                id={`dataLama.${idx}.alamatPemilikLama`}
+                                autoComplete="off"
+                                value={item.alamatPemilikLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'alamatPemilikLama', e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase' }}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.alamatPemilikLama`])}
+                              />
+                              {formErrors[`dataLama.${idx}.alamatPemilikLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.alamatPemilikLama`]}</span>}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok</label>
+                                <input
+                                  type="text"
+                                  placeholder="A4"
+                                  autoComplete="off"
+                                  value={item.blokPemilikLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'blokPemilikLama', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT</label>
+                                <input
+                                  type="text"
+                                  placeholder="001"
+                                  autoComplete="off"
+                                  value={item.rtPemilikLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'rtPemilikLama', e.target.value)}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW</label>
+                                <input
+                                  type="text"
+                                  placeholder="005"
+                                  autoComplete="off"
+                                  value={item.rwPemilikLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'rwPemilikLama', e.target.value)}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik Asal <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                id={`dataLama.${idx}.kecamatanPemilikLama`}
+                                autoComplete="off"
+                                value={item.kecamatanPemilikLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'kecamatanPemilikLama', e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase' }}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.kecamatanPemilikLama`])}
+                              />
+                              {formErrors[`dataLama.${idx}.kecamatanPemilikLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.kecamatanPemilikLama`]}</span>}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik Asal <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                id={`dataLama.${idx}.desaPemilikLama`}
+                                autoComplete="off"
+                                value={item.desaPemilikLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'desaPemilikLama', e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase' }}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.desaPemilikLama`])}
+                              />
+                              {formErrors[`dataLama.${idx}.desaPemilikLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.desaPemilikLama`]}</span>}
+                            </div>
+                          </div>
+
+                          {/* Alamat Objek Asal & Wilayah */}
+                          <div className="flex flex-col gap-5">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Asal <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                id={`dataLama.${idx}.alamatObjekLama`}
+                                autoComplete="off"
+                                value={item.alamatObjekLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'alamatObjekLama', e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase' }}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.alamatObjekLama`])}
+                              />
+                              {formErrors[`dataLama.${idx}.alamatObjekLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.alamatObjekLama`]}</span>}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="B2"
+                                  autoComplete="off"
+                                  value={item.blokObjekLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'blokObjekLama', e.target.value.toUpperCase())}
+                                  style={{ textTransform: 'uppercase' }}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="001"
+                                  autoComplete="off"
+                                  value={item.rtObjekLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'rtObjekLama', e.target.value)}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW Objek</label>
+                                <input
+                                  type="text"
+                                  placeholder="005"
+                                  autoComplete="off"
+                                  value={item.rwObjekLama || ''}
+                                  onChange={(e) => handleDataLamaItemChange(idx, 'rwObjekLama', e.target.value)}
+                                  disabled={loading}
+                                  className={getInputClass()}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek Asal <span className="text-red-500">*</span></label>
+                              <select
+                                id={`dataLama.${idx}.kecamatanObjekLama`}
+                                value={item.kecamatanObjekLama}
+                                onChange={(e) => {
+                                  handleDataLamaItemChange(idx, 'kecamatanObjekLama', e.target.value);
+                                  handleDataLamaItemChange(idx, 'desaObjekLama', '');
+                                }}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.kecamatanObjekLama`], 'cursor-pointer')}
+                              >
+                                <option value="">Pilih Kecamatan Objek</option>
+                                {Object.keys(KECAMATAN_DATA).map(kec => (
+                                  <option key={kec} value={kec}>{kec}</option>
+                                ))}
+                              </select>
+                              {formErrors[`dataLama.${idx}.kecamatanObjekLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.kecamatanObjekLama`]}</span>}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek Asal <span className="text-red-500">*</span></label>
+                              <select
+                                id={`dataLama.${idx}.desaObjekLama`}
+                                value={item.desaObjekLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'desaObjekLama', e.target.value)}
+                                disabled={loading || !item.kecamatanObjekLama}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.desaObjekLama`], 'cursor-pointer')}
+                              >
+                                <option value="">
+                                  {!item.kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
+                                </option>
+                                {item.kecamatanObjekLama && KECAMATAN_DATA[item.kecamatanObjekLama]?.map(desa => (
+                                  <option key={desa} value={desa}>{desa}</option>
+                                ))}
+                              </select>
+                              {formErrors[`dataLama.${idx}.desaObjekLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.desaObjekLama`]}</span>}
+                            </div>
+                          </div>
+
+                          {/* Luas Tanah & Bangunan */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah Asal <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                id={`dataLama.${idx}.luasTanahLama`}
+                                autoComplete="off"
+                                value={item.luasTanahLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'luasTanahLama', e.target.value)}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.luasTanahLama`], 'pl-3.5 pr-10')}
+                              />
+                              <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
+                            </div>
+                            {formErrors[`dataLama.${idx}.luasTanahLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.luasTanahLama`]}</span>}
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan Asal <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                id={`dataLama.${idx}.luasBangunanLama`}
+                                autoComplete="off"
+                                value={item.luasBangunanLama}
+                                onChange={(e) => handleDataLamaItemChange(idx, 'luasBangunanLama', e.target.value)}
+                                disabled={loading}
+                                className={getInputClass(!!formErrors[`dataLama.${idx}.luasBangunanLama`], 'pl-3.5 pr-10')}
+                              />
+                              <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
+                            </div>
+                            {formErrors[`dataLama.${idx}.luasBangunanLama`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataLama.${idx}.luasBangunanLama`]}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* SINGLE DATA LAMA FORM */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* NOP Asal (18-digit mask) */}
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label className="text-[13px] font-normal text-slate-700 tracking-wide flex items-center justify-between font-sans">
+                        <span>Nomor Objek Pajak (NOP) Asal <span className="text-red-500">*</span></span>
+                        <span className={`text-xs font-mono font-normal pr-1 ${nopLama.replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                          {nopLama.replace(/[^\d]/g, '').length}/18 digit
+                          {nopLama.replace(/[^\d]/g, '').length === 18 && ' ✓'}
+                        </span>
+                      </label>
                       <input
                         type="text"
-                        id="sertifikatLama"
-                        placeholder="Contoh: SHM NO. 12345"
-                        value={sertifikatLama}
-                        onChange={(e) => setSertifikatLama(e.target.value.toUpperCase())}
+                        id="nopLama"
+                        autoComplete="off"
+                        maxLength={24}
+                        placeholder="Contoh: 36.19.xxx.xxx.xxx-xxxx.x"
+                        value={nopLama}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
+                          let fmt = '';
+                          if (raw.length <= 2) fmt = raw;
+                          else if (raw.length <= 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
+                          else if (raw.length <= 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
+                          else if (raw.length <= 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
+                          else if (raw.length <= 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
+                          else if (raw.length <= 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
+                          else fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
+                          setNopLama(fmt);
+                        }}
+                        disabled={loading}
+                        className={getInputClass(!!formErrors.nopLama, 'font-mono tracking-wide')}
+                      />
+                      {formErrors.nopLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.nopLama}</span>}
+                    </div>
+
+                    {/* Nama pemilik lama (Full Width) */}
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        id="namaPemilikLama"
+                        autoComplete="off"
+                        value={namaPemilikLama}
+                        onChange={(e) => setNamaPemilikLama(e.target.value.toUpperCase())}
                         style={{ textTransform: 'uppercase' }}
                         disabled={loading}
-                        className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors.sertifikatLama ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                        className={getInputClass(!!formErrors.namaPemilikLama)}
                       />
+                      {formErrors.namaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.namaPemilikLama}</span>}
                     </div>
-                    {formErrors.sertifikatLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.sertifikatLama}</span>}
+
+                    {/* KELOMPOK ALAMAT, KECAMATAN, DESA */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2">
+                      {/* Kiri: Pemilik */}
+                      <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik <span className="text-red-500">*</span></label>
+                          <input
+                            type="text"
+                            id="alamatPemilikLama"
+                            autoComplete="off"
+                            value={alamatPemilikLama}
+                            onChange={(e) => setAlamatPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors.alamatPemilikLama)}
+                          />
+                          {formErrors.alamatPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatPemilikLama}</span>}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="A4"
+                              autoComplete="off"
+                              value={blokPemilikLama}
+                              onChange={(e) => setBlokPemilikLama(e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="001"
+                              autoComplete="off"
+                              value={rtPemilikLama}
+                              onChange={(e) => setRtPemilikLama(e.target.value)}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW Pemilik</label>
+                            <input
+                              type="text"
+                              placeholder="005"
+                              autoComplete="off"
+                              value={rwPemilikLama}
+                              onChange={(e) => setRwPemilikLama(e.target.value)}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
+                          <input
+                            type="text"
+                            id="kecamatanPemilikLama"
+                            autoComplete="off"
+                            value={kecamatanPemilikLama}
+                            onChange={(e) => setKecamatanPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors.kecamatanPemilikLama)}
+                          />
+                          {formErrors.kecamatanPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanPemilikLama}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
+                          <input
+                            type="text"
+                            id="desaPemilikLama"
+                            autoComplete="off"
+                            value={desaPemilikLama}
+                            onChange={(e) => setDesaPemilikLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors.desaPemilikLama)}
+                          />
+                          {formErrors.desaPemilikLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaPemilikLama}</span>}
+                        </div>
+                      </div>
+
+                      {/* Kanan: Objek */}
+                      <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Pajak <span className="text-red-500">*</span></label>
+                          <input
+                            type="text"
+                            id="alamatObjekLama"
+                            autoComplete="off"
+                            value={alamatObjekLama}
+                            onChange={(e) => setAlamatObjekLama(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors.alamatObjekLama)}
+                          />
+                          {formErrors.alamatObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.alamatObjekLama}</span>}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok Objek</label>
+                            <input
+                              type="text"
+                              placeholder="B2"
+                              autoComplete="off"
+                              value={blokObjekLama}
+                              onChange={(e) => setBlokObjekLama(e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT Objek</label>
+                            <input
+                              type="text"
+                              placeholder="001"
+                              autoComplete="off"
+                              value={rtObjekLama}
+                              onChange={(e) => setRtObjekLama(e.target.value)}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW Objek</label>
+                            <input
+                              type="text"
+                              placeholder="005"
+                              autoComplete="off"
+                              value={rwObjekLama}
+                              onChange={(e) => setRwObjekLama(e.target.value)}
+                              disabled={loading}
+                              className={getInputClass()}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
+                          <select
+                            id="kecamatanObjekLama"
+                            value={kecamatanObjekLama}
+                            onChange={(e) => {
+                              setKecamatanObjekLama(e.target.value);
+                              setDesaObjekLama('');
+                            }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors.kecamatanObjekLama, 'cursor-pointer')}
+                          >
+                            <option value="">Pilih Kecamatan Objek</option>
+                            {Object.keys(KECAMATAN_DATA).map(kec => (
+                              <option key={kec} value={kec}>{kec}</option>
+                            ))}
+                          </select>
+                          {formErrors.kecamatanObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.kecamatanObjekLama}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek <span className="text-red-500">*</span></label>
+                          <select
+                            id="desaObjekLama"
+                            value={desaObjekLama}
+                            onChange={(e) => setDesaObjekLama(e.target.value)}
+                            disabled={loading || !kecamatanObjekLama}
+                            className={getInputClass(!!formErrors.desaObjekLama, 'cursor-pointer')}
+                          >
+                            <option value="">
+                              {!kecamatanObjekLama ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
+                            </option>
+                            {kecamatanObjekLama && KECAMATAN_DATA[kecamatanObjekLama]?.map(desa => (
+                              <option key={desa} value={desa}>{desa}</option>
+                            ))}
+                          </select>
+                          {formErrors.desaObjekLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.desaObjekLama}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Luas tanah & bangunan asal */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah Asal <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="luasTanahLama"
+                          autoComplete="off"
+                          value={luasTanahLama}
+                          onChange={(e) => setLuasTanahLama(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass(!!formErrors.luasTanahLama, 'pl-3.5 pr-10')}
+                        />
+                        <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
+                      </div>
+                      {formErrors.luasTanahLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasTanahLama}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan Asal <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="luasBangunanLama"
+                          autoComplete="off"
+                          value={luasBangunanLama}
+                          onChange={(e) => setLuasBangunanLama(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass(!!formErrors.luasBangunanLama, 'pl-3.5 pr-10')}
+                        />
+                        <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
+                      </div>
+                      {formErrors.luasBangunanLama && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.luasBangunanLama}</span>}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -1275,7 +1678,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                     <div
                       key={idx}
                       className={`flex flex-col gap-4 relative ${dataBaru.length > 1
-                        ? 'p-5 border border-slate-200/80 rounded-2xl pt-10 shadow-3xs bg-transparent'
+                        ? 'p-5 border border-slate-200/80 rounded-md pt-10 shadow-3xs bg-white'
                         : ''
                         }`}
                     >
@@ -1286,7 +1689,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                             type="button"
                             onClick={() => handleRemoveOwner(idx)}
                             disabled={loading}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1294,291 +1697,271 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                       )}
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
-                        {/* 1. Nama pemilik baru */}
+                        {/* Nama pemilik baru */}
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nama Pemilik <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             id={`dataBaru.${idx}.namaPemilikBaru`}
+                            autoComplete="off"
                             value={item.namaPemilikBaru}
                             onChange={(e) => handleOwnerChange(idx, 'namaPemilikBaru', e.target.value.toUpperCase())}
                             style={{ textTransform: 'uppercase' }}
                             disabled={loading}
-                            className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.namaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                            className={getInputClass(!!formErrors[`dataBaru.${idx}.namaPemilikBaru`])}
                           />
                           {formErrors[`dataBaru.${idx}.namaPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.namaPemilikBaru`]}</span>}
                         </div>
 
-                        {/* KELOMPOK ALAMAT BARU */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:col-span-2 font-sans">
-                          {/* Kiri: Pemilik Baru */}
-                          <div className="flex flex-col gap-5">
-                            {/* 2. Alamat pemilik baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik <span className="text-red-500">*</span></label>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  id={`dataBaru.${idx}.alamatPemilikBaru`}
-                                  value={item.alamatPemilikBaru}
-                                  onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
-                                  disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                                />
-                                {needDataLama && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyPemilikFromLama(idx)}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatPemilikIdx === idx
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200/60'
-                                      }`}
-                                    title="Salin alamat pemilik dari data lama"
-                                  >
-                                    {copiedAlamatPemilikIdx === idx ? 'Tersalin ✓' : 'Salin'}
-                                  </button>
-                                )}
-                              </div>
-                              {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
-                            </div>
+                        {/* Alamat, Kecamatan, Desa Pemilik Baru */}
+                        <div className="flex flex-col gap-5">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Pemilik Baru <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataBaru.${idx}.alamatPemilikBaru`}
+                              autoComplete="off"
+                              value={item.alamatPemilikBaru}
+                              onChange={(e) => handleOwnerChange(idx, 'alamatPemilikBaru', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.alamatPemilikBaru`])}
+                            />
+                            {formErrors[`dataBaru.${idx}.alamatPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatPemilikBaru`]}</span>}
+                          </div>
 
-                            {/* Blok, RT, RW Pemilik Baru */}
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Pemilik</label>
-                                <input
-                                  type="text"
-                                  placeholder="A4"
-                                  value={item.blokPemilikBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'blokPemilikBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">RT Pemilik</label>
-                                <input
-                                  type="text"
-                                  placeholder="001"
-                                  value={item.rtPemilikBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'rtPemilikBaru', e.target.value)}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">RW Pemilik</label>
-                                <input
-                                  type="text"
-                                  placeholder="005"
-                                  value={item.rwPemilikBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'rwPemilikBaru', e.target.value)}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                            </div>
-
-                            {/* 3. Kecamatan pemilik baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok</label>
                               <input
                                 type="text"
-                                id={`dataBaru.${idx}.kecamatanPemilikBaru`}
-                                value={item.kecamatanPemilikBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
+                                placeholder="A4"
+                                autoComplete="off"
+                                value={item.blokPemilikBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'blokPemilikBaru', e.target.value.toUpperCase())}
                                 style={{ textTransform: 'uppercase' }}
                                 disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={getInputClass()}
                               />
-                              {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
                             </div>
-
-                            {/* 4. Desa pemilik baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik <span className="text-red-500">*</span></label>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT</label>
                               <input
                                 type="text"
-                                id={`dataBaru.${idx}.desaPemilikBaru`}
-                                value={item.desaPemilikBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
-                                style={{ textTransform: 'uppercase' }}
+                                placeholder="001"
+                                autoComplete="off"
+                                value={item.rtPemilikBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'rtPemilikBaru', e.target.value)}
                                 disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.desaPemilikBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                                className={getInputClass()}
                               />
-                              {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW</label>
+                              <input
+                                type="text"
+                                placeholder="005"
+                                autoComplete="off"
+                                value={item.rwPemilikBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'rwPemilikBaru', e.target.value)}
+                                disabled={loading}
+                                className={getInputClass()}
+                              />
                             </div>
                           </div>
 
-                          {/* Kanan: Objek Baru */}
-                          <div className="flex flex-col gap-5">
-                            {/* 5. Alamat objek baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek <span className="text-red-500">*</span></label>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  id={`dataBaru.${idx}.alamatObjekBaru`}
-                                  value={item.alamatObjekBaru}
-                                  onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
-                                  disabled={loading}
-                                  className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-20 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.alamatObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                                />
-                                {needDataLama && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyFromLama(idx)}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-normal rounded-md transition-all cursor-pointer select-none border font-sans ${copiedAlamatObjekIdx === idx
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200/60'
-                                      }`}
-                                    title="Salin alamat objek dari data lama"
-                                  >
-                                    {copiedAlamatObjekIdx === idx ? 'Tersalin ✓' : 'Salin'}
-                                  </button>
-                                )}
-                              </div>
-                              {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
-                            </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Pemilik Baru <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataBaru.${idx}.kecamatanPemilikBaru`}
+                              autoComplete="off"
+                              value={item.kecamatanPemilikBaru}
+                              onChange={(e) => handleOwnerChange(idx, 'kecamatanPemilikBaru', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`])}
+                            />
+                            {formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanPemilikBaru`]}</span>}
+                          </div>
 
-                            {/* Blok, RT, RW Objek Baru */}
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">Blok Objek</label>
-                                <input
-                                  type="text"
-                                  placeholder="B2"
-                                  value={item.blokObjekBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'blokObjekBaru', e.target.value.toUpperCase())}
-                                  style={{ textTransform: 'uppercase' }}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">RT Objek</label>
-                                <input
-                                  type="text"
-                                  placeholder="001"
-                                  value={item.rtObjekBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'rtObjekBaru', e.target.value)}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[12px] font-normal text-slate-600 font-sans">RW Objek</label>
-                                <input
-                                  type="text"
-                                  placeholder="005"
-                                  value={item.rwObjekBaru || ''}
-                                  onChange={(e) => handleOwnerChange(idx, 'rwObjekBaru', e.target.value)}
-                                  disabled={loading}
-                                  className="w-full bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 py-2 text-[12px] text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] transition-all font-sans"
-                                />
-                              </div>
-                            </div>
-
-                            {/* 7. Kecamatan Objek Baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
-                              <select
-                                id={`dataBaru.${idx}.kecamatanObjekBaru`}
-                                value={item.kecamatanObjekBaru}
-                                onChange={(e) => {
-                                  handleOwnerChange(idx, 'kecamatanObjekBaru', e.target.value);
-                                  handleOwnerChange(idx, 'desaObjekBaru', ''); // Reset desa
-                                }}
-                                disabled={loading}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                              >
-                                <option value="">Pilih Kecamatan Objek</option>
-                                {Object.keys(KECAMATAN_DATA).map(kec => (
-                                  <option key={kec} value={kec}>{kec}</option>
-                                ))}
-                              </select>
-                              {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
-                            </div>
-
-                            {/* 8. Desa Objek Baru */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek <span className="text-red-500">*</span></label>
-                              <select
-                                id={`dataBaru.${idx}.desaObjekBaru`}
-                                value={item.desaObjekBaru}
-                                onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
-                                disabled={loading || !item.kecamatanObjekBaru}
-                                className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal transition-all text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 cursor-pointer font-sans ${formErrors[`dataBaru.${idx}.desaObjekBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                              >
-                                <option value="">
-                                  {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
-                                </option>
-                                {item.kecamatanObjekBaru && KECAMATAN_DATA[item.kecamatanObjekBaru]?.map(desa => (
-                                  <option key={desa} value={desa}>{desa}</option>
-                                ))}
-                              </select>
-                              {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
-                            </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Pemilik Baru <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataBaru.${idx}.desaPemilikBaru`}
+                              autoComplete="off"
+                              value={item.desaPemilikBaru}
+                              onChange={(e) => handleOwnerChange(idx, 'desaPemilikBaru', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.desaPemilikBaru`])}
+                            />
+                            {formErrors[`dataBaru.${idx}.desaPemilikBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaPemilikBaru`]}</span>}
                           </div>
                         </div>
 
-                        {/* 9. Luas Tanah */}
+                        {/* Alamat Objek Baru */}
+                        <div className="flex flex-col gap-5">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Baru <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
+                              id={`dataBaru.${idx}.alamatObjekBaru`}
+                              autoComplete="off"
+                              value={item.alamatObjekBaru}
+                              onChange={(e) => handleOwnerChange(idx, 'alamatObjekBaru', e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.alamatObjekBaru`])}
+                            />
+                            {formErrors[`dataBaru.${idx}.alamatObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.alamatObjekBaru`]}</span>}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Blok Objek</label>
+                              <input
+                                type="text"
+                                placeholder="B2"
+                                autoComplete="off"
+                                value={item.blokObjekBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'blokObjekBaru', e.target.value.toUpperCase())}
+                                style={{ textTransform: 'uppercase' }}
+                                disabled={loading}
+                                className={getInputClass()}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RT Objek</label>
+                              <input
+                                type="text"
+                                placeholder="001"
+                                autoComplete="off"
+                                value={item.rtObjekBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'rtObjekBaru', e.target.value)}
+                                disabled={loading}
+                                className={getInputClass()}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">RW Objek</label>
+                              <input
+                                type="text"
+                                placeholder="005"
+                                autoComplete="off"
+                                value={item.rwObjekBaru}
+                                onChange={(e) => handleOwnerChange(idx, 'rwObjekBaru', e.target.value)}
+                                disabled={loading}
+                                className={getInputClass()}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Kecamatan Objek Baru <span className="text-red-500">*</span></label>
+                            <select
+                              id={`dataBaru.${idx}.kecamatanObjekBaru`}
+                              value={item.kecamatanObjekBaru}
+                              onChange={(e) => {
+                                handleOwnerChange(idx, 'kecamatanObjekBaru', e.target.value);
+                                handleOwnerChange(idx, 'desaObjekBaru', '');
+                              }}
+                              disabled={loading}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.kecamatanObjekBaru`], 'cursor-pointer')}
+                            >
+                              <option value="">Pilih Kecamatan Objek</option>
+                              {Object.keys(KECAMATAN_DATA).map(kec => (
+                                <option key={kec} value={kec}>{kec}</option>
+                              ))}
+                            </select>
+                            {formErrors[`dataBaru.${idx}.kecamatanObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.kecamatanObjekBaru`]}</span>}
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Desa Objek Baru <span className="text-red-500">*</span></label>
+                            <select
+                              id={`dataBaru.${idx}.desaObjekBaru`}
+                              value={item.desaObjekBaru}
+                              onChange={(e) => handleOwnerChange(idx, 'desaObjekBaru', e.target.value)}
+                              disabled={loading || !item.kecamatanObjekBaru}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.desaObjekBaru`], 'cursor-pointer')}
+                            >
+                              <option value="">
+                                {!item.kecamatanObjekBaru ? 'Pilih Kecamatan Terlebih Dahulu' : 'Pilih Desa/Kelurahan Objek'}
+                              </option>
+                              {item.kecamatanObjekBaru && KECAMATAN_DATA[item.kecamatanObjekBaru]?.map(desa => (
+                                <option key={desa} value={desa}>{desa}</option>
+                              ))}
+                            </select>
+                            {formErrors[`dataBaru.${idx}.desaObjekBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.desaObjekBaru`]}</span>}
+                          </div>
+                        </div>
+
+                        {/* Luas tanah & bangunan baru */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Tanah Baru <span className="text-red-500">*</span></label>
                           <div className="relative">
                             <input
                               type="number"
                               id={`dataBaru.${idx}.luasTanahBaru`}
+                              autoComplete="off"
                               value={item.luasTanahBaru}
                               onChange={(e) => handleOwnerChange(idx, 'luasTanahBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasTanahBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.luasTanahBaru`], 'pl-3.5 pr-10')}
                             />
-                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
-                              m²
-                            </span>
+                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                           </div>
                           {formErrors[`dataBaru.${idx}.luasTanahBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasTanahBaru`]}</span>}
                         </div>
 
-                        {/* 10. Luas Bangunan */}
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan <span className="text-red-500">*</span></label>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Luas Bangunan Baru <span className="text-red-500">*</span></label>
                           <div className="relative">
                             <input
                               type="number"
                               id={`dataBaru.${idx}.luasBangunanBaru`}
+                              autoComplete="off"
                               value={item.luasBangunanBaru}
                               onChange={(e) => handleOwnerChange(idx, 'luasBangunanBaru', e.target.value)}
                               disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg pl-3.5 pr-10 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.luasBangunanBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
+                              className={getInputClass(!!formErrors[`dataBaru.${idx}.luasBangunanBaru`], 'pl-3.5 pr-10')}
                             />
-                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">
-                              m²
-                            </span>
+                            <span className="text-slate-500 text-xs font-normal absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                           </div>
                           {formErrors[`dataBaru.${idx}.luasBangunanBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.luasBangunanBaru`]}</span>}
                         </div>
 
-                        {/* 6. Nomor/Jenis Sertifikat Baru */}
+                        {/* Sertifikat Baru */}
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
-                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              id={`dataBaru.${idx}.sertifikatBaru`}
-                              placeholder="Contoh: SHM NO. 12345"
-                              value={item.sertifikatBaru}
-                              onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value.toUpperCase())}
-                              style={{ textTransform: 'uppercase' }}
-                              disabled={loading}
-                              className={`w-full bg-slate-50 border rounded-lg px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:bg-white focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all font-sans ${formErrors[`dataBaru.${idx}.sertifikatBaru`] ? 'border-red-500 focus:border-red-500' : 'border-slate-200/90'}`}
-                            />
-                          </div>
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No/Jenis Sertifikat Baru <span className="text-red-500">*</span></label>
+                          <input
+                            type="text"
+                            id={`dataBaru.${idx}.sertifikatBaru`}
+                            autoComplete="off"
+                            placeholder="Contoh: SHM NO. 12345"
+                            value={item.sertifikatBaru}
+                            onChange={(e) => handleOwnerChange(idx, 'sertifikatBaru', e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(!!formErrors[`dataBaru.${idx}.sertifikatBaru`])}
+                          />
                           {formErrors[`dataBaru.${idx}.sertifikatBaru`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`dataBaru.${idx}.sertifikatBaru`]}</span>}
+                        </div>
+
+                        {/* Catatan Field (Opsional) */}
+                        <div className="flex flex-col gap-1.5 sm:col-span-2">
+                          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Catatan Tambahan <span className="text-slate-400 font-normal">(Opsional)</span></label>
+                          <textarea
+                            rows={2}
+                            placeholder="Masukkan catatan tambahan jika ada..."
+                            value={item.catatan || ''}
+                            onChange={(e) => handleOwnerChange(idx, 'catatan', e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase' }}
+                            disabled={loading}
+                            className={getInputClass(false, 'resize-y')}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1587,112 +1970,75 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
               </div>
             )}
 
-            {/* Stepper Footer Action Buttons */}
-            <div className="flex items-center justify-end pt-4 border-t border-slate-100 select-none font-sans">
-              <div className="flex items-center gap-3">
-                {/* Back Step Button */}
-                {currentStep > 1 && (
-                  <button
-                    type="button"
-                    onClick={handlePrevStep}
-                    disabled={loading}
-                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 font-normal text-[13px] rounded-lg transition-colors cursor-pointer font-sans"
-                  >
-                    Kembali
-                  </button>
-                )}
+            {/* Bottom Actions: Previous & Next/Submit Buttons */}
+            <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 mt-2 select-none">
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  disabled={loading}
+                  className="h-10 px-4 rounded-md border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                  <span>Sebelumnya</span>
+                </button>
+              ) : (
+                <div />
+              )}
 
-                {/* Cancel Button (step 1 only) */}
-                {currentStep === 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        localStorage.removeItem('permohonan_form_draft');
-                      } catch (e) {
-                        console.error(e);
-                      }
-                      onCancel();
-                    }}
-                    className="px-4 py-2 text-slate-500 hover:text-slate-700 font-normal text-[13px] transition-colors cursor-pointer font-sans"
-                  >
-                    Batal
-                  </button>
-                )}
-
-                {/* Next Step or Submit Button */}
-                {currentStep < steps.length ? (
-                  <button
-                    type="button"
-                    onClick={handleNextStep}
-                    className="px-5 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] rounded-lg shadow-xs hover:shadow-sm transition-all cursor-pointer font-sans"
-                  >
-                    Lanjut
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] capitalize tracking-wider py-2.5 px-6 rounded-lg shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 font-sans"
-                  >
-                    {loading ? (
-                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    ) : (
-                      <span>Simpan Permohonan</span>
-                    )}
-                  </button>
-                )}
-              </div>
+              {currentStep < steps.length ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                  className="h-10 px-5 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-normal text-[13px] font-sans shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 ml-auto"
+                >
+                  <span>Selanjutnya</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="h-10 px-6 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-98 text-white font-normal text-[13px] font-sans shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 ml-auto"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>{loading ? 'Menyimpan...' : 'Daftarkan Permohonan'}</span>
+                </button>
+              )}
             </div>
-
           </form>
         </div>
-
-        <ActionStatusModal
-          isOpen={statusModalOpen}
-          status={statusModalStatus}
-          title={statusModalTitle}
-          message={statusModalMessage}
-          onClose={handleCloseStatusModal}
-        />
-
-        {/* Draft Restored Popup Modal with Embedded Lottie Animation (Full Screen Viewport Backdrop via Portal) */}
-        {mounted && draftModalOpen && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn select-none">
-            {/* Clickable Backdrop Overlay */}
-            <div
-              className="fixed inset-0"
-              onClick={() => setDraftModalOpen(false)}
-            />
-            <div className="relative z-10 bg-white rounded-lg p-6 max-w-sm w-full shadow-2xl border border-slate-200/90 flex flex-col items-center text-center animate-scaleUp">
-              {/* Lottie Animation iframe */}
-              <div className="w-36 h-36 flex items-center justify-center overflow-hidden mb-2 pointer-events-none">
-                <iframe
-                  src="https://lottie.host/embed/3a4ef8c0-cad0-4d84-a7ba-ea8fee7383b3/YsqMpnjOdj.lottie"
-                  className="w-full h-full border-0"
-                  title="Draft Restored Animation"
-                />
-              </div>
-
-              <h3 className="text-base font-extrabold text-slate-800 tracking-tight mb-1.5">
-                Draf Berhasil Dipulihkan!
-              </h3>
-              <p className="text-xs font-semibold text-slate-500 mb-6 leading-relaxed">
-                {draftModalMessage}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setDraftModalOpen(false)}
-                className="w-full py-2.5 bg-[#00a389] hover:bg-[#008f78] text-white font-bold text-xs rounded-lg transition-all shadow-xs cursor-pointer"
-              >
-                Lanjutkan Pengisian
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
       </div>
+
+      {/* Status Action Modal */}
+      <ActionStatusModal
+        isOpen={statusModalOpen}
+        onClose={handleCloseStatusModal}
+        status={statusModalStatus}
+        title={statusModalTitle}
+        message={statusModalMessage}
+      />
+
+      {/* Draft Notification / Reset Modal */}
+      {draftModalOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-md p-6 max-w-sm w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center gap-3 animate-scaleUp font-sans">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-[#00a389] flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <h3 className="text-base font-normal text-slate-800 font-sans">Informasi Formulir</h3>
+            <p className="text-xs text-slate-600 font-sans">{draftModalMessage}</p>
+            <button
+              type="button"
+              onClick={() => setDraftModalOpen(false)}
+              className="mt-2 w-full py-2.5 rounded-md bg-[#00a389] hover:bg-[#008f78] text-white text-xs font-normal transition-all cursor-pointer font-sans shadow-xs"
+            >
+              Mengerti & Lanjutkan
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 });

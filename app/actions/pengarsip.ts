@@ -511,13 +511,13 @@ export async function getPengarsipStats() {
         if (p.status !== "ARCHIVED") {
           // digitization queue: files that do NOT have ACTIVE digital archive
           if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
-            const unarchivedFractions = p.dataBaru.filter(db => 
+            const unarchivedFractions = p.dataBaru.filter(db =>
               !p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE")
             ).length;
             queueFileCount += (unarchivedFractions === 0 && p.dataBaru.length === 0) ? 1 : unarchivedFractions;
 
             // re-upload queue: fractions that have SUPERSEDED archive and no ACTIVE archive
-            const supersededFractions = p.dataBaru.filter(db => 
+            const supersededFractions = p.dataBaru.filter(db =>
               p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "SUPERSEDED") &&
               !p.arsipDigital.some((ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE")
             ).length;

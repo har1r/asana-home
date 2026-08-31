@@ -747,191 +747,191 @@ export default function PemantauWorkspace() {
             {/* Main Cards Grid Container */}
             <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
 
-            {/* Bundle Cards Grid (Exact Preserved Content, Palette & Rounded-md Updated) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
-              {paginatedBundles.length === 0 ? (
-                <div className="col-span-full py-8 font-sans">
-                  <EmptyDataAnimation
-                    title={searchBundleQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Bundle"}
-                    description={
-                      searchBundleQuery
-                        ? "Tidak ada bundle yang sesuai dengan kriteria pencarian."
-                        : "Tidak ada bundle aktif dalam antrean pemantauan."
-                    }
-                  />
-                </div>
-              ) : (
-                paginatedBundles.map((b) => {
-                  const isSelected = selectedBundle?.id === b.id;
+              {/* Bundle Cards Grid (Exact Preserved Content, Palette & Rounded-md Updated) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+                {paginatedBundles.length === 0 ? (
+                  <div className="col-span-full py-8 font-sans">
+                    <EmptyDataAnimation
+                      title={searchBundleQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Bundle"}
+                      description={
+                        searchBundleQuery
+                          ? "Tidak ada bundle yang sesuai dengan kriteria pencarian."
+                          : "Tidak ada bundle aktif dalam antrean pemantauan."
+                      }
+                    />
+                  </div>
+                ) : (
+                  paginatedBundles.map((b) => {
+                    const isSelected = selectedBundle?.id === b.id;
 
-                  let totalPemohon = 0;
-                  let completedPemohon = 0;
+                    let totalPemohon = 0;
+                    let completedPemohon = 0;
 
-                  (b.permohonan || []).forEach((p: any) => {
-                    if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
-                      totalPemohon += p.dataBaru.length;
-                      if (p.status === "COMPLETED") {
-                        completedPemohon += p.dataBaru.length;
+                    (b.permohonan || []).forEach((p: any) => {
+                      if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
+                        totalPemohon += p.dataBaru.length;
+                        if (p.status === "COMPLETED") {
+                          completedPemohon += p.dataBaru.length;
+                        } else {
+                          p.dataBaru.forEach((db: any) => {
+                            if (db.isVerified) completedPemohon++;
+                          });
+                        }
                       } else {
-                        p.dataBaru.forEach((db: any) => {
-                          if (db.isVerified) completedPemohon++;
-                        });
+                        totalPemohon += 1;
+                        if (p.status === "COMPLETED") {
+                          completedPemohon += 1;
+                        }
                       }
-                    } else {
-                      totalPemohon += 1;
-                      if (p.status === "COMPLETED") {
-                        completedPemohon += 1;
-                      }
-                    }
-                  });
+                    });
 
-                  const progressPct = totalPemohon > 0 ? Math.round((completedPemohon / totalPemohon) * 100) : 0;
+                    const progressPct = totalPemohon > 0 ? Math.round((completedPemohon / totalPemohon) * 100) : 0;
 
-                  const pembuatName = b.peneliti?.name || "—";
-                  const pembuatInitials = pembuatName !== "—"
-                    ? pembuatName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
-                    : "?";
-                  const tanggalDibuat = b.createdAt
-                    ? new Date(b.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-                    : null;
+                    const pembuatName = b.peneliti?.name || "—";
+                    const pembuatInitials = pembuatName !== "—"
+                      ? pembuatName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+                      : "?";
+                    const tanggalDibuat = b.createdAt
+                      ? new Date(b.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                      : null;
 
-                  return (
-                    <div
-                      key={b.id}
-                      onClick={() => {
-                        setSelectedBundle(b);
-                        setSelectedPermohonan(null);
-                      }}
-                      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none font-sans ${isSelected
-                        ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-                        : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
-                        }`}
-                    >
-                      {/* Top Row: Number & Count Badge */}
-                      <div className="flex items-center justify-between gap-3 w-full">
-                        <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate block max-w-[170px]" title={b.nomorBundle}>
-                          {b.nomorBundle}
-                        </span>
-                        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-md shrink-0 shadow-2xs font-sans" title={`${totalPemohon} Pemohon`}>
-                          {totalPemohon}
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => {
+                          setSelectedBundle(b);
+                          setSelectedPermohonan(null);
+                        }}
+                        className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group min-h-[140px] select-none font-sans ${isSelected
+                          ? "bg-[#00a389]/5 border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+                          : "bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md"
+                          }`}
+                      >
+                        {/* Top Row: Number & Count Badge */}
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate block max-w-[170px]" title={b.nomorBundle}>
+                            {b.nomorBundle}
+                          </span>
+                          <span className="flex items-center justify-center bg-[#f25c54] text-white text-[10px] font-black w-5 h-5 rounded-md shrink-0 shadow-2xs font-sans" title={`${totalPemohon} Pemohon`}>
+                            {totalPemohon}
+                          </span>
+                        </div>
 
-                      {/* Middle: Progress bar + badges */}
-                      <div className="flex flex-col gap-2.5 pt-2.5 border-t border-slate-100">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between text-[13px] font-normal font-sans">
-                            <span className="text-slate-600 capitalize">Progres</span>
-                            <span className={`${progressPct === 100 ? "text-[#008f78]" : "text-slate-500"}`}>
-                              {completedPemohon}/{totalPemohon} selesai
+                        {/* Middle: Progress bar + badges */}
+                        <div className="flex flex-col gap-2.5 pt-2.5 border-t border-slate-100">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-[13px] font-normal font-sans">
+                              <span className="text-slate-600 capitalize">Progres</span>
+                              <span className={`${progressPct === 100 ? "text-[#008f78]" : "text-slate-500"}`}>
+                                {completedPemohon}/{totalPemohon} selesai
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-100 rounded-md overflow-hidden">
+                              <div
+                                className={`h-full rounded-md transition-all duration-500 ${progressPct === 100
+                                  ? "bg-[#00a389]"
+                                  : progressPct > 0
+                                    ? "bg-[#00a389]/70"
+                                    : "bg-slate-200"
+                                  }`}
+                                style={{ width: `${progressPct}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 select-none uppercase tracking-wide">
+                              {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : 'Umum'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md text-[8px] font-extrabold border bg-emerald-50 text-[#008f78] border-emerald-200 uppercase tracking-wider select-none shrink-0">
+                              TERKIRIM
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-md overflow-hidden">
-                            <div
-                              className={`h-full rounded-md transition-all duration-500 ${progressPct === 100
-                                ? "bg-[#00a389]"
-                                : progressPct > 0
-                                  ? "bg-[#00a389]/70"
-                                  : "bg-slate-200"
-                                }`}
-                              style={{ width: `${progressPct}%` }}
-                            />
+                        </div>
+
+                        {/* Bottom: Pembuat (Peneliti) avatar + tanggal dibuat */}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                          <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={pembuatName}>
+                            {pembuatInitials}
                           </div>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-extrabold border leading-none bg-emerald-50 text-[#008f78] border-emerald-200 select-none uppercase tracking-wide">
-                            {b.jenisPermohonan ? getAbbreviatedJenis(b.jenisPermohonan) : 'Umum'}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-md text-[8px] font-extrabold border bg-emerald-50 text-[#008f78] border-emerald-200 uppercase tracking-wider select-none shrink-0">
-                            TERKIRIM
-                          </span>
+                          {tanggalDibuat && (
+                            <span className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 shrink-0">
+                              {tanggalDibuat}
+                            </span>
+                          )}
                         </div>
                       </div>
-
-                      {/* Bottom: Pembuat (Peneliti) avatar + tanggal dibuat */}
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        <div className="w-5.5 h-5.5 rounded-full bg-[#00a389] text-white text-[8px] font-black flex items-center justify-center shrink-0 shadow-3xs" title={pembuatName}>
-                          {pembuatInitials}
-                        </div>
-                        {tanggalDibuat && (
-                          <span className="text-[9px] font-semibold text-slate-400 flex items-center gap-1 shrink-0">
-                            {tanggalDibuat}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Table Footer / Pagination for Bundles */}
-            <div className="px-5 py-3.5 border border-slate-200/90 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto rounded-md select-none shadow-3xs shrink-0">
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] font-semibold text-slate-500 font-sans">
-                  {filteredBundlesList.length > 0
-                    ? `Menampilkan ${((activeBundlePage - 1) * itemsPerBundlePage) + 1}–${Math.min(activeBundlePage * itemsPerBundlePage, filteredBundlesList.length)} dari ${filteredBundlesList.length} bundle`
-                    : 'Tidak ada data'}
-                </span>
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5">
-                  {[8, 16, 32].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => {
-                        setItemsPerBundlePage(n);
-                        setCurrentBundlePage(1);
-                      }}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerBundlePage === n
-                        ? 'bg-[#00a389] text-white font-extrabold shadow-3xs'
-                        : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                  <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
-                </div>
+                    );
+                  })
+                )}
               </div>
 
-              {totalBundlePages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentBundlePage(prev => Math.max(prev - 1, 1))}
-                    disabled={activeBundlePage === 1}
-                    className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
-                  >
-                    ‹
-                  </button>
-                  {Array.from({ length: totalBundlePages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setCurrentBundlePage(page)}
-                      className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold transition-all cursor-pointer ${activeBundlePage === page
-                        ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setCurrentBundlePage(prev => Math.min(prev + 1, totalBundlePages))}
-                    disabled={activeBundlePage === totalBundlePages}
-                    className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
-                  >
-                    ›
-                  </button>
+              {/* Table Footer / Pagination for Bundles */}
+              <div className="px-5 py-3.5 border border-slate-200/90 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto rounded-md select-none shadow-3xs shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-semibold text-slate-500 font-sans">
+                    {filteredBundlesList.length > 0
+                      ? `Menampilkan ${((activeBundlePage - 1) * itemsPerBundlePage) + 1}–${Math.min(activeBundlePage * itemsPerBundlePage, filteredBundlesList.length)} dari ${filteredBundlesList.length} bundle`
+                      : 'Tidak ada data'}
+                  </span>
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5">
+                    {[8, 16, 32].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => {
+                          setItemsPerBundlePage(n);
+                          setCurrentBundlePage(1);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerBundlePage === n
+                          ? 'bg-[#00a389] text-white font-extrabold shadow-3xs'
+                          : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
+                  </div>
                 </div>
-              )}
+
+                {totalBundlePages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentBundlePage(prev => Math.max(prev - 1, 1))}
+                      disabled={activeBundlePage === 1}
+                      className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
+                    >
+                      ‹
+                    </button>
+                    {Array.from({ length: totalBundlePages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCurrentBundlePage(page)}
+                        className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold transition-all cursor-pointer ${activeBundlePage === page
+                          ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentBundlePage(prev => Math.min(prev + 1, totalBundlePages))}
+                      disabled={activeBundlePage === totalBundlePages}
+                      className="p-1.5 px-2.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs flex items-center justify-center text-xs font-bold"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
         {/* ==================== TAB: DAFTAR PANTAU ==================== */}
         {workspaceTab === "daftar-pantau" && (

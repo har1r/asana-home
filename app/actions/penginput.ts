@@ -196,17 +196,17 @@ export async function createPermohonan(rawInput: any) {
       : (validated.namaPemilikLama || "");
     const derivedAlamat = (validated.dataBaru && validated.dataBaru.length > 0)
       ? formatAlamatLengkap({
-          alamat: validated.dataBaru[0].alamatPemilikBaru,
-          blok: validated.dataBaru[0].blokPemilikBaru,
-          rt: validated.dataBaru[0].rtPemilikBaru,
-          rw: validated.dataBaru[0].rwPemilikBaru
-        })
+        alamat: validated.dataBaru[0].alamatPemilikBaru,
+        blok: validated.dataBaru[0].blokPemilikBaru,
+        rt: validated.dataBaru[0].rtPemilikBaru,
+        rw: validated.dataBaru[0].rwPemilikBaru
+      })
       : formatAlamatLengkap({
-          alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
-          blok: validated.blokPemilikLama,
-          rt: validated.rtPemilikLama,
-          rw: validated.rwPemilikLama
-        });
+        alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
+        blok: validated.blokPemilikLama,
+        rt: validated.rtPemilikLama,
+        rw: validated.rwPemilikLama
+      });
 
     const needDataLama = [
       'MUTASI_SEBAGIAN',
@@ -368,17 +368,17 @@ export async function updatePermohonan(id: string, rawInput: any) {
       : (validated.namaPemilikLama || "");
     const derivedAlamat = (validated.dataBaru && validated.dataBaru.length > 0)
       ? formatAlamatLengkap({
-          alamat: validated.dataBaru[0].alamatPemilikBaru,
-          blok: validated.dataBaru[0].blokPemilikBaru,
-          rt: validated.dataBaru[0].rtPemilikBaru,
-          rw: validated.dataBaru[0].rwPemilikBaru
-        })
+        alamat: validated.dataBaru[0].alamatPemilikBaru,
+        blok: validated.dataBaru[0].blokPemilikBaru,
+        rt: validated.dataBaru[0].rtPemilikBaru,
+        rw: validated.dataBaru[0].rwPemilikBaru
+      })
       : formatAlamatLengkap({
-          alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
-          blok: validated.blokPemilikLama,
-          rt: validated.rtPemilikLama,
-          rw: validated.rwPemilikLama
-        });
+        alamat: validated.namaPemilikLama ? validated.alamatPemilikLama : "",
+        blok: validated.blokPemilikLama,
+        rt: validated.rtPemilikLama,
+        rw: validated.rwPemilikLama
+      });
 
     const needDataLama = [
       'MUTASI_SEBAGIAN',

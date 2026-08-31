@@ -1737,11 +1737,10 @@ export default function PengarsipWorkspace() {
                                                 openCorrectionModal(p);
                                               }}
                                               disabled={loading || isFrozen || !canReturnToPeneliti}
-                                              className={`p-1.5 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${
-                                                !canReturnToPeneliti
+                                              className={`p-1.5 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${!canReturnToPeneliti
                                                   ? 'bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50'
                                                   : 'bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer'
-                                              }`}
+                                                }`}
                                               title={
                                                 !canReturnToPeneliti
                                                   ? 'Bundle sudah di Pengirim (Dimanifest). Tidak dapat dikembalikan ke Peneliti tanpa adanya pengembalian resmi dari Pengirim.'

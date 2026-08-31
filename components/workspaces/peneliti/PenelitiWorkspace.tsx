@@ -2738,44 +2738,43 @@ export default function PenelitiWorkspace() {
                                           )}
 
                                           {/* Extraction Action with Strict UI Guard Validation */}
-                                           {(() => {
-                                             const canExtractDirect = selectedBundle.status === 'DRAFT' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
-                                             const canExtractViaSupervisor = selectedBundle.status === 'LOCKED' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
-                                             const isExtractionBlocked = !canExtractDirect && !canExtractViaSupervisor;
+                                          {(() => {
+                                            const canExtractDirect = selectedBundle.status === 'DRAFT' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
+                                            const canExtractViaSupervisor = selectedBundle.status === 'LOCKED' && item.status !== 'ARCHIVED' && item.status !== 'COMPLETED';
+                                            const isExtractionBlocked = !canExtractDirect && !canExtractViaSupervisor;
 
-                                             let tooltipText = "Keluarkan dari Bundle Draf";
-                                             if (canExtractViaSupervisor) tooltipText = "Ajukan keluarkan dari Bundle Terkunci (Persetujuan Supervisor)";
-                                             if (isExtractionBlocked) tooltipText = "Berkas pada bundle yang sudah diarsipkan/dimanifestkan tidak dapat dikeluarkan sepihak. Harus melalui pengembalian resmi dari Pengarsip.";
+                                            let tooltipText = "Keluarkan dari Bundle Draf";
+                                            if (canExtractViaSupervisor) tooltipText = "Ajukan keluarkan dari Bundle Terkunci (Persetujuan Supervisor)";
+                                            if (isExtractionBlocked) tooltipText = "Berkas pada bundle yang sudah diarsipkan/dimanifestkan tidak dapat dikeluarkan sepihak. Harus melalui pengembalian resmi dari Pengarsip.";
 
-                                             return (
-                                               <button
-                                                 onClick={(e) => {
-                                                   e.stopPropagation();
-                                                   if (isExtractionBlocked) return;
-                                                   if (selectedBundle.status === 'LOCKED') {
-                                                     setExtractionTarget(item);
-                                                   } else {
-                                                     showConfirm({
-                                                       title: 'Keluarkan dari Bundle',
-                                                       message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPelayanan || item.nomorPermohonan} dari bundle draf ini?`,
-                                                       onConfirm: () => {
-                                                         handleRemoveFromBundle(item);
-                                                       }
-                                                     });
-                                                   }
-                                                 }}
-                                                 disabled={loading || isFrozen || isExtractionBlocked}
-                                                 className={`h-8 w-8 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${
-                                                   isExtractionBlocked
-                                                     ? 'bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50'
-                                                     : 'bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer'
-                                                 }`}
-                                                 title={tooltipText}
-                                               >
-                                                 <FolderMinus className="w-3.5 h-3.5" />
-                                               </button>
-                                             );
-                                           })()}
+                                            return (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  if (isExtractionBlocked) return;
+                                                  if (selectedBundle.status === 'LOCKED') {
+                                                    setExtractionTarget(item);
+                                                  } else {
+                                                    showConfirm({
+                                                      title: 'Keluarkan dari Bundle',
+                                                      message: `Apakah Anda yakin ingin mengeluarkan permohonan ${item.nomorPelayanan || item.nomorPermohonan} dari bundle draf ini?`,
+                                                      onConfirm: () => {
+                                                        handleRemoveFromBundle(item);
+                                                      }
+                                                    });
+                                                  }
+                                                }}
+                                                disabled={loading || isFrozen || isExtractionBlocked}
+                                                className={`h-8 w-8 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${isExtractionBlocked
+                                                  ? 'bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50'
+                                                  : 'bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer'
+                                                  }`}
+                                                title={tooltipText}
+                                              >
+                                                <FolderMinus className="w-3.5 h-3.5" />
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       </td>
                                     </tr>
