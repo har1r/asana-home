@@ -347,8 +347,8 @@ export async function createPermohonan(rawInput: unknown) {
 
     const dataLamaCreate =
       jenisPermohonan === 'MUTASI_PENGGABUNGAN' &&
-      validated.dataLama &&
-      validated.dataLama.length > 0
+        validated.dataLama &&
+        validated.dataLama.length > 0
         ? validated.dataLama.map((item, index) => ({
           nopLama:
             item.nopLama?.trim() || null,
@@ -934,12 +934,12 @@ export async function createPermohonan(rawInput: unknown) {
       const msg = error.message;
       if (msg.includes('Invalid `prisma.permohonan.create()` invocation:')) {
         const lines = msg.split('\n').map(l => l.trim()).filter(Boolean);
-        const detailLine = lines.slice().reverse().find(l => 
-          !l.includes('~') && 
-          !l.startsWith('{') && 
-          !l.startsWith('}') && 
-          !l.startsWith(']') && 
-          !l.startsWith('[') && 
+        const detailLine = lines.slice().reverse().find(l =>
+          !l.includes('~') &&
+          !l.startsWith('{') &&
+          !l.startsWith('}') &&
+          !l.startsWith(']') &&
+          !l.startsWith('[') &&
           !l.startsWith('data:') &&
           !l.includes('invocation:')
         );

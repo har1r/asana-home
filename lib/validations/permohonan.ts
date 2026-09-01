@@ -2,13 +2,8 @@ import { z } from 'zod';
 
 /**
  * ============================================================
- * 1. SCHEMA DATA LAMA ITEM
+ * SCHEMA DATA LAMA ITEM
  * ============================================================
- *
- * Schema ini HANYA bertugas memvalidasi TIPE DATA.
- *
- * Tidak menentukan apakah field wajib atau opsional secara bisnis.
- * Aturan required/optional ditentukan di superRefine().
  */
 
 export const dataLamaItemSchema = z.object({
@@ -44,13 +39,8 @@ export const dataLamaItemSchema = z.object({
 
 /**
  * ============================================================
- * 2. SCHEMA DATA BARU ITEM
+ * SCHEMA DATA BARU ITEM
  * ============================================================
- *
- * Schema ini HANYA bertugas memvalidasi TIPE DATA.
- *
- * Tidak menentukan apakah field wajib atau opsional secara bisnis.
- * Aturan required/optional ditentukan di superRefine().
  */
 
 export const dataBaruItemSchema = z.object({
@@ -84,14 +74,8 @@ export const dataBaruItemSchema = z.object({
 
 /**
  * ============================================================
- * 3. HELPER: REQUIRED STRING
+ * HELPER: REQUIRED STRING
  * ============================================================
- *
- * Field dianggap tidak valid jika:
- * - undefined
- * - null
- * - string kosong
- * - hanya berisi spasi
  */
 
 function requireString(
@@ -112,14 +96,8 @@ function requireString(
 
 /**
  * ============================================================
- * 4. HELPER: REQUIRED NUMBER >= 0
+ * HELPER: REQUIRED NUMBER >= 0
  * ============================================================
- *
- * Field dianggap tidak valid jika:
- * - undefined
- * - null
- * - NaN
- * - kurang dari 0
  */
 
 function requireNonNegativeNumber(
@@ -144,36 +122,8 @@ function requireNonNegativeNumber(
 
 /**
  * ============================================================
- * 5. HELPER: VALIDASI DATA LAMA SNAPSHOT
+ * HELPER: VALIDASI DATA LAMA SNAPSHOT
  * ============================================================
- *
- * Digunakan oleh:
- *
- * - MUTASI_SEBAGIAN
- * - MUTASI_HABIS_UPDATE
- * - MUTASI_HABIS_REGULER
- *
- * Aturan:
- *
- * WAJIB:
- * - namaPemilikLama
- * - kecamatanPemilikLama
- * - desaPemilikLama
- * - alamatObjekLama
- * - blokObjekLama
- * - rtObjekLama
- * - rwObjekLama
- * - kecamatanObjekLama
- * - desaObjekLama
- * - luasTanahLama
- * - luasBangunanLama
- *
- * OPTIONAL:
- * - alamatPemilikLama
- * - blokPemilikLama
- * - rtPemilikLama
- * - rwPemilikLama
- * - sertifikatLama
  */
 
 function validateDataLamaSnapshot(
@@ -203,33 +153,12 @@ function validateDataLamaSnapshot(
   },
   ctx: z.RefinementCtx
 ) {
-  // ==========================================================
-  // DATA PEMILIK LAMA
-  // ==========================================================
-
   requireString(
     data.namaPemilikLama,
     ['namaPemilikLama'],
     'Nama pemilik lama wajib diisi',
     ctx
   );
-
-  /*
-   * alamatPemilikLama -> OPTIONAL
-   * blokPemilikLama   -> OPTIONAL
-   * rtPemilikLama     -> OPTIONAL
-   * rwPemilikLama     -> OPTIONAL
-   */
-
-  /*
-   * kecamatanPemilikLama -> OPTIONAL
-   * desaPemilikLama      -> OPTIONAL
-   */
-
-
-  // ==========================================================
-  // DATA OBJEK LAMA
-  // ==========================================================
 
   requireString(
     data.alamatObjekLama,
@@ -273,11 +202,6 @@ function validateDataLamaSnapshot(
     ctx
   );
 
-
-  // ==========================================================
-  // LUAS
-  // ==========================================================
-
   requireNonNegativeNumber(
     data.luasTanahLama,
     ['luasTanahLama'],
@@ -292,9 +216,6 @@ function validateDataLamaSnapshot(
     ctx
   );
 
-  /*
-   * sertifikatLama -> OPTIONAL
-   */
 }
 
 

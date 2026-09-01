@@ -6,11 +6,11 @@ const nextConfig = {
   // Reduces payload size significantly for JS bundles and API responses.
   compress: true,
 
-  // Configure Server Actions Body Size Limit (default 1MB, increased to 50MB for scan files/PDFs)
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    optimizePackageImports: ['lucide-react', 'motion', 'googleapis', '@google/genai'],
   },
 
   // Allow Next.js Image Optimization (<Image />) to serve and optimize
