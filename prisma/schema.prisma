@@ -63,84 +63,60 @@ enum StatusKoreksi {
   REJECTED
 }
 
+enum JenisKoreksi {
+  REVISI_DARI_PENELITI
+  KEMBALIKAN_DARI_PENGARSIP
+  KEMBALIKAN_DARI_PENGIRIM
+  KEMBALIKAN_DARI_PUSAT
+}
+
 model User {
   id                          String              @id @default(auto()) @map("_id") @db.ObjectId
   name                        String
   email                       String              @unique
   passwordHash                String
   role                        UserRole
-  isActive                    Boolean             @default(true)
+  isActive                    Boolean             @default(true) 
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
 
-  permohonan                  Permohonan[]        @relation(name: "PenginputPermohonan")
-  permohonanDiverifikasi      Permohonan[]        @relation(name: "PemantauPermohonan")
-  bundle                      Bundle[]
-  manifest                    Manifest[]
-  arsipDigital                ArsipDigital[]
-  permintaanKoreksiPengaju    PermintaanKoreksi[] @relation(name: "PengajuKoreksi")
-  permintaanKoreksiSupervisor PermintaanKoreksi[] @relation(name: "SupervisorKoreksi")
-  inAppNotification           InAppNotification[]
+  // Relasi dengan model lainnya
+  daftarInput                 Permohonan[]        @relation(name: "PenginputPermohonan")
+  daftarPantau                Permohonan[]        @relation(name: "PemantauPermohonan")
+  daftarBundle                Bundle[]
+  daftarManifest              Manifest[]
+  daftarArsipDigital          ArsipDigital[]
+  daftarAjuan                 PermintaanKoreksi[] @relation(name: "PengajuKoreksi")
+  daftarPutusan               PermintaanKoreksi[] @relation(name: "PemutusKoreksi")
+  daftarInAppNotification     InAppNotification[]
 }
 
 model Permohonan {
-  // 1. Identitas & Status Berkas
   id                   String           @id @default(auto()) @map("_id") @db.ObjectId
-  nomorPermohonan      String           @unique
   jenisPermohonan      JenisPermohonan
-  status               StatusPermohonan @default(SUBMITTED)
-  bundleId             String?          @db.ObjectId
-  isFavorite           Boolean          @default(false)
-  
-  // 2. Data Pelayanan & Wajib Pajak Utama
-  nomorPelayanan       String?
+  nomorPermohonan      String?          @unique
   tanggalNoPelayanan   DateTime?        @default(now())
   tanggalPenyelesaian  DateTime?
-  namaWajibPajak       String?
-  nop                  String?
-  noWhatsapp           String?          @map("nomorWhatsapp")
-  alamat               String?
-
-  // 3. Snapshot Data Lama (OP Asal)
-  namaPemilikLama      String?
-  alamatPemilikLama    String?
-  blokPemilikLama      String?
-  rtPemilikLama        String?
-  rwPemilikLama        String?
-  kecamatanPemilikLama String?
-  desaPemilikLama      String?
-  alamatObjekLama      String?
-  blokObjekLama        String?
-  rtObjekLama          String?
-  rwObjekLama          String?
-  kecamatanObjekLama   String?
-  desaObjekLama        String?
-  luasTanahLama        Float?
-  luasBangunanLama     Float?
-  sertifikatLama       String?
-
-  // 4. Relasi Rincian Data & Berkas
   dataLama             DataLama[]
   dataBaru             DataBaru[]
-  arsipDigital          ArsipDigital[]
-  permintaanKoreksi     PermintaanKoreksi[]
-  
-  // 5. Petugas & Waktu
-  penginputId          String           @db.ObjectId
-  pemantauId           String?          @db.ObjectId
+  versi                Int              @default(1)
+  status               StatusPermohonan @default(SUBMITTED)
+  isFavorite           Boolean          @default(false)
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   completedAt          DateTime?
 
-  // 6. Relasi Petugas & Bundle
-  bundle                Bundle?          @relation(fields: [bundleId], references: [id])
-  penginput             User             @relation(name: "PenginputPermohonan", fields: [penginputId], references: [id])
-  pemantau              User?            @relation(name: "PemantauPermohonan", fields: [pemantauId], references: [id])
+  // Relasi dengan model lainnya
+  penginputId          String           @db.ObjectId
+  penginput            User             @relation(name: "PenginputPermohonan", fields: [penginputId], references: [id])
+  pemantauId           String?          @db.ObjectId
+  pemantau             User?            @relation(name: "PemantauPermohonan", fields: [pemantauId], references: [id])
+  bundleId             String?          @db.ObjectId
+  bundle               Bundle?          @relation(fields: [bundleId], references: [id])
+  permintaanKoreksi    PermintaanKoreksi[]
 }
 
-model DataLama {
-  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
-  permohonanId         String     @db.ObjectId
+type DataLama {
   nopLama              String?
   namaPemilikLama      String?
   alamatPemilikLama    String?
@@ -160,15 +136,12 @@ model DataLama {
   sertifikatLama       String?
   isUtama              Boolean    @default(false)
   catatan              String?
-  
-  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
 }
 
-model DataBaru {
-  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
-  permohonanId         String     @db.ObjectId
+type DataBaru {
   nopBaru              String?
   namaPemilikBaru      String?
+  noWhatsapp           String?          @map("nomorWhatsapp")
   alamatPemilikBaru    String?
   blokPemilikBaru      String?
   rtPemilikBaru        String?
@@ -186,78 +159,74 @@ model DataBaru {
   sertifikatBaru       String?
   isVerified           Boolean    @default(false)
   catatan              String?
-  
-  permohonan           Permohonan @relation(fields: [permohonanId], references: [id], onDelete: Cascade)
+
   arsipDigital         ArsipDigital[]
+}
+
+type ArsipDigital {
+  urlBlob       String
+  versi         Int                @default(1)
+  status        StatusArsipDigital @default(ACTIVE)
+  createdAt     DateTime           @default(now())
+
+  // Relasi dengan model lainnya
+  pengarsipId   String             @db.ObjectId
+  pengarsip     User               @relation(fields: [pengarsipId], references: [id])
+  permohonanId  String             @db.ObjectId
+  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
 }
 
 model Bundle {
   id              String           @id @default(auto()) @map("_id") @db.ObjectId
   nomorBundle     String           @unique
-  status          StatusBundle     @default(DRAFT)
-  manifestId      String?          @db.ObjectId
   jenisPermohonan JenisPermohonan?
-  
-  penelitiId      String           @db.ObjectId
+  versi           Int              @default(1)
+  status          StatusBundle     @default(DRAFT)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  
-  permohonan      Permohonan[]
-  manifest        Manifest?        @relation(fields: [manifestId], references: [id])
+
+  // Relasi dengan model lainnya
+  penelitiId      String           @db.ObjectId
   peneliti        User             @relation(fields: [penelitiId], references: [id])
+  manifestId      String?          @db.ObjectId
+  manifest        Manifest?        @relation(fields: [manifestId], references: [id])
+  permohonan      Permohonan[]
 }
 
 model Manifest {
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
   nomorManifest    String         @unique
-  status           StatusManifest @default(DRAFT)
   buktiTandaTerima String?
-  
-  pengirimId       String         @db.ObjectId
+  versi            Int            @default(1)
+  status           StatusManifest @default(DRAFT)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   
-  bundle           Bundle[]
+  // Relasi dengan model lainnya
+  pengirimId       String         @db.ObjectId
   pengirim         User           @relation(fields: [pengirimId], references: [id])
-}
-
-model ArsipDigital {
-  id            String             @id @default(auto()) @map("_id") @db.ObjectId
-  permohonanId  String             @db.ObjectId
-  urlBlob       String
-  status        StatusArsipDigital @default(ACTIVE)
-  versi         Int
-  
-  pengarsipId   String             @db.ObjectId
-  dataBaruId    String?            @db.ObjectId
-  createdAt     DateTime           @default(now())
-  
-  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
-  dataBaru      DataBaru?          @relation(fields: [dataBaruId], references: [id])
-  pengarsip     User               @relation(fields: [pengarsipId], references: [id])
+  bundle           Bundle[]
 }
 
 model PermintaanKoreksi {
   id                String        @id @default(auto()) @map("_id") @db.ObjectId
-  permohonanId      String        @db.ObjectId
-  jenisKoreksi      String
-  status            StatusKoreksi @default(PENDING_APPROVAL)
-  
-  pengajuId         String        @db.ObjectId
-  supervisorId      String?       @db.ObjectId
+  jenisKoreksi      JenisKoreksi
   catatanPengaju    String
   catatanSupervisor String?
-  
-  reminderSentAt    DateTime?
-  escalationSentAt  DateTime?
-  
+  status            StatusKoreksi @default(PENDING_APPROVAL)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   diputuskanAt      DateTime?
+  reminderSentAt    DateTime?
+  escalationSentAt  DateTime?
 
-  permohonan        Permohonan    @relation(fields: [permohonanId], references: [id])
+  // Relasi dengan model lainnya
+  pengajuId         String        @db.ObjectId
   pengaju           User          @relation(name: "PengajuKoreksi", fields: [pengajuId], references: [id])
-  supervisor        User?         @relation(name: "SupervisorKoreksi", fields: [supervisorId], references: [id])
+  supervisorId      String?       @db.ObjectId
+  supervisor        User?         @relation(name: "PemutusKoreksi", fields: [supervisorId], references: [id])
+  permohonanId      String        @db.ObjectId
+  permohonan        Permohonan    @relation(fields: [permohonanId], references: [id])
 }
 
 model InAppNotification {
@@ -265,10 +234,11 @@ model InAppNotification {
   userId    String   @db.ObjectId
   judul     String
   pesan     String
-  isRead    Boolean  @default(false)
   metadata  Json?
+  isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-  
+
+  // Relasi dengan model lainnya
   user      User     @relation(fields: [userId], references: [id])
 }
 
