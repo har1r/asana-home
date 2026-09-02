@@ -1,3 +1,9 @@
+// =========================================================================
+// APPLICATION, BUNDLE, AND MANIFEST MANAGEMENT SYSTEM
+// Database: MongoDB
+// Principles: Flexible (Reuse), Trackable (Immutable History), Strict Control
+// =========================================================================
+
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
@@ -7,250 +13,314 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ========================== ENUMS ==========================
+
 enum UserRole {
-  PENGINPUT
-  PENELITI
-  PENGARSIP
-  PENGIRIM
-  PEMANTAU
-  SUPERVISOR
+  DATA_ENTRY    // PENGINPUT
+  RESEARCHER    // PENELITI
+  ARCHIVIST     // PENGARSIP
+  SENDER        // PENGIRIM
+  MONITOR       // PEMANTAU
+  SUPERVISOR    // SUPERVISOR
 }
 
-enum JenisPermohonan {
-  MUTASI_SEBAGIAN
-  MUTASI_HABIS_UPDATE
-  MUTASI_HABIS_REGULER
-  OBJEK_PAJAK_BARU
-  PEMBETULAN
-  PENGAKTIFAN
-  MUTASI_PENGGABUNGAN
+enum ApplicationType {
+  PARTIAL_MUTATION       // MUTASI_SEBAGIAN
+  EXPIRED_UPDATE         // MUTASI_HABIS_UPDATE
+  EXPIRED_REGULAR        // MUTASI_HABIS_REGULER
+  NEW_TAX_OBJECT         // OBJEK_PAJAK_BARU
+  CORRECTION             // PEMBETULAN
+  REACTIVATION           // PENGAKTIFAN
+  MERGER_MUTATION        // MUTASI_PENGGABUNGAN
 }
 
-enum StatusPermohonan {
+enum ApplicationStatus {
   SUBMITTED
+  REVISION
   BUNDLED
   ARCHIVED
   MANIFESTED
   DELIVERED
   COMPLETED
-  REJECTED
-  REVISION
 }
 
-enum StatusBundle {
+enum BundleStatus {
   DRAFT
   LOCKED
   IN_MANIFEST
-  VOID
 }
 
-enum StatusManifest {
+enum ManifestStatus {
   DRAFT
   LOCKED
   SENT
-  VOID
 }
 
-enum StatusArsipDigital {
+enum DigitalArchiveStatus {
   ACTIVE
-  SUPERSEDED
-  INVALIDATED
+  SUPERSEDED // Replaced by a newer version
 }
 
-enum StatusKoreksi {
-  PENDING_APPROVAL
+enum AuditAction {
+  CREATE
+  UPDATE_STATUS
+  ADD_TO_BUNDLE
+  REMOVE_FROM_BUNDLE
+  LOCK_BUNDLE
+  UNLOCK_BUNDLE
+  ADD_TO_MANIFEST
+  REMOVE_FROM_MANIFEST
+  LOCK_MANIFEST
+  SEND_MANIFEST
+  TRIGGER_RETURN
+  APPROVE_RETURN
+  REJECT_RETURN
+  UPLOAD_DOCUMENT
+  SUBMIT_DATA
+  REVISE_DATA
+}
+
+enum ReturnOrigin {
+  ARCHIVIST
+  SENDER
+  HEADQUARTERS // KANTOR_PUSAT
+}
+
+enum ReturnStatus {
+  PENDING
   APPROVED
   REJECTED
+  EXECUTED
 }
 
-enum JenisKoreksi {
-  REVISI_DARI_PENELITI
-  KEMBALIKAN_DARI_PENGARSIP
-  KEMBALIKAN_DARI_PENGIRIM
-  KEMBALIKAN_DARI_PUSAT
-}
+// ========================== MODELS ==========================
 
 model User {
-  id                          String              @id @default(auto()) @map("_id") @db.ObjectId
-  name                        String
-  email                       String              @unique
-  passwordHash                String
-  role                        UserRole
-  isActive                    Boolean             @default(true) 
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  // Relasi dengan model lainnya
-  daftarInput                 Permohonan[]        @relation(name: "PenginputPermohonan")
-  daftarPantau                Permohonan[]        @relation(name: "PemantauPermohonan")
-  daftarBundle                Bundle[]
-  daftarManifest              Manifest[]
-  daftarArsipDigital          ArsipDigital[]
-  daftarAjuan                 PermintaanKoreksi[] @relation(name: "PengajuKoreksi")
-  daftarPutusan               PermintaanKoreksi[] @relation(name: "PemutusKoreksi")
-  daftarInAppNotification     InAppNotification[]
+  auditLogs    AuditLog[]
+  snapshots    ApplicationSnapshot[]
 }
 
-model Permohonan {
-  id                   String           @id @default(auto()) @map("_id") @db.ObjectId
-  jenisPermohonan      JenisPermohonan
-  nomorPermohonan      String?          @unique
-  tanggalNoPelayanan   DateTime?        @default(now())
-  tanggalPenyelesaian  DateTime?
-  dataLama             DataLama[]
-  dataBaru             DataBaru[]
-  versi                Int              @default(1)
-  status               StatusPermohonan @default(SUBMITTED)
-  isFavorite           Boolean          @default(false)
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  completedAt          DateTime?
+model Application {
+  id                   String             @id @default(auto()) @map("_id") @db.ObjectId
+  applicationType      ApplicationType
+  applicationNumber    String             @unique
 
-  // Relasi dengan model lainnya
-  penginputId          String           @db.ObjectId
-  penginput            User             @relation(name: "PenginputPermohonan", fields: [penginputId], references: [id])
-  pemantauId           String?          @db.ObjectId
-  pemantau             User?            @relation(name: "PemantauPermohonan", fields: [pemantauId], references: [id])
-  bundleId             String?          @db.ObjectId
-  bundle               Bundle?          @relation(fields: [bundleId], references: [id])
-  permintaanKoreksi    PermintaanKoreksi[]
+  serviceNumberDate    DateTime           @default(now())
+  completionDate       DateTime 
+  
+  previousData         PreviousData[]
+  targetData           TargetData[]       
+  
+  status               ApplicationStatus  @default(SUBMITTED)
+  currentBundleId      String?            @db.ObjectId  
+  isFavorite           Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  currentBundle        Bundle?                    @relation(fields: [currentBundleId], references: [id])
+  auditLogs            AuditLog[]
+  bundleHistory        ApplicationBundleHistory[]
+  snapshots            ApplicationSnapshot[]
 }
 
-type DataLama {
-  nopLama              String?
-  namaPemilikLama      String?
-  alamatPemilikLama    String?
-  blokPemilikLama      String?
-  rtPemilikLama        String?
-  rwPemilikLama        String?
-  kecamatanPemilikLama String?
-  desaPemilikLama      String?
-  alamatObjekLama      String?
-  blokObjekLama        String?
-  rtObjekLama          String?
-  rwObjekLama          String?
-  kecamatanObjekLama   String?
-  desaObjekLama        String?
-  luasTanahLama        Float?
-  luasBangunanLama     Float?
-  sertifikatLama       String?
-  isUtama              Boolean    @default(false)
-  catatan              String?
+type PreviousData {
+  nop                 String
+  ownerName           String
+  ownerAddress        String?
+  ownerBlock          String?
+  ownerRt             String?
+  ownerRw             String?
+  ownerKecamatan      String? // Istilah domain dipertahankan
+  ownerDesa           String? // Istilah domain dipertahankan
+  objectAddress       String?
+  objectBlock         String?
+  objectRt            String?
+  objectRw            String?
+  objectKecamatan     String?
+  objectDesa          String?
+  landArea            Float
+  buildingArea        Float?
+  certificate         String?
+  isPrimary           Boolean  @default(false)
+  notes               String?
 }
 
-type DataBaru {
-  nopBaru              String?
-  namaPemilikBaru      String?
-  noWhatsapp           String?          @map("nomorWhatsapp")
-  alamatPemilikBaru    String?
-  blokPemilikBaru      String?
-  rtPemilikBaru        String?
-  rwPemilikBaru        String?
-  kecamatanPemilikBaru String?
-  desaPemilikBaru      String?
-  alamatObjekBaru      String?
-  blokObjekBaru        String?
-  rtObjekBaru          String?
-  rwObjekBaru          String?
-  kecamatanObjekBaru   String?
-  desaObjekBaru        String?
-  luasTanahBaru        Float?
-  luasBangunanBaru     Float?
-  sertifikatBaru       String?
-  isVerified           Boolean    @default(false)
-  catatan              String?
-
-  arsipDigital         ArsipDigital[]
+type TargetData {
+  idTargetData        String     @default(auto()) @map("_id")   
+  nopTemporary        String?    // NOP Sementara (Prefix)
+  nopFinal            String?    // NOP Final (Hasil Pusat) 
+  ownerName           String
+  whatsappNumber      String?    
+  ownerAddress        String?
+  ownerBlock          String?
+  ownerRt             String?
+  ownerRw             String?
+  ownerKecamatan      String?
+  ownerDesa           String?
+  objectAddress       String?
+  objectBlock         String?
+  objectRt            String?
+  objectRw            String?
+  objectKecamatan     String?
+  objectDesa          String?
+  landArea            Float
+  buildingArea        Float?
+  certificate         String?
+  
+  isVerified          Boolean    @default(false)
+  isArchived          Boolean    @default(false) 
+  
+  notes               String?
+  digitalArchives     DigitalArchive[]
 }
 
-type ArsipDigital {
-  urlBlob       String
-  versi         Int                @default(1)
-  status        StatusArsipDigital @default(ACTIVE)
-  createdAt     DateTime           @default(now())
-
-  // Relasi dengan model lainnya
-  pengarsipId   String             @db.ObjectId
-  pengarsip     User               @relation(fields: [pengarsipId], references: [id])
-  permohonanId  String             @db.ObjectId
-  permohonan    Permohonan         @relation(fields: [permohonanId], references: [id])
+type DigitalArchive {
+  idArchive       String                @default(auto()) @map("_id")
+  urlBlob         String
+  fileName        String?  
+  status          DigitalArchiveStatus  @default(ACTIVE)
+  uploadedBy      String?               @db.ObjectId 
+  createdAt       DateTime              @default(now())
+  
+  revisionNote    String?               
+  supersededBy    String?               
+  supersededAt    DateTime?             
 }
 
 model Bundle {
-  id              String           @id @default(auto()) @map("_id") @db.ObjectId
-  nomorBundle     String           @unique
-  jenisPermohonan JenisPermohonan?
-  versi           Int              @default(1)
-  status          StatusBundle     @default(DRAFT)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  bundleNumber      String          @unique
+  applicationType   ApplicationType // Ensures 1 Bundle = 1 Application Type
+  status            BundleStatus    @default(DRAFT)
+  
+  currentManifestId String?         @db.ObjectId 
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  // Relasi dengan model lainnya
-  penelitiId      String           @db.ObjectId
-  peneliti        User             @relation(fields: [penelitiId], references: [id])
-  manifestId      String?          @db.ObjectId
-  manifest        Manifest?        @relation(fields: [manifestId], references: [id])
-  permohonan      Permohonan[]
+  bundleDocuments   DocumentContainer[] 
+
+  currentManifest   Manifest?                   @relation(fields: [currentManifestId], references: [id])
+  applications      Application[]             
+  auditLogs         AuditLog[]
+  returnRequests    ReturnRequest[]
+  applicationHistory ApplicationBundleHistory[]
+  manifestHistory   ManifestBundleHistory[]
 }
 
 model Manifest {
-  id               String         @id @default(auto()) @map("_id") @db.ObjectId
-  nomorManifest    String         @unique
-  buktiTandaTerima String?
-  versi            Int            @default(1)
-  status           StatusManifest @default(DRAFT)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  manifestNumber    String          @unique
+  signedReceiptUrl  String?         // Bukti Tanda Terima
   
-  // Relasi dengan model lainnya
-  pengirimId       String         @db.ObjectId
-  pengirim         User           @relation(fields: [pengirimId], references: [id])
-  bundle           Bundle[]
+  status            ManifestStatus  @default(DRAFT)
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  manifestDocuments DocumentContainer[] 
+
+  bundles           Bundle[]       
+  auditLogs         AuditLog[]
+  returnRequests    ReturnRequest[] 
+  bundleHistory     ManifestBundleHistory[]
 }
 
-model PermintaanKoreksi {
-  id                String        @id @default(auto()) @map("_id") @db.ObjectId
-  jenisKoreksi      JenisKoreksi
-  catatanPengaju    String
-  catatanSupervisor String?
-  status            StatusKoreksi @default(PENDING_APPROVAL)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  diputuskanAt      DateTime?
-  reminderSentAt    DateTime?
-  escalationSentAt  DateTime?
-
-  // Relasi dengan model lainnya
-  pengajuId         String        @db.ObjectId
-  pengaju           User          @relation(name: "PengajuKoreksi", fields: [pengajuId], references: [id])
-  supervisorId      String?       @db.ObjectId
-  supervisor        User?         @relation(name: "PemutusKoreksi", fields: [supervisorId], references: [id])
-  permohonanId      String        @db.ObjectId
-  permohonan        Permohonan    @relation(fields: [permohonanId], references: [id])
-}
-
-model InAppNotification {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  judul     String
-  pesan     String
-  metadata  Json?
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  // Relasi dengan model lainnya
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model AuditLog {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  entityType    String
-  entityId      String?  @db.ObjectId
-  aksi          String
-  statusSebelum String?
-  statusSesudah String?
-  pelakuId      String?  @db.ObjectId
-  correlationId String?
-  metadata      Json?
+type DocumentContainer {
+  idDocument    String   @default(auto()) @map("_id")
+  documentType  String   // e.g., "COVER_LETTER", "SHIPPING_LETTER", "HQ_RECEIPT"
+  urlBlob       String
+  fileName      String?
+  uploadedBy    String?  @db.ObjectId
   createdAt     DateTime @default(now())
 }
+
+// ========================== TRACKABILITY & RETURN ==========================
+
+model AuditLog {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  action      AuditAction 
+  entityType  String      // "APPLICATION", "BUNDLE", or "MANIFEST"
+  entityId    String      @db.ObjectId
+  oldStatus   String?     
+  newStatus   String?     
+  
+  // CRITICAL: Store snapshot of container contents here when action is LOCK_*
+  metadata    Json?       
+  createdAt   DateTime    @default(now())
+
+  actorId     String      @db.ObjectId
+  actor       User        @relation(fields: [actorId], references: [id])
+}
+
+model ReturnRequest {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  
+  origin        ReturnOrigin 
+  triggeredBy   String       @db.ObjectId 
+  reason        String
+  
+  status        ReturnStatus @default(PENDING)
+  approvedBy    String?      @db.ObjectId 
+  approvedAt    DateTime?
+  rejectionNote String?      
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  bundleId      String?      @db.ObjectId
+  bundle        Bundle?      @relation(fields: [bundleId], references: [id])
+
+  manifestId    String?      @db.ObjectId
+  manifest      Manifest?    @relation(fields: [manifestId], references: [id])
+}
+
+model ApplicationBundleHistory {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  applicationId String       @db.ObjectId
+  bundleId      String       @db.ObjectId
+  
+  joinedAt      DateTime     @default(now())
+  leftAt        DateTime?    
+  reasonLeft    String?      
+  
+  application   Application  @relation(fields: [applicationId], references: [id])
+  bundle        Bundle       @relation(fields: [bundleId], references: [id])
+}
+
+model ManifestBundleHistory {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  bundleId      String       @db.ObjectId
+  manifestId    String       @db.ObjectId
+  
+  joinedAt      DateTime     @default(now())
+  leftAt        DateTime?    
+  reasonLeft    String?      
+  
+  bundle        Bundle       @relation(fields: [bundleId], references: [id])
+  manifest      Manifest     @relation(fields: [manifestId], references: [id])
+}
+
+model ApplicationSnapshot {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  applicationId  String         @db.ObjectId
+  snapshotData   Json           // Full JSON copy of previousData & targetData at that moment
+  
+  snapshotType   String         // e.g., "INITIAL_SUBMIT", "REVISION_1", "RESUBMIT"
+  note           String?        
+  actorId        String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  
+  actor          User           @relation(fields: [actorId], references: [id])
+  application    Application    @relation(fields: [applicationId], references: [id])
+}
+
