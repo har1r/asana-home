@@ -3,11 +3,10 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createInAppNotification } from '@/lib/notifications';
 import { revalidatePath } from 'next/cache';
 
 /**
- * Retrieve all pending koreksi requests for Supervisor to review.
+ * Retrieve all pending return/koreksi requests for Supervisor to review.
  */
 export async function getPendingKoreksi() {
   const session = await getServerSession(authOptions);
@@ -16,16 +15,15 @@ export async function getPendingKoreksi() {
   }
 
   try {
-    const list = await prisma.permintaanKoreksi.findMany({
-      where: { status: 'PENDING_APPROVAL' },
+    const list = await prisma.returnRequest.findMany({
+      where: { status: 'PENDING' },
       include: {
-        permohonan: {
+        bundle: {
           include: {
-            penginput: { select: { id: true, name: true, email: true } },
-            bundle: { select: { id: true, nomorBundle: true, status: true } }
+            applications: true
           }
         },
-        pengaju: { select: { id: true, name: true, role: true } },
+        manifest: true
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -46,24 +44,17 @@ export async function getKoreksiHistory() {
   }
 
   try {
-    const list = await prisma.permintaanKoreksi.findMany({
+    const list = await prisma.returnRequest.findMany({
       where: { status: { in: ['APPROVED', 'REJECTED'] } },
       include: {
-        permohonan: {
-          select: {
-            id: true,
-            nomorPermohonan: true,
-            jenisPermohonan: true,
-            status: true,
-            namaWajibPajak: true,
-            createdAt: true,
-            penginput: { select: { id: true, name: true, email: true } }
+        bundle: {
+          include: {
+            applications: true
           }
         },
-        pengaju: { select: { id: true, name: true, role: true } },
-        supervisor: { select: { id: true, name: true } },
+        manifest: true
       },
-      orderBy: { diputuskanAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       take: 100
     });
     return { success: true, list };
@@ -86,25 +77,17 @@ export async function getSupervisorStats() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [pendingTotal, decidedToday, approvedTotal, rejectedTotal, byJenis] = await Promise.all([
-      prisma.permintaanKoreksi.count({ where: { status: 'PENDING_APPROVAL' } }),
-      prisma.permintaanKoreksi.count({
+    const [pendingTotal, decidedToday, approvedTotal, rejectedTotal] = await Promise.all([
+      prisma.returnRequest.count({ where: { status: 'PENDING' } }),
+      prisma.returnRequest.count({
         where: {
           status: { in: ['APPROVED', 'REJECTED'] },
-          diputuskanAt: { gte: todayStart }
+          updatedAt: { gte: todayStart }
         }
       }),
-      prisma.permintaanKoreksi.count({ where: { status: 'APPROVED' } }),
-      prisma.permintaanKoreksi.count({ where: { status: 'REJECTED' } }),
-      prisma.permintaanKoreksi.groupBy({
-        by: ['jenisKoreksi'],
-        where: { status: 'PENDING_APPROVAL' },
-        _count: true
-      }),
+      prisma.returnRequest.count({ where: { status: 'APPROVED' } }),
+      prisma.returnRequest.count({ where: { status: 'REJECTED' } }),
     ]);
-
-    const jenisCount: Record<string, number> = {};
-    byJenis.forEach(g => { jenisCount[g.jenisKoreksi] = g._count; });
 
     return {
       success: true,
@@ -113,7 +96,7 @@ export async function getSupervisorStats() {
         decidedToday,
         approvedTotal,
         rejectedTotal,
-        byJenis: jenisCount,
+        byJenis: {}
       }
     };
   } catch (error: any) {
@@ -127,8 +110,7 @@ export async function getSupervisorStats() {
 }
 
 /**
- * Approve a PermintaanKoreksi and execute the side-effect for each jenisKoreksi.
- * Also fixes the empty LOCKED bundle bug for KELUARKAN_DARI_BUNDLE.
+ * Approve a ReturnRequest
  */
 export async function approveKoreksi(koreksiId: string, catatan?: string) {
   const session = await getServerSession(authOptions);
@@ -138,175 +120,51 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const koreksi = await tx.permintaanKoreksi.findUnique({
+      const returnReq = await tx.returnRequest.findUnique({
         where: { id: koreksiId },
         include: {
-          permohonan: {
+          bundle: {
             include: {
-              bundle: true,
-              arsipDigital: { orderBy: { versi: 'desc' }, take: 1 }
+              applications: true
             }
-          },
-          pengaju: { select: { id: true, name: true, role: true } }
+          }
         }
       });
 
-      if (!koreksi) throw new Error('Permintaan koreksi tidak ditemukan.');
-      if (koreksi.status !== 'PENDING_APPROVAL') throw new Error('Permintaan koreksi ini sudah diputuskan sebelumnya.');
+      if (!returnReq) throw new Error('Permintaan koreksi tidak ditemukan.');
+      if (returnReq.status !== 'PENDING') throw new Error('Permintaan koreksi ini sudah diputuskan sebelumnya.');
 
-      const permohonan = koreksi.permohonan;
-      const bundle = permohonan.bundle;
-      let aksiDetail = '';
-
-      // ======================================================
-      // EXECUTE SIDE EFFECTS BASED ON jenisKoreksi
-      // ======================================================
-      if (koreksi.jenisKoreksi === 'KELUARKAN_DARI_BUNDLE') {
-        // Remove permohonan from bundle, revert to SUBMITTED
-        await tx.permohonan.update({
-          where: { id: permohonan.id },
-          data: { bundleId: null, status: 'SUBMITTED' }
+      if (returnReq.bundleId) {
+        await tx.application.updateMany({
+          where: { currentBundleId: returnReq.bundleId },
+          data: { status: 'SUBMITTED', currentBundleId: null }
         });
-
-        // Check if bundle is now empty → fix the empty LOCKED bundle bug
-        if (bundle) {
-          const remaining = await tx.permohonan.findMany({ where: { bundleId: bundle.id } });
-          if (remaining.length === 0) {
-            await tx.bundle.update({
-              where: { id: bundle.id },
-              data: {
-                status: 'VOID',
-                jenisPermohonan: null
-              }
-            });
-          }
-        }
-        aksiDetail = `Permohonan ${permohonan.nomorPermohonan} dikeluarkan dari bundle${bundle ? ` ${bundle.nomorBundle}` : ''} dan dikembalikan ke status SUBMITTED.`;
-
-      } else if (koreksi.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI') {
-        // Detach from bundle and revert to SUBMITTED for re-bundling
-        await tx.permohonan.update({
-          where: { id: permohonan.id },
-          data: { bundleId: null, status: 'SUBMITTED' }
-        });
-
-        // If bundle is now empty after removal, reset it
-        if (bundle) {
-          const remaining = await tx.permohonan.findMany({ where: { bundleId: bundle.id } });
-          if (remaining.length === 0) {
-            await tx.bundle.update({
-              where: { id: bundle.id },
-              data: {
-                status: 'VOID',
-                jenisPermohonan: null
-              }
-            });
-          }
-        }
-        aksiDetail = `Permohonan ${permohonan.nomorPermohonan} dikembalikan ke Peneliti (SUBMITTED).`;
-
-      } else if (koreksi.jenisKoreksi === 'KEMBALIKAN_KE_PENGARSIP') {
-        // Revert ARCHIVED back to BUNDLED so Pengarsip can re-scan
-        await tx.permohonan.update({
-          where: { id: permohonan.id },
-          data: { status: 'BUNDLED' }
-        });
-
-        // Supersede the most recent arsip digital version so Pengarsip can upload fresh
-        if (permohonan.arsipDigital.length > 0) {
-          await tx.arsipDigital.update({
-            where: { id: permohonan.arsipDigital[0].id },
-            data: { status: 'INVALIDATED' }
-          });
-        }
-        aksiDetail = `Permohonan ${permohonan.nomorPermohonan} dikembalikan ke Pengarsip (BUNDLED), arsip digital terakhir diinvalidasi.`;
-
-      } else if (koreksi.jenisKoreksi === 'BATAL_SELESAI') {
-        // Rollback COMPLETED → ARCHIVED
-        await tx.permohonan.update({
-          where: { id: permohonan.id },
-          data: { status: 'ARCHIVED' }
-        });
-        aksiDetail = `Permohonan ${permohonan.nomorPermohonan} dibatalkan status Selesainya, kembali ke ARCHIVED.`;
       }
 
-      // Mark koreksi as APPROVED
-      const updatedKoreksi = await tx.permintaanKoreksi.update({
+      const updated = await tx.returnRequest.update({
         where: { id: koreksiId },
         data: {
           status: 'APPROVED',
-          supervisorId: session.user.id,
-          catatanSupervisor: catatan || 'Disetujui.',
-          diputuskanAt: new Date()
+          approvedBy: session.user.id,
+          approvedAt: new Date()
         }
       });
 
-      // Audit log
       await tx.auditLog.create({
         data: {
-          entityType: 'PERMOHONAN',
-          entityId: permohonan.id,
-          aksi: `Supervisor Menyetujui Koreksi (${koreksi.jenisKoreksi}): ${aksiDetail}`,
-          statusSebelum: permohonan.status,
-          pelakuId: session.user.id,
-          metadata: { koreksiId, jenisKoreksi: koreksi.jenisKoreksi, catatan }
+          entityType: 'RETURN_REQUEST',
+          entityId: returnReq.id,
+          action: 'LOCK_BUNDLE',
+          actorId: session.user.id,
+          metadata: { note: catatan || 'Disetujui.' }
         }
       });
 
-      return {
-        updatedKoreksi,
-        pengajuId: koreksi.pengajuId,
-        nomorPelayanan: permohonan.nomorPelayanan || permohonan.nomorPermohonan,
-        jenisKoreksi: koreksi.jenisKoreksi,
-      };
+      return updated;
     });
 
-    // Notify pengaju (outside transaction)
-    const notifPesan = `Permintaan koreksi Anda untuk Permohonan ${result.nomorPelayanan} (${result.jenisKoreksi.replace(/_/g, ' ')}) telah DISETUJUI oleh Supervisor.${catatan ? ` Catatan: "${catatan}"` : ''}`;
-    await createInAppNotification(result.pengajuId, 'Koreksi Disetujui', notifPesan, { koreksiId });
-
-    // If KEMBALIKAN_KE_PENGARSIP, notify all PENGARSIP users so they know re-scan is requested
-    if (result.jenisKoreksi === 'KEMBALIKAN_KE_PENGARSIP') {
-      try {
-        const pengarsipUsers = await prisma.user.findMany({
-          where: { role: 'PENGARSIP' },
-          select: { id: true }
-        });
-        for (const u of pengarsipUsers) {
-          await createInAppNotification(
-            u.id,
-            'Permohonan Dikembalikan untuk Re-upload',
-            `Permohonan No. Pelayanan ${result.nomorPelayanan} dikembalikan oleh Pengirim untuk di-upload ulang scan PDF-nya.${catatan ? ` Catatan: "${catatan}"` : ''}`,
-            { koreksiId }
-          );
-        }
-      } catch (err) {
-        console.error('[NOTIF-PENGARSIP-ERR]', err);
-      }
-    }
-
-    // If KEMBALIKAN_KE_PENELITI, notify all PENELITI users so they know a returned application has entered their queue
-    if (result.jenisKoreksi === 'KEMBALIKAN_KE_PENELITI') {
-      try {
-        const penelitiUsers = await prisma.user.findMany({
-          where: { role: 'PENELITI' },
-          select: { id: true }
-        });
-        for (const u of penelitiUsers) {
-          await createInAppNotification(
-            u.id,
-            'Permohonan Dikembalikan oleh Pengarsip',
-            `Permohonan No. Pelayanan ${result.nomorPelayanan} dikembalikan oleh Pengarsip (disetujui Supervisor) untuk diteliti/dibundel ulang.${catatan ? ` Catatan Alasan: "${catatan}"` : ''}`,
-            { koreksiId }
-          );
-        }
-      } catch (err) {
-        console.error('[NOTIF-PENELITI-ERR]', err);
-      }
-    }
-
     revalidatePath('/');
-    return { success: true };
+    return { success: true, result };
   } catch (error: any) {
     console.error('[ACTION-APPROVE-KOREKSI-ERR]', error);
     return { success: false, error: error.message || 'Gagal menyetujui koreksi.' };
@@ -314,65 +172,52 @@ export async function approveKoreksi(koreksiId: string, catatan?: string) {
 }
 
 /**
- * Reject a PermintaanKoreksi. No side-effects on permohonan status.
+ * Reject a ReturnRequest
  */
-export async function rejectKoreksi(koreksiId: string, catatan: string) {
+export async function rejectKoreksi(koreksiId: string, alasanPenolakan: string) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'SUPERVISOR') {
     throw new Error('Unauthorized');
   }
 
-  if (!catatan.trim()) {
+  if (!alasanPenolakan || !alasanPenolakan.trim()) {
     return { success: false, error: 'Alasan penolakan wajib diisi.' };
   }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const koreksi = await tx.permintaanKoreksi.findUnique({
-        where: { id: koreksiId },
-        include: {
-          permohonan: { select: { id: true, nomorPermohonan: true, nomorPelayanan: true, status: true } },
-          pengaju: { select: { id: true, name: true } }
-        }
+      const returnReq = await tx.returnRequest.findUnique({
+        where: { id: koreksiId }
       });
 
-      if (!koreksi) throw new Error('Permintaan koreksi tidak ditemukan.');
-      if (koreksi.status !== 'PENDING_APPROVAL') throw new Error('Permintaan koreksi ini sudah diputuskan sebelumnya.');
+      if (!returnReq) throw new Error('Permintaan koreksi tidak ditemukan.');
+      if (returnReq.status !== 'PENDING') throw new Error('Permintaan koreksi ini sudah diputuskan sebelumnya.');
 
-      const updatedKoreksi = await tx.permintaanKoreksi.update({
+      const updated = await tx.returnRequest.update({
         where: { id: koreksiId },
         data: {
           status: 'REJECTED',
-          supervisorId: session.user.id,
-          catatanSupervisor: catatan,
-          diputuskanAt: new Date()
+          rejectionNote: alasanPenolakan.trim(),
+          approvedBy: session.user.id,
+          approvedAt: new Date()
         }
       });
 
       await tx.auditLog.create({
         data: {
-          entityType: 'PERMOHONAN',
-          entityId: koreksi.permohonanId,
-          aksi: `Supervisor Menolak Koreksi (${koreksi.jenisKoreksi})`,
-          statusSebelum: koreksi.permohonan.status,
-          pelakuId: session.user.id,
-          metadata: { koreksiId, jenisKoreksi: koreksi.jenisKoreksi, catatan }
+          entityType: 'RETURN_REQUEST',
+          entityId: returnReq.id,
+          action: 'LOCK_BUNDLE',
+          actorId: session.user.id,
+          metadata: { rejectionNote: alasanPenolakan.trim() }
         }
       });
 
-      return {
-        updatedKoreksi,
-        pengajuId: koreksi.pengajuId,
-        nomorPelayanan: koreksi.permohonan.nomorPelayanan || koreksi.permohonan.nomorPermohonan,
-        jenisKoreksi: koreksi.jenisKoreksi,
-      };
+      return updated;
     });
 
-    const notifPesan = `Permintaan koreksi Anda untuk Permohonan ${result.nomorPelayanan} (${result.jenisKoreksi.replace(/_/g, ' ')}) telah DITOLAK oleh Supervisor. Alasan: "${catatan}"`;
-    await createInAppNotification(result.pengajuId, 'Koreksi Ditolak', notifPesan, { koreksiId });
-
     revalidatePath('/');
-    return { success: true };
+    return { success: true, result };
   } catch (error: any) {
     console.error('[ACTION-REJECT-KOREKSI-ERR]', error);
     return { success: false, error: error.message || 'Gagal menolak koreksi.' };

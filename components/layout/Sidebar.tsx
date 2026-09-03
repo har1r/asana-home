@@ -30,8 +30,8 @@ import {
   X
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-import { getGlobalBerandaStats } from '@/app/actions/beranda';
-import { getPermohonanStats } from '@/app/actions/penginput';
+import { getGlobalBerandaStats } from '@/app/actions/dashboard';
+import { getPermohonanStats } from '@/app/actions/data-entry';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonCircle } from '@/components/skeletons/SkeletonBase';
 
 // ==========================================

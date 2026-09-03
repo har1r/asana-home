@@ -12,16 +12,11 @@ export async function searchPermohonans(query: string) {
   if (!trimmedQuery) return { success: true, results: [] };
 
   try {
-    const results = await prisma.permohonan.findMany({
+    const results = await prisma.application.findMany({
       where: {
         OR: [
-          { nomorPelayanan: { contains: trimmedQuery, mode: "insensitive" } },
-          { nop: { contains: trimmedQuery, mode: "insensitive" } },
-          { namaWajibPajak: { contains: trimmedQuery, mode: "insensitive" } },
+          { applicationNumber: { contains: trimmedQuery, mode: "insensitive" } },
         ],
-      },
-      include: {
-        dataBaru: true,
       },
       orderBy: { createdAt: "desc" },
       take: 15,

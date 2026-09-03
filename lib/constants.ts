@@ -1,3 +1,5 @@
+import { UserRole } from '@prisma/client';
+
 export const ROLE_COOKIE_NAME = 'architax_user_role';
 
 export const VALID_TABS = [
@@ -6,25 +8,30 @@ export const VALID_TABS = [
   'inbox',
   'tracking',
   'help',
+  'data-entry',
+  'researcher',
+  'archivist',
+  'sender',
+  'monitor',
+  'supervisor',
+  'portfolios',
   'penginput',
   'peneliti',
   'pengarsip',
   'pengirim',
-  'pemantau',
-  'supervisor',
-  'portfolios'
+  'pemantau'
 ] as const;
 export type TabType = typeof VALID_TABS[number];
 
 export const VALID_ROLES = [
-  'PENGINPUT',
-  'PENELITI',
-  'PENGARSIP',
-  'PENGIRIM',
-  'PEMANTAU',
+  'DATA_ENTRY',
+  'RESEARCHER',
+  'ARCHIVIST',
+  'SENDER',
+  'MONITOR',
   'SUPERVISOR'
 ] as const;
-export type UserRoleType = typeof VALID_ROLES[number];
+export type UserRoleType = UserRole;
 
 export function isValidTab(tab: any): boolean {
   return typeof tab === 'string' && (VALID_TABS as readonly string[]).includes(tab);

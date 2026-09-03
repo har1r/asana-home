@@ -30,7 +30,7 @@ import {
   SkeletonBox, SkeletonCircle, SkeletonText
 } from '@/components/skeletons/SkeletonBase';
 
-const GlobalBerandaDashboard = dynamic(() => import('@/components/widgets/GlobalBerandaDashboard'), {
+const GlobalDashboard = dynamic(() => import('@/components/widgets/GlobalDashboard'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
@@ -39,23 +39,23 @@ const GlobalBerandaDashboard = dynamic(() => import('@/components/widgets/Global
 
 
 
-const PenginputWorkspace = dynamic(() => import('@/components/workspaces/penginput/PenginputWorkspace'), {
+const DataEntryWorkspace = dynamic(() => import('@/components/workspaces/data-entry/DataEntryWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
-const PenelitiWorkspace = dynamic(() => import('@/components/workspaces/peneliti/PenelitiWorkspace'), {
+const ResearcherWorkspace = dynamic(() => import('@/components/workspaces/researcher/ResearcherWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
-const PengarsipWorkspace = dynamic(() => import('@/components/workspaces/pengarsip/PengarsipWorkspace'), {
+const ArchivistWorkspace = dynamic(() => import('@/components/workspaces/archivist/ArchivistWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
-const PengirimWorkspace = dynamic(() => import('@/components/workspaces/pengirim/PengirimWorkspace'), {
+const SenderWorkspace = dynamic(() => import('@/components/workspaces/sender/SenderWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
-const PemantauWorkspace = dynamic(() => import('@/components/workspaces/pemantau/PemantauWorkspace'), {
+const MonitorWorkspace = dynamic(() => import('@/components/workspaces/monitor/MonitorWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
@@ -215,18 +215,23 @@ const BerandaTab = React.memo(function BerandaTab({ onViewAllTasks, initialRole 
     return <MascotLoadingSpinner />;
   }
 
-  return <GlobalBerandaDashboard onViewAllTasks={onViewAllTasks} />;
+  return <GlobalDashboard onViewAllTasks={onViewAllTasks} />;
 });
 
 
 // --- 2. MyTasksTab ---
 const WORKSPACE_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  PENGINPUT: PenginputWorkspace,
-  PENELITI: PenelitiWorkspace,
-  PENGARSIP: PengarsipWorkspace,
-  PENGIRIM: PengirimWorkspace,
-  PEMANTAU: PemantauWorkspace,
+  DATA_ENTRY: DataEntryWorkspace,
+  RESEARCHER: ResearcherWorkspace,
+  ARCHIVIST: ArchivistWorkspace,
+  SENDER: SenderWorkspace,
+  MONITOR: MonitorWorkspace,
   SUPERVISOR: SupervisorWorkspace,
+  PENGINPUT: DataEntryWorkspace,
+  PENELITI: ResearcherWorkspace,
+  PENGARSIP: ArchivistWorkspace,
+  PENGIRIM: SenderWorkspace,
+  PEMANTAU: MonitorWorkspace,
 };
 
 interface MyTasksTabProps {
@@ -670,23 +675,23 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
           )}
 
           {activeTab === 'penginput' && (
-            <PenginputWorkspace />
+            <DataEntryWorkspace />
           )}
 
           {activeTab === 'peneliti' && (
-            <PenelitiWorkspace />
+            <ResearcherWorkspace />
           )}
 
           {activeTab === 'pengarsip' && (
-            <PengarsipWorkspace />
+            <ArchivistWorkspace />
           )}
 
           {activeTab === 'pengirim' && (
-            <PengirimWorkspace />
+            <SenderWorkspace />
           )}
 
           {activeTab === 'pemantau' && (
-            <PemantauWorkspace />
+            <MonitorWorkspace />
           )}
 
           {activeTab === 'supervisor' && (

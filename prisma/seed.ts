@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -13,45 +13,45 @@ async function main() {
   
   const users = [
     {
-      name: 'Ahmad Penginput',
+      name: 'Ahmad Data Entry',
       email: 'penginput@architax.com',
       passwordHash,
-      role: 'PENGINPUT' as const,
+      role: UserRole.DATA_ENTRY,
       isActive: true,
     },
     {
-      name: 'Budi Peneliti',
+      name: 'Budi Researcher',
       email: 'peneliti@architax.com',
       passwordHash,
-      role: 'PENELITI' as const,
+      role: UserRole.RESEARCHER,
       isActive: true,
     },
     {
-      name: 'Chandra Pengarsip',
+      name: 'Chandra Archivist',
       email: 'pengarsip@architax.com',
       passwordHash,
-      role: 'PENGARSIP' as const,
+      role: UserRole.ARCHIVIST,
       isActive: true,
     },
     {
-      name: 'Dedi Pengirim',
+      name: 'Dedi Sender',
       email: 'pengirim@architax.com',
       passwordHash,
-      role: 'PENGIRIM' as const,
+      role: UserRole.SENDER,
       isActive: true,
     },
     {
-      name: 'Eko Pemantau',
+      name: 'Eko Monitor',
       email: 'pemantau@architax.com',
       passwordHash,
-      role: 'PEMANTAU' as const,
+      role: UserRole.MONITOR,
       isActive: true,
     },
     {
       name: 'Siti Supervisor',
       email: 'supervisor@architax.com',
       passwordHash,
-      role: 'SUPERVISOR' as const,
+      role: UserRole.SUPERVISOR,
       isActive: true,
     },
   ];

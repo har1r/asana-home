@@ -16,22 +16,22 @@ generator client {
 // ========================== ENUMS ==========================
 
 enum UserRole {
-  DATA_ENTRY    // PENGINPUT
-  RESEARCHER    // PENELITI
-  ARCHIVIST     // PENGARSIP
-  SENDER        // PENGIRIM
-  MONITOR       // PEMANTAU
-  SUPERVISOR    // SUPERVISOR
+  DATA_ENTRY
+  RESEARCHER
+  ARCHIVIST
+  SENDER
+  MONITOR
+  SUPERVISOR
 }
 
 enum ApplicationType {
-  PARTIAL_MUTATION       // MUTASI_SEBAGIAN
-  EXPIRED_UPDATE         // MUTASI_HABIS_UPDATE
-  EXPIRED_REGULAR        // MUTASI_HABIS_REGULER
-  NEW_TAX_OBJECT         // OBJEK_PAJAK_BARU
-  CORRECTION             // PEMBETULAN
-  REACTIVATION           // PENGAKTIFAN
-  MERGER_MUTATION        // MUTASI_PENGGABUNGAN
+  PARTIAL_MUTATION
+  EXPIRED_UPDATE
+  EXPIRED_REGULAR
+  NEW_TAX_OBJECT
+  CORRECTION
+  REACTIVATION
+  MERGER_MUTATION
 }
 
 enum ApplicationStatus {
@@ -58,7 +58,7 @@ enum ManifestStatus {
 
 enum DigitalArchiveStatus {
   ACTIVE
-  SUPERSEDED // Replaced by a newer version
+  SUPERSEDED
 }
 
 enum AuditAction {
@@ -83,7 +83,7 @@ enum AuditAction {
 enum ReturnOrigin {
   ARCHIVIST
   SENDER
-  HEADQUARTERS // KANTOR_PUSAT
+  HEADQUARTERS
 }
 
 enum ReturnStatus {
@@ -113,7 +113,6 @@ model Application {
   id                   String             @id @default(auto()) @map("_id") @db.ObjectId
   applicationType      ApplicationType
   applicationNumber    String             @unique
-
   serviceNumberDate    DateTime           @default(now())
   completionDate       DateTime 
   
@@ -127,9 +126,9 @@ model Application {
   updatedAt            DateTime           @updatedAt
 
   currentBundle        Bundle?                    @relation(fields: [currentBundleId], references: [id])
-  auditLogs            AuditLog[]
   bundleHistory        ApplicationBundleHistory[]
   snapshots            ApplicationSnapshot[]
+  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
 type PreviousData {
@@ -139,8 +138,8 @@ type PreviousData {
   ownerBlock          String?
   ownerRt             String?
   ownerRw             String?
-  ownerKecamatan      String? // Istilah domain dipertahankan
-  ownerDesa           String? // Istilah domain dipertahankan
+  ownerKecamatan      String?
+  ownerDesa           String?
   objectAddress       String?
   objectBlock         String?
   objectRt            String?
@@ -155,9 +154,9 @@ type PreviousData {
 }
 
 type TargetData {
-  idTargetData        String     @default(auto()) @map("_id")   
-  nopTemporary        String?    // NOP Sementara (Prefix)
-  nopFinal            String?    // NOP Final (Hasil Pusat) 
+  idTargetData        String     @default(uuid())   
+  nopTemporary        String?    
+  nopFinal            String?    
   ownerName           String
   whatsappNumber      String?    
   ownerAddress        String?
@@ -175,22 +174,19 @@ type TargetData {
   landArea            Float
   buildingArea        Float?
   certificate         String?
-  
   isVerified          Boolean    @default(false)
   isArchived          Boolean    @default(false) 
-  
   notes               String?
   digitalArchives     DigitalArchive[]
 }
 
 type DigitalArchive {
-  idArchive       String                @default(auto()) @map("_id")
+  idArchive       String                @default(uuid())
   urlBlob         String
   fileName        String?  
   status          DigitalArchiveStatus  @default(ACTIVE)
   uploadedBy      String?               @db.ObjectId 
   createdAt       DateTime              @default(now())
-  
   revisionNote    String?               
   supersededBy    String?               
   supersededAt    DateTime?             
@@ -199,45 +195,39 @@ type DigitalArchive {
 model Bundle {
   id                String          @id @default(auto()) @map("_id") @db.ObjectId
   bundleNumber      String          @unique
-  applicationType   ApplicationType // Ensures 1 Bundle = 1 Application Type
+  applicationType   ApplicationType 
   status            BundleStatus    @default(DRAFT)
-  
   currentManifestId String?         @db.ObjectId 
-  
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   bundleDocuments   DocumentContainer[] 
-
   currentManifest   Manifest?                   @relation(fields: [currentManifestId], references: [id])
   applications      Application[]             
-  auditLogs         AuditLog[]
   returnRequests    ReturnRequest[]
   applicationHistory ApplicationBundleHistory[]
   manifestHistory   ManifestBundleHistory[]
+  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
 model Manifest {
   id                String          @id @default(auto()) @map("_id") @db.ObjectId
   manifestNumber    String          @unique
-  signedReceiptUrl  String?         // Bukti Tanda Terima
-  
+  signedReceiptUrl  String?         
   status            ManifestStatus  @default(DRAFT)
-  
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   manifestDocuments DocumentContainer[] 
-
   bundles           Bundle[]       
-  auditLogs         AuditLog[]
   returnRequests    ReturnRequest[] 
   bundleHistory     ManifestBundleHistory[]
+  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
 type DocumentContainer {
-  idDocument    String   @default(auto()) @map("_id")
-  documentType  String   // e.g., "COVER_LETTER", "SHIPPING_LETTER", "HQ_RECEIPT"
+  idDocument    String   @default(uuid())
+  documentType  String   
   urlBlob       String
   fileName      String?
   uploadedBy    String?  @db.ObjectId
@@ -253,33 +243,26 @@ model AuditLog {
   entityId    String      @db.ObjectId
   oldStatus   String?     
   newStatus   String?     
-  
-  // CRITICAL: Store snapshot of container contents here when action is LOCK_*
   metadata    Json?       
   createdAt   DateTime    @default(now())
-
   actorId     String      @db.ObjectId
   actor       User        @relation(fields: [actorId], references: [id])
 }
 
 model ReturnRequest {
   id            String       @id @default(auto()) @map("_id") @db.ObjectId
-  
   origin        ReturnOrigin 
   triggeredBy   String       @db.ObjectId 
   reason        String
-  
   status        ReturnStatus @default(PENDING)
   approvedBy    String?      @db.ObjectId 
   approvedAt    DateTime?
   rejectionNote String?      
-  
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   
   bundleId      String?      @db.ObjectId
   bundle        Bundle?      @relation(fields: [bundleId], references: [id])
-
   manifestId    String?      @db.ObjectId
   manifest      Manifest?    @relation(fields: [manifestId], references: [id])
 }
@@ -288,11 +271,9 @@ model ApplicationBundleHistory {
   id            String       @id @default(auto()) @map("_id") @db.ObjectId
   applicationId String       @db.ObjectId
   bundleId      String       @db.ObjectId
-  
   joinedAt      DateTime     @default(now())
   leftAt        DateTime?    
   reasonLeft    String?      
-  
   application   Application  @relation(fields: [applicationId], references: [id])
   bundle        Bundle       @relation(fields: [bundleId], references: [id])
 }
@@ -301,11 +282,9 @@ model ManifestBundleHistory {
   id            String       @id @default(auto()) @map("_id") @db.ObjectId
   bundleId      String       @db.ObjectId
   manifestId    String       @db.ObjectId
-  
   joinedAt      DateTime     @default(now())
   leftAt        DateTime?    
   reasonLeft    String?      
-  
   bundle        Bundle       @relation(fields: [bundleId], references: [id])
   manifest      Manifest     @relation(fields: [manifestId], references: [id])
 }
@@ -313,14 +292,11 @@ model ManifestBundleHistory {
 model ApplicationSnapshot {
   id             String         @id @default(auto()) @map("_id") @db.ObjectId
   applicationId  String         @db.ObjectId
-  snapshotData   Json           // Full JSON copy of previousData & targetData at that moment
-  
-  snapshotType   String         // e.g., "INITIAL_SUBMIT", "REVISION_1", "RESUBMIT"
+  snapshotData   Json           
+  snapshotType   String         
   note           String?        
   actorId        String         @db.ObjectId
   createdAt      DateTime       @default(now())
-  
   actor          User           @relation(fields: [actorId], references: [id])
   application    Application    @relation(fields: [applicationId], references: [id])
 }
-

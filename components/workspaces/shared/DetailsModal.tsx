@@ -92,7 +92,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
                   );
                 })()}
                 <span className="inline-flex items-center text-[13px] font-normal px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 capitalize font-sans">
-                  {selectedRequest.jenisPermohonan?.replace(/_/g, ' ').toLowerCase()}
+                  {(selectedRequest.jenisPermohonan || selectedRequest.applicationType || '').replace(/_/g, ' ').toLowerCase()}
                 </span>
               </div>
 
@@ -115,7 +115,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = React.memo(({ isOpen, o
               <label className="text-[13px] font-normal text-slate-500 capitalize font-sans pl-0.5">Jenis Layanan Permohonan</label>
               <input
                 type="text"
-                value={toTitleCase(selectedRequest.jenisPermohonan || '')}
+                value={toTitleCase(selectedRequest.jenisPermohonan || selectedRequest.applicationType || '')}
                 readOnly
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-[13px] font-normal text-slate-800 shadow-3xs cursor-default outline-none capitalize font-sans"
               />

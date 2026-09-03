@@ -19,57 +19,24 @@ export async function getTrackingData(query?: string) {
         orderBy: { createdAt: "desc" },
         take: 10,
         include: {
-          pengirim: {
-            select: { name: true, email: true }
-          },
-          bundle: {
+          bundles: {
             include: {
-              peneliti: {
-                select: { name: true, email: true }
-              },
-              permohonan: {
-                include: {
-                  penginput: {
-                    select: { name: true, email: true }
-                  },
-                  dataBaru: true,
-                  arsipDigital: {
-                    where: { status: "ACTIVE" },
-                    orderBy: { versi: "desc" },
-                    take: 1
-                  }
-                }
-              }
+              applications: true
             }
           }
         }
       });
 
-      // 2. Fetch latest 15 loose permohonans
-      const loosePermohonans = await prisma.permohonan.findMany({
+      // 2. Fetch latest 15 loose applications
+      const loosePermohonans = await prisma.application.findMany({
         where: {
           OR: [
-            { bundleId: null },
-            { bundle: { manifestId: null } }
+            { currentBundleId: null },
+            { currentBundle: { currentManifestId: null } }
           ]
         },
         include: {
-          penginput: {
-            select: { name: true, email: true }
-          },
-          dataBaru: true,
-          arsipDigital: {
-            where: { status: "ACTIVE" },
-            orderBy: { versi: "desc" },
-            take: 1
-          },
-          bundle: {
-            include: {
-              peneliti: {
-                select: { name: true, email: true }
-              }
-            }
-          }
+          currentBundle: true
         },
         orderBy: { createdAt: "desc" },
         take: 15
@@ -77,25 +44,20 @@ export async function getTrackingData(query?: string) {
 
       return { success: true, manifests, loosePermohonans };
     } else {
-      // 3. Query manifests matching query (by nomorManifest, nomorBundle, NOP, nomorPelayanan, nomorPermohonan, namaWajibPajak)
+      // 3. Query manifests matching query
       const manifests = await prisma.manifest.findMany({
         where: {
           OR: [
-            { nomorManifest: { contains: trimmedQuery, mode: "insensitive" } },
+            { manifestNumber: { contains: trimmedQuery, mode: "insensitive" } },
             {
-              bundle: {
+              bundles: {
                 some: {
                   OR: [
-                    { nomorBundle: { contains: trimmedQuery, mode: "insensitive" } },
+                    { bundleNumber: { contains: trimmedQuery, mode: "insensitive" } },
                     {
-                      permohonan: {
+                      applications: {
                         some: {
-                          OR: [
-                            { nop: { contains: trimmedQuery, mode: "insensitive" } },
-                            { nomorPelayanan: { contains: trimmedQuery, mode: "insensitive" } },
-                            { nomorPermohonan: { contains: trimmedQuery, mode: "insensitive" } },
-                            { namaWajibPajak: { contains: trimmedQuery, mode: "insensitive" } }
-                          ]
+                          applicationNumber: { contains: trimmedQuery, mode: "insensitive" }
                         }
                       }
                     }
@@ -106,70 +68,32 @@ export async function getTrackingData(query?: string) {
           ]
         },
         include: {
-          pengirim: {
-            select: { name: true, email: true }
-          },
-          bundle: {
+          bundles: {
             include: {
-              peneliti: {
-                select: { name: true, email: true }
-              },
-              permohonan: {
-                include: {
-                  penginput: {
-                    select: { name: true, email: true }
-                  },
-                  dataBaru: true,
-                  arsipDigital: {
-                    where: { status: "ACTIVE" },
-                    orderBy: { versi: "desc" },
-                    take: 1
-                  }
-                }
-              }
+              applications: true
             }
           }
         },
         orderBy: { createdAt: "desc" }
       });
 
-      // 4. Query matching loose permohonans
-      const loosePermohonans = await prisma.permohonan.findMany({
+      // 4. Query matching loose applications
+      const loosePermohonans = await prisma.application.findMany({
         where: {
           AND: [
             {
               OR: [
-                { bundleId: null },
-                { bundle: { manifestId: null } }
+                { currentBundleId: null },
+                { currentBundle: { currentManifestId: null } }
               ]
             },
             {
-              OR: [
-                { nop: { contains: trimmedQuery, mode: "insensitive" } },
-                { nomorPelayanan: { contains: trimmedQuery, mode: "insensitive" } },
-                { nomorPermohonan: { contains: trimmedQuery, mode: "insensitive" } },
-                { namaWajibPajak: { contains: trimmedQuery, mode: "insensitive" } }
-              ]
+              applicationNumber: { contains: trimmedQuery, mode: "insensitive" }
             }
           ]
         },
         include: {
-          penginput: {
-            select: { name: true, email: true }
-          },
-          dataBaru: true,
-          arsipDigital: {
-            where: { status: "ACTIVE" },
-            orderBy: { versi: "desc" },
-            take: 1
-          },
-          bundle: {
-            include: {
-              peneliti: {
-                select: { name: true, email: true }
-              }
-            }
-          }
+          currentBundle: true
         },
         orderBy: { createdAt: "desc" }
       });

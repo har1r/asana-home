@@ -6,7 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { isValidTab } from '@/lib/constants';
 import { useSyncToLocalStorage } from '@/lib/useLocalStorage';
 import { Task, Project, Team, TeamMessage, TeamMember, FavoriteTile } from '@/types';
-import { getFavoritePermohonans } from '@/app/actions/penginput';
+import { getFavoritePermohonans } from '@/app/actions/data-entry';
 import {
   INITIAL_MEMBERS,
   INITIAL_TASKS,
