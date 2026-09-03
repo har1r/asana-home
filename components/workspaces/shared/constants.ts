@@ -1,12 +1,5 @@
-// =========================================================================
-// CONSTANTS & UTILITIES
-// Diselaraskan dengan Prisma Schema (ApplicationType, PreviousData, TargetData)
-// =========================================================================
-
 /**
- * 1. OPTIONS JENIS PERMOHONAN
- * Value disesuaikan dengan Enum ApplicationType di Prisma.
- * Label tetap dalam Bahasa Indonesia untuk kebutuhan UI.
+ *  OPTIONS JENIS PERMOHONAN
  */
 export const APPLICATION_TYPE_OPTIONS = [
   { value: 'PARTIAL_MUTATION', label: 'MUTASI SEBAGIAN' },
@@ -19,7 +12,7 @@ export const APPLICATION_TYPE_OPTIONS = [
 ] as const;
 
 /**
- * 2. LAYANAN YANG MEMBUTUHKAN DATA LAMA (PREVIOUS DATA)
+ *  LAYANAN YANG MEMBUTUHKAN DATA LAMA (PREVIOUS DATA)
  */
 export const SERVICES_NEED_PREVIOUS_DATA = [
   'PARTIAL_MUTATION',
@@ -31,7 +24,7 @@ export const SERVICES_NEED_PREVIOUS_DATA = [
 ];
 
 /**
- * 3. LAYANAN YANG MEMBUTUHKAN DATA BARU (TARGET DATA)
+ *  LAYANAN YANG MEMBUTUHKAN DATA BARU (TARGET DATA)
  */
 export const SERVICES_NEED_TARGET_DATA = [
   'PARTIAL_MUTATION',
@@ -42,10 +35,8 @@ export const SERVICES_NEED_TARGET_DATA = [
   'NEW_TAX_OBJECT'
 ];
 
-// =========================================================================
-// DATA WILAYAH (TIDAK BERUBAH, KARENA INI ADALAH DOMAIN BUSINESS LOGIC)
-// =========================================================================
 
+// DATA WILAYAH (TIDAK BERUBAH, KARENA INI ADALAH DOMAIN BUSINESS LOGIC)
 export const KECAMATAN_DATA: Record<string, string[]> = {
   'PAKUHAJI': [
     "KALIBARU", "SURYA BAHARI", "SUKAWALI", "KRAMAT", "KOHOD", "GAGA",
@@ -72,6 +63,7 @@ export const KECAMATAN_DATA: Record<string, string[]> = {
   ],
 };
 
+// MAPPING NOP BERDASARKAN KECAMATAN
 export const NOP_MAPPING: Record<string, { name: string, villages: Record<string, string> }> = {
   '150': {
     name: 'SEPATAN',
@@ -116,13 +108,9 @@ export const NOP_MAPPING: Record<string, { name: string, villages: Record<string
   }
 };
 
-// =========================================================================
-// HELPER FUNCTIONS UNTUK FORM STATE
-// =========================================================================
 
 /**
- * Membuat objek kosong untuk PreviousData (Data Lama)
- * Sesuai dengan type PreviousData di Prisma Schema
+ * MEMBUAT DATA PREVIOUS DATA KOSONG
  */
 export const createEmptyPreviousDataItem = () => ({
   nop: '',
@@ -147,8 +135,7 @@ export const createEmptyPreviousDataItem = () => ({
 });
 
 /**
- * Membuat objek kosong untuk TargetData (Data Baru)
- * Sesuai dengan type TargetData di Prisma Schema
+ * MEMBUAT DATA TARGET DATA KOSONG
  */
 export const createEmptyTargetDataItem = () => ({
   nopTemporary: '',
@@ -173,8 +160,7 @@ export const createEmptyTargetDataItem = () => ({
 });
 
 /**
- * Format Alamat Lengkap
- * Bisa digunakan untuk ownerAddress atau objectAddress
+ * FORMAT ALAMAT LENGKAP
  */
 export const formatAlamatLengkap = (opts: {
   alamat?: string | null;
@@ -194,7 +180,7 @@ export const formatAlamatLengkap = (opts: {
 };
 
 /**
- * Ubah string menjadi Title Case
+ * FORMAT TEXT MENJADI TITLE CASE
  */
 export const toTitleCase = (str?: string | null): string => {
   if (!str) return '';
@@ -207,7 +193,7 @@ export const toTitleCase = (str?: string | null): string => {
 };
 
 /**
- * Format NOP menjadi format standar: XX.XX.XXX.XXX.XXX-XXXX.X
+ * FORMAT NOP MENJADI XX.XX.XXX.XXX.XXX-XXXX.X
  */
 export const formatNop = (nop: string) => {
   if (!nop) return '';

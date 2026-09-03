@@ -128,24 +128,24 @@ model Application {
   currentBundle        Bundle?                    @relation(fields: [currentBundleId], references: [id])
   bundleHistory        ApplicationBundleHistory[]
   snapshots            ApplicationSnapshot[]
-  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
 type PreviousData {
   nop                 String
   ownerName           String
+  whatsappNumber      String?
   ownerAddress        String?
   ownerBlock          String?
   ownerRt             String?
   ownerRw             String?
   ownerKecamatan      String?
   ownerDesa           String?
-  objectAddress       String?
+  objectAddress       String
   objectBlock         String?
   objectRt            String?
   objectRw            String?
-  objectKecamatan     String?
-  objectDesa          String?
+  objectKecamatan     String
+  objectDesa          String
   landArea            Float
   buildingArea        Float?
   certificate         String?
@@ -155,25 +155,25 @@ type PreviousData {
 
 type TargetData {
   idTargetData        String     @default(uuid())   
-  nopTemporary        String?    
+  nopTemporary        String   
   nopFinal            String?    
   ownerName           String
-  whatsappNumber      String?    
-  ownerAddress        String?
+  whatsappNumber      String   
+  ownerAddress        String
   ownerBlock          String?
   ownerRt             String?
   ownerRw             String?
-  ownerKecamatan      String?
-  ownerDesa           String?
-  objectAddress       String?
+  ownerKecamatan      String
+  ownerDesa           String
+  objectAddress       String
   objectBlock         String?
   objectRt            String?
   objectRw            String?
-  objectKecamatan     String?
-  objectDesa          String?
+  objectKecamatan     String
+  objectDesa          String
   landArea            Float
   buildingArea        Float?
-  certificate         String?
+  certificate         String
   isVerified          Boolean    @default(false)
   isArchived          Boolean    @default(false) 
   notes               String?

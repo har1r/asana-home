@@ -1,217 +1,42 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createApplication } from '@/app/actions/data-entry';
+import { applicationSchema } from '@/lib/validations/application'
 import {
+  APPLICATION_TYPE_OPTIONS,
   SERVICES_NEED_PREVIOUS_DATA,
   SERVICES_NEED_TARGET_DATA,
   createEmptyPreviousDataItem,
   createEmptyTargetDataItem
-} from '../../shared/constants';
+} from '@/components/workspaces/shared/constants';
 
-interface UseCreateFormOptions {
-  onSuccess: () => void;
-  onCancel: () => void;
-  initialData?: any;
-}
-
-export function useCreateForm({ onSuccess, onCancel, initialData }: UseCreateFormOptions) {
+export const useCreateForm = (initialData?: any, onSuccess?: () => void, onCancel?: () => void) => {
+  // STATE MANAGEMENT
   const [applicationType, setApplicationType] = useState<string>('PARTIAL_MUTATION');
   const [applicationNumber, setApplicationNumber] = useState('');
   const [serviceNumberDate, setServiceNumberDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [completionDate, setCompletionDate] = useState('');
 
-  // SLA Calculation
-  useEffect(() => {
-    if (!serviceNumberDate) return;
-    const d = new Date(serviceNumberDate);
-    const slaMonths: Record<string, number> = {
-      PARTIAL_MUTATION: 4,
-      MERGER_MUTATION: 4,
-      EXPIRED_UPDATE: 4,
-      EXPIRED_REGULAR: 4,
-      CORRECTION: 2,
-      REACTIVATION: 1,
-      NEW_TAX_OBJECT: 6,
-    };
-    const months = slaMonths[applicationType] || 4;
-    d.setMonth(d.getMonth() + months);
-    setCompletionDate(d.toISOString().split('T')[0]);
-  }, [serviceNumberDate, applicationType]);
+  // STATE ARRAY UNTUK DATA LAMA & DATA BARU
+  const [previousData, setPreviousData] = useState<any[]>([createEmptyPreviousDataItem(), createEmptyPreviousDataItem]);
+  const [targetData, setTargetData] = useState<any[]>([]);
 
-  const [previousData, setPreviousData] = useState<any[]>(() => [
-    createEmptyPreviousDataItem()
-  ]);
-  const [targetData, setTargetData] = useState<any[]>(() => [
-    createEmptyTargetDataItem()
-  ]);
-
+  // UI DAN VALIDATION STATE
+  const [currentStep, setCurrentStep] = useState(1);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
   const [draftLoaded, setDraftLoaded] = useState(false);
 
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [statusModalStatus, setStatusModalStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [statusModalTitle, setStatusModalTitle] = useState('');
-  const [statusModalMessage, setStatusModalMessage] = useState('');
-
-  const [draftModalOpen, setDraftModalOpen] = useState(false);
-  const [draftModalMessage, setDraftModalMessage] = useState('');
+  // MODAL STATES
+  const [statusModal, setStatusModal] = useState({ open: false, status: 'idle' as 'idle' | 'loading' | 'success' | 'error', title: '', message: '' });
+  const [draftModal, setDraftModal] = useState({ open: false, message: '' });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  const handleCloseStatusModal = useCallback(() => {
-    setStatusModalOpen(false);
-    if (statusModalStatus === 'success') {
-      onSuccess();
-      onCancel();
-    }
-  }, [statusModalStatus, onSuccess, onCancel]);
-
-  const handleApplicationTypeChange = (newType: string) => {
-    setApplicationType(newType);
-    if (newType === 'NEW_TAX_OBJECT') {
-      setPreviousData([]);
-    } else if (newType === 'MERGER_MUTATION') {
-      if (previousData.length < 2) {
-        setPreviousData([
-          previousData[0] || createEmptyPreviousDataItem(),
-          createEmptyPreviousDataItem()
-        ]);
-      }
-    } else {
-      if (previousData.length === 0) {
-        setPreviousData([createEmptyPreviousDataItem()]);
-      } else if (previousData.length > 1) {
-        setPreviousData([previousData[0]]);
-      }
-    }
-
-    if (newType === 'REACTIVATION') {
-      setTargetData([]);
-    } else {
-      if (targetData.length === 0) {
-        setTargetData([createEmptyTargetDataItem()]);
-      }
-    }
-  };
-
-  const handleResetDraft = useCallback(() => {
-    try { localStorage.removeItem('permohonan_form_draft'); } catch (e) { console.error(e); }
-    setApplicationNumber('');
-    setServiceNumberDate(new Date().toISOString().split('T')[0]);
-    setPreviousData([createEmptyPreviousDataItem()]);
-    setTargetData([createEmptyTargetDataItem()]);
-    setFormErrors({});
-    setError('');
-    setCurrentStep(1);
-    setDraftModalMessage('Draf formulir dan penyimpanan lokal berhasil dihapus & formulir di-reset!');
-    setDraftModalOpen(true);
-  }, []);
-
-  // Initial & Draft Loader
-  useEffect(() => {
-    if (initialData) {
-      try {
-        if (initialData.applicationType) setApplicationType(initialData.applicationType);
-        if (initialData.applicationNumber) setApplicationNumber(initialData.applicationNumber.toUpperCase());
-        const rawDate = initialData.serviceNumberDate ? new Date(initialData.serviceNumberDate) : null;
-        setServiceNumberDate(rawDate && !isNaN(rawDate.getTime()) ? rawDate.toISOString().split('T')[0] : '');
-
-        if (initialData.previousData && initialData.previousData.length > 0) {
-          setPreviousData(initialData.previousData.map((item: any, idx: number) => ({
-            nop: item.nop || '',
-            ownerName: (item.ownerName || '').toUpperCase(),
-            ownerAddress: (item.ownerAddress || '').toUpperCase(),
-            ownerBlock: (item.ownerBlock || '').toUpperCase(),
-            ownerRt: item.ownerRt || '',
-            ownerRw: item.ownerRw || '',
-            ownerKecamatan: (item.ownerKecamatan || '').toUpperCase(),
-            ownerDesa: (item.ownerDesa || '').toUpperCase(),
-            objectAddress: (item.objectAddress || '').toUpperCase(),
-            objectBlock: (item.objectBlock || '').toUpperCase(),
-            objectRt: item.objectRt || '',
-            objectRw: item.objectRw || '',
-            objectKecamatan: (item.objectKecamatan || '').toUpperCase(),
-            objectDesa: (item.objectDesa || '').toUpperCase(),
-            landArea: item.landArea != null ? String(item.landArea) : '',
-            buildingArea: item.buildingArea != null ? String(item.buildingArea) : '',
-            certificate: (item.certificate || '').toUpperCase(),
-            isPrimary: item.isPrimary ?? idx === 0,
-            notes: (item.notes || '').toUpperCase()
-          })));
-        }
-
-        if (initialData.targetData && initialData.targetData.length > 0) {
-          setTargetData(initialData.targetData.map((item: any) => ({
-            nopTemporary: item.nopTemporary || '',
-            ownerName: (item.ownerName || '').toUpperCase(),
-            whatsappNumber: item.whatsappNumber || '',
-            ownerAddress: (item.ownerAddress || '').toUpperCase(),
-            ownerBlock: (item.ownerBlock || '').toUpperCase(),
-            ownerRt: item.ownerRt || '',
-            ownerRw: item.ownerRw || '',
-            ownerKecamatan: (item.ownerKecamatan || '').toUpperCase(),
-            ownerDesa: (item.ownerDesa || '').toUpperCase(),
-            objectAddress: (item.objectAddress || '').toUpperCase(),
-            objectBlock: (item.objectBlock || '').toUpperCase(),
-            objectRt: item.objectRt || '',
-            objectRw: item.objectRw || '',
-            objectKecamatan: (item.objectKecamatan || '').toUpperCase(),
-            objectDesa: (item.objectDesa || '').toUpperCase(),
-            landArea: item.landArea != null ? String(item.landArea) : '',
-            buildingArea: item.buildingArea != null ? String(item.buildingArea) : '',
-            certificate: (item.certificate || '').toUpperCase(),
-            notes: (item.notes || '').toUpperCase()
-          })));
-        } else {
-          setTargetData([createEmptyTargetDataItem()]);
-        }
-        setDraftModalMessage('Draf permohonan berhasil diduplikat untuk formulir baru!');
-        setDraftModalOpen(true);
-      } catch (e) { console.error('Failed to duplicate initialData', e); }
-      finally { setDraftLoaded(true); }
-      return;
-    }
-
-    try {
-      const stored = localStorage.getItem('permohonan_form_draft');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.applicationType) setApplicationType(parsed.applicationType);
-        if (parsed.applicationNumber) setApplicationNumber(parsed.applicationNumber.toUpperCase());
-        if (parsed.serviceNumberDate) setServiceNumberDate(parsed.serviceNumberDate);
-        if (parsed.previousData && parsed.previousData.length > 0) setPreviousData(parsed.previousData);
-        if (parsed.targetData && parsed.targetData.length > 0) setTargetData(parsed.targetData);
-        setDraftModalMessage('Draf pendaftaran permohonan Anda sebelumnya telah otomatis dipulihkan.');
-        setDraftModalOpen(true);
-      }
-    } catch (e) { console.error('Failed to load form draft', e); }
-    finally { setDraftLoaded(true); }
-  }, [initialData]);
-
-  // Draft Autosave
-  useEffect(() => {
-    if (!draftLoaded) return;
-    try {
-      const draft = {
-        applicationType,
-        applicationNumber: applicationNumber.toUpperCase(),
-        serviceNumberDate,
-        previousData,
-        targetData: targetData.map(item => ({
-          ...item,
-          ownerName: (item.ownerName || '').toUpperCase(),
-          notes: (item.notes || '').toUpperCase()
-        }))
-      };
-      localStorage.setItem('permohonan_form_draft', JSON.stringify(draft));
-    } catch (e) { console.error('Failed to save form draft', e); }
-  }, [draftLoaded, applicationType, applicationNumber, serviceNumberDate, previousData, targetData]);
-
-  const needPreviousData = SERVICES_NEED_PREVIOUS_DATA.includes(applicationType);
-  const needTargetData = SERVICES_NEED_TARGET_DATA.includes(applicationType);
+  // DERIVED VALUES
+  const needPreviousData = useMemo(() => SERVICES_NEED_PREVIOUS_DATA.includes(applicationType), [applicationType]);
+  const needTargetData = useMemo(() => SERVICES_NEED_TARGET_DATA.includes(applicationType), [applicationType]);
 
   const steps = useMemo(() => {
     const list = [{ id: 1, label: 'Data Utama' }];
@@ -220,218 +45,109 @@ export function useCreateForm({ onSuccess, onCancel, initialData }: UseCreateFor
     return list;
   }, [needPreviousData, needTargetData]);
 
-  useEffect(() => { setCurrentStep(1); setFormErrors({}); }, [applicationType]);
+  const currentStepLabel = steps[currentStep - 1]?.label;
 
+  // EFFECTS
+  // Auto-calculate Tanggal Penyelesaian (SLA)
+  useEffect(() => {
+    if (!serviceNumberDate) return;
+    const baseDate = new Date(serviceNumberDate);
+    if (isNaN(baseDate.getTime())) return;
+
+    let monthsToAdd = 4; // Default
+    if (applicationType === 'NEW_TAX_OBJECT') monthsToAdd = 6;
+    else if (applicationType === 'REACTIVATION') monthsToAdd = 1;
+
+    const targetDate = new Date(baseDate);
+    targetDate.setMonth(baseDate.getMonth() + monthsToAdd);
+    setCompletionDate(targetDate.toISOString().split('T')[0]);
+  }, [applicationType, serviceNumberDate]);
+
+  // Restore Draft / Initial Data
+  useEffect(() => {
+    if (initialData) {
+      setApplicationType(initialData.applicationType || 'PARTIAL_MUTATION');
+      setApplicationNumber(initialData.applicationNumber || '');
+      setServiceNumberDate(initialData.serviceNumberDate ? new Date(initialData.serviceNumberDate).toISOString().split('T')[0] : '');
+      if (initialData.previousData) setPreviousData(initialData.previousData);
+      if (initialData.targetData) setTargetData(initialData.targetData);
+      else setTargetData([createEmptyTargetDataItem()]);
+
+      setDraftModal({ open: true, message: 'Draf permohonan berhasil diduplikat!' });
+      setDraftLoaded(true);
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem('permohonan_form_draft');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setApplicationType(parsed.applicationType);
+        setApplicationNumber(parsed.applicationNumber);
+        setServiceNumberDate(parsed.serviceNumberDate);
+        setCompletionDate(parsed.completionDate);
+        if (parsed.previousData) setPreviousData(parsed.previousData);
+        if (parsed.targetData) setTargetData(parsed.targetData);
+        setDraftModal({ open: true, message: 'Draf pengisian sebelumnya telah otomatis dipulihkan.' });
+      }
+    } catch (e) { console.error('Failed to load draft', e); }
+    finally { setDraftLoaded(true); }
+  }, [initialData]);
+
+  // SAVE DRAFT KE LOCAL STORAGE
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const draft = { applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData };
+    localStorage.setItem('permohonan_form_draft', JSON.stringify(draft));
+  }, [draftLoaded, applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData]);
+
+  // BATASI PANJANG ARRAY TERGET DATA JIKA BUKAN PARTIAL MUTATION
   useEffect(() => {
     if (applicationType !== 'PARTIAL_MUTATION' && targetData.length > 1) {
       setTargetData(prev => prev.slice(0, 1));
     }
   }, [applicationType, targetData.length]);
 
+  // INISIALISASI TARGET DATA JIKA DIBUTUHKAN TAPI KOSONG
   useEffect(() => {
-    if (!draftLoaded) return;
-    if (needTargetData && targetData.length === 0) {
+    if (draftLoaded && needTargetData && targetData.length === 0) {
       setTargetData([createEmptyTargetDataItem()]);
     }
   }, [needTargetData, targetData.length, draftLoaded]);
 
-  const handleAddPreviousItem = useCallback(() => {
-    setPreviousData(prev => [...prev, createEmptyPreviousDataItem()]);
-  }, []);
-
-  const handleRemovePreviousItem = useCallback((index: number) => {
-    setPreviousData(prev => {
-      if (prev.length <= 2) return prev;
-      const next = prev.filter((_, i) => i !== index);
-      return next.map((item, i) => ({ ...item, isPrimary: i === 0 }));
-    });
-  }, []);
-
-  const handlePreviousItemChange = useCallback((index: number, field: string, value: any) => {
+  // ARRAY MANIPULATION
+  const updatePreviousItem = useCallback((index: number, field: string, value: any) => {
     setPreviousData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
   }, []);
 
-  const handleAddTargetItem = useCallback(() => {
-    setTargetData(prev => [...prev, createEmptyTargetDataItem()]);
-  }, []);
-
-  const handleRemoveTargetItem = useCallback((index: number) => {
-    setTargetData(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleTargetItemChange = useCallback((index: number, field: string, value: any) => {
+  const addTargetItem = useCallback(() => setTargetData(prev => [...prev, createEmptyTargetDataItem()]), []);
+  const removeTargetItem = useCallback((index: number) => setTargetData(prev => prev.filter((_, i) => i !== index)), []);
+  const updateTargetItem = useCallback((index: number, field: string, value: any) => {
     setTargetData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
   }, []);
 
-  const handleCopyOwnerFromPrevious = useCallback((targetIdx: number) => {
-    const prev = previousData[0];
-    if (!prev) return;
-    setTargetData(prevData => prevData.map((item, idx) => {
-      if (idx !== targetIdx) return item;
-      return {
-        ...item,
-        ownerAddress: prev.ownerAddress || '',
-        ownerBlock: prev.ownerBlock || '',
-        ownerRt: prev.ownerRt || '',
-        ownerRw: prev.ownerRw || '',
-        ownerKecamatan: prev.ownerKecamatan || '',
-        ownerDesa: prev.ownerDesa || '',
-      };
-    }));
-  }, [previousData]);
-
-  const handleCopyObjectFromPrevious = useCallback((targetIdx: number) => {
-    const prev = previousData[0];
-    if (!prev) return;
-    setTargetData(prevData => prevData.map((item, idx) => {
-      if (idx !== targetIdx) return item;
-      return {
-        ...item,
-        objectAddress: prev.objectAddress || '',
-        objectBlock: prev.objectBlock || '',
-        objectRt: prev.objectRt || '',
-        objectRw: prev.objectRw || '',
-        objectKecamatan: prev.objectKecamatan || '',
-        objectDesa: prev.objectDesa || '',
-      };
-    }));
-  }, [previousData]);
-
-  const handleCopyObjectToOwner = useCallback((targetIdx: number) => {
-    setTargetData(prevData => prevData.map((item, idx) => {
-      if (idx !== targetIdx) return item;
-      return {
-        ...item,
-        ownerAddress: item.objectAddress || '',
-        ownerBlock: item.objectBlock || '',
-        ownerRt: item.objectRt || '',
-        ownerRw: item.objectRw || '',
-        ownerKecamatan: item.objectKecamatan || '',
-        ownerDesa: item.objectDesa || '',
-      };
-    }));
-  }, []);
-
-  // Clear specific form errors on change
-  useEffect(() => {
-    setFormErrors(prev => {
-      if (Object.keys(prev).length === 0) return prev;
-      const next = { ...prev };
-      let changed = false;
-      if (applicationNumber.trim() && next.applicationNumber) { delete next.applicationNumber; changed = true; }
-      if (serviceNumberDate.trim() && next.serviceNumberDate) { delete next.serviceNumberDate; changed = true; }
-      if (needPreviousData) {
-        previousData.forEach((item, idx) => {
-          if (item.nop?.replace(/[.\-]/g, '').length === 18 && next[`previousData.${idx}.nop`]) { delete next[`previousData.${idx}.nop`]; changed = true; }
-          if (item.ownerName?.trim() && next[`previousData.${idx}.ownerName`]) { delete next[`previousData.${idx}.ownerName`]; changed = true; }
-          if (item.objectAddress?.trim() && next[`previousData.${idx}.objectAddress`]) { delete next[`previousData.${idx}.objectAddress`]; changed = true; }
-          if (item.landArea !== '' && Number(item.landArea) > 0 && next[`previousData.${idx}.landArea`]) { delete next[`previousData.${idx}.landArea`]; changed = true; }
-        });
-      }
-      if (needTargetData) {
-        targetData.forEach((item, idx) => {
-          if (item.ownerName?.trim() && next[`targetData.${idx}.ownerName`]) { delete next[`targetData.${idx}.ownerName`]; changed = true; }
-          if (item.landArea !== '' && Number(item.landArea) > 0 && next[`targetData.${idx}.landArea`]) { delete next[`targetData.${idx}.landArea`]; changed = true; }
-        });
-      }
-      if (changed && Object.keys(next).length === 0) setError('');
-      return changed ? next : prev;
-    });
-  }, [applicationNumber, serviceNumberDate, needPreviousData, needTargetData, previousData, targetData]);
-
+  // VALIDATION & NAVIGATION
   const validateCurrentStep = useCallback(() => {
-    const errors: Record<string, string> = {};
-    const stepLabel = steps[currentStep - 1]?.label;
+    // Kita gunakan Zod schema untuk validasi, lalu filter error berdasarkan step saat ini
+    const result = applicationSchema.safeParse({ applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData });
 
-    if (stepLabel === 'Data Utama') {
-      if (!applicationNumber?.trim()) errors.applicationNumber = 'Nomor pelayanan wajib diisi';
-      if (!serviceNumberDate?.trim()) errors.serviceNumberDate = 'Tanggal pelayanan wajib diisi';
-    } else if (stepLabel === 'Data Lama (Asal)') {
-      if (applicationType === 'MERGER_MUTATION' && previousData.length < 2) {
-        errors.previousDataGeneral = 'Mutasi penggabungan wajib memiliki minimal 2 NOP Asal';
-      }
-
-      previousData.forEach((item, idx) => {
-        if (!item.nop || !/^\d{18}$/.test(item.nop.replace(/[.\-]/g, ''))) errors[`previousData.${idx}.nop`] = 'NOP harus 18 digit';
-        if (!item.ownerName?.trim()) errors[`previousData.${idx}.ownerName`] = 'Nama pemilik lama wajib diisi';
-        if (!item.objectAddress?.trim()) errors[`previousData.${idx}.objectAddress`] = 'Alamat objek lama wajib diisi';
-        if (!item.objectKecamatan?.trim()) errors[`previousData.${idx}.objectKecamatan`] = 'Kecamatan objek lama wajib diisi';
-        if (!item.objectDesa?.trim()) errors[`previousData.${idx}.objectDesa`] = 'Desa objek lama wajib diisi';
-        if (!item.landArea || Number(item.landArea) <= 0) errors[`previousData.${idx}.landArea`] = 'Luas tanah wajib diisi & > 0';
-
-        if (applicationType === 'CORRECTION' || applicationType === 'REACTIVATION') {
-          if (!item.certificate?.trim()) errors[`previousData.${idx}.certificate`] = 'Sertifikat lama wajib diisi';
+    if (!result.success) {
+      const stepErrors: Record<string, string> = {};
+      result.error.issues.forEach(issue => {
+        const path = issue.path.join('.');
+        // Filter error hanya untuk field yang relevan dengan step saat ini
+        if (currentStepLabel === 'Data Utama' && (path.includes('applicationNumber') || path.includes('serviceNumberDate') || path.includes('completionDate') || path.includes('targetData.0.whatsappNumber'))) {
+          stepErrors[path] = issue.message;
+        } else if (currentStepLabel === 'Data Lama (Asal)' && path.includes('previousData')) {
+          stepErrors[path] = issue.message;
+        } else if (currentStepLabel === 'Data Baru' && path.includes('targetData')) {
+          stepErrors[path] = issue.message;
         }
       });
-    } else if (stepLabel === 'Data Baru') {
-      targetData.forEach((item, idx) => {
-        if (applicationType === 'NEW_TAX_OBJECT' && (!item.nopTemporary || !item.nopTemporary.trim())) {
-          errors[`targetData.${idx}.nopTemporary`] = 'NOP sementara wajib diisi untuk Objek Pajak Baru';
-        }
-        if (!item.ownerName?.trim()) errors[`targetData.${idx}.ownerName`] = 'Nama pemilik baru wajib diisi';
-        if (item.whatsappNumber && item.whatsappNumber.trim() !== '') {
-          if (!/^(08|628)\d{8,12}$/.test(item.whatsappNumber)) {
-            errors[`targetData.${idx}.whatsappNumber`] = 'Nomor WhatsApp tidak valid (contoh: 08123456789)';
-          }
-        }
-        if (!item.ownerAddress?.trim()) errors[`targetData.${idx}.ownerAddress`] = 'Alamat pemilik baru wajib diisi';
-        if (!item.ownerKecamatan?.trim()) errors[`targetData.${idx}.ownerKecamatan`] = 'Kecamatan pemilik baru wajib diisi';
-        if (!item.ownerDesa?.trim()) errors[`targetData.${idx}.ownerDesa`] = 'Desa pemilik baru wajib diisi';
-        if (!item.objectAddress?.trim()) errors[`targetData.${idx}.objectAddress`] = 'Alamat objek baru wajib diisi';
-        if (!item.objectKecamatan?.trim()) errors[`targetData.${idx}.objectKecamatan`] = 'Kecamatan objek baru wajib diisi';
-        if (!item.objectDesa?.trim()) errors[`targetData.${idx}.objectDesa`] = 'Desa objek baru wajib diisi';
-        if (!item.landArea || Number(item.landArea) <= 0) errors[`targetData.${idx}.landArea`] = 'Luas tanah baru wajib diisi & > 0';
-        if (!item.certificate?.trim()) errors[`targetData.${idx}.certificate`] = 'Sertifikat baru wajib diisi';
-      });
+      return stepErrors;
     }
-    return errors;
-  }, [currentStep, steps, applicationNumber, serviceNumberDate, applicationType, previousData, targetData]);
-
-  const validateFullForm = useCallback(() => {
-    const errors: Record<string, string> = {};
-    if (!applicationNumber?.trim()) errors.applicationNumber = 'Nomor pelayanan wajib diisi';
-    if (!serviceNumberDate?.trim()) errors.serviceNumberDate = 'Tanggal pelayanan wajib diisi';
-
-    if (needPreviousData) {
-      if (applicationType === 'MERGER_MUTATION' && previousData.length < 2) {
-        errors.previousDataGeneral = 'Minimal 2 NOP Asal';
-      }
-      previousData.forEach((item, idx) => {
-        if (!item.nop || !/^\d{18}$/.test(item.nop.replace(/[.\-]/g, ''))) errors[`previousData.${idx}.nop`] = 'NOP harus 18 digit';
-        if (!item.ownerName?.trim()) errors[`previousData.${idx}.ownerName`] = 'Nama pemilik lama wajib diisi';
-        if (!item.objectAddress?.trim()) errors[`previousData.${idx}.objectAddress`] = 'Alamat objek lama wajib diisi';
-        if (!item.objectKecamatan?.trim()) errors[`previousData.${idx}.objectKecamatan`] = 'Kecamatan objek lama wajib diisi';
-        if (!item.objectDesa?.trim()) errors[`previousData.${idx}.objectDesa`] = 'Desa objek lama wajib diisi';
-        if (!item.landArea || Number(item.landArea) <= 0) errors[`previousData.${idx}.landArea`] = 'Luas tanah wajib > 0';
-
-        if (applicationType === 'CORRECTION' || applicationType === 'REACTIVATION') {
-          if (!item.certificate?.trim()) errors[`previousData.${idx}.certificate`] = 'Sertifikat lama wajib diisi';
-        }
-      });
-    }
-    if (needTargetData) {
-      targetData.forEach((item, idx) => {
-        if (applicationType === 'NEW_TAX_OBJECT' && (!item.nopTemporary || !item.nopTemporary.trim())) {
-          errors[`targetData.${idx}.nopTemporary`] = 'NOP sementara wajib diisi';
-        }
-        if (!item.ownerName?.trim()) errors[`targetData.${idx}.ownerName`] = 'Nama pemilik baru wajib diisi';
-        if (item.whatsappNumber && item.whatsappNumber.trim() !== '') {
-          if (!/^(08|628)\d{8,12}$/.test(item.whatsappNumber)) {
-            errors[`targetData.${idx}.whatsappNumber`] = 'WhatsApp tidak valid';
-          }
-        }
-        if (!item.ownerAddress?.trim()) errors[`targetData.${idx}.ownerAddress`] = 'Alamat pemilik baru wajib diisi';
-        if (!item.ownerKecamatan?.trim()) errors[`targetData.${idx}.ownerKecamatan`] = 'Kecamatan pemilik baru wajib diisi';
-        if (!item.ownerDesa?.trim()) errors[`targetData.${idx}.ownerDesa`] = 'Desa pemilik baru wajib diisi';
-        if (!item.objectAddress?.trim()) errors[`targetData.${idx}.objectAddress`] = 'Alamat objek baru wajib diisi';
-        if (!item.objectKecamatan?.trim()) errors[`targetData.${idx}.objectKecamatan`] = 'Kecamatan objek baru wajib diisi';
-        if (!item.objectDesa?.trim()) errors[`targetData.${idx}.objectDesa`] = 'Desa objek baru wajib diisi';
-        if (!item.landArea || Number(item.landArea) <= 0) errors[`targetData.${idx}.landArea`] = 'Luas tanah baru wajib > 0';
-        if (!item.certificate?.trim()) errors[`targetData.${idx}.certificate`] = 'Sertifikat baru wajib diisi';
-      });
-    }
-    return errors;
-  }, [applicationNumber, serviceNumberDate, needPreviousData, needTargetData, applicationType, previousData, targetData]);
+    return {};
+  }, [applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData, currentStepLabel]);
 
   const handleNextStep = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -440,8 +156,10 @@ export function useCreateForm({ onSuccess, onCancel, initialData }: UseCreateFor
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setError('Form kurang lengkap. Harap periksa detail isian merah di bawah.');
+      // Auto-scroll ke error pertama
       setTimeout(() => {
-        const el = document.getElementById(Object.keys(errors)[0]);
+        const firstKey = Object.keys(errors)[0];
+        const el = document.getElementById(firstKey);
         if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       }, 50);
       return;
@@ -456,157 +174,123 @@ export function useCreateForm({ onSuccess, onCancel, initialData }: UseCreateFor
     setCurrentStep(prev => Math.max(prev - 1, 1));
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  // SUBMIT
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const errors = validateFullForm();
-    if (Object.keys(errors).length > 0) {
+    // Validasi Penuh sebelum kirim
+    const result = applicationSchema.safeParse({ applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData });
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.issues.forEach(issue => { errors[issue.path.join('.')] = issue.message; });
       setFormErrors(errors);
-      setError('Formulir belum lengkap. Harap periksa dan lengkapi bagian berpembatas merah.');
+      setError('Formulir belum lengkap. Harap periksa bagian berpembatas merah.');
+
+      // Pindah ke step yang memiliki error
       const firstKey = Object.keys(errors)[0];
-      if (firstKey.startsWith('targetData.')) {
-        const stepIdx = steps.findIndex(s => s.label === 'Data Baru');
-        if (stepIdx !== -1) setCurrentStep(stepIdx + 1);
-      } else if (firstKey.startsWith('previousData.')) {
-        const stepIdx = steps.findIndex(s => s.label === 'Data Lama (Asal)');
-        if (stepIdx !== -1) setCurrentStep(stepIdx + 1);
-      } else {
-        setCurrentStep(1);
-      }
-      setTimeout(() => {
-        const el = document.getElementById(firstKey);
-        if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-      }, 100);
+      if (firstKey.includes('previousData')) setCurrentStep(steps.findIndex(s => s.label === 'Data Lama (Asal)') + 1 || 1);
+      else if (firstKey.includes('targetData')) setCurrentStep(steps.findIndex(s => s.label === 'Data Baru') + 1 || 1);
+      else setCurrentStep(1);
       return;
     }
 
+    // Siapkan Payload Bersih (Sesuai Ekspektasi Backend)
     const payload = {
       applicationType,
       applicationNumber: applicationNumber.toUpperCase(),
       serviceNumberDate,
-      previousData: needPreviousData ? previousData.map((item, idx) => ({
+      completionDate,
+      previousData: needPreviousData ? previousData.map(item => ({
+        ...item,
         nop: item.nop ? item.nop.replace(/[.\-]/g, '') : '',
         ownerName: item.ownerName ? item.ownerName.toUpperCase() : '',
-        ownerAddress: item.ownerAddress ? item.ownerAddress.toUpperCase() : null,
-        ownerBlock: item.ownerBlock ? item.ownerBlock.toUpperCase() : null,
-        ownerRt: item.ownerRt || null,
-        ownerRw: item.ownerRw || null,
-        ownerKecamatan: item.ownerKecamatan ? item.ownerKecamatan.toUpperCase() : null,
-        ownerDesa: item.ownerDesa ? item.ownerDesa.toUpperCase() : null,
-        objectAddress: item.objectAddress ? item.objectAddress.toUpperCase() : null,
-        objectBlock: item.objectBlock ? item.objectBlock.toUpperCase() : null,
-        objectRt: item.objectRt || null,
-        objectRw: item.objectRw || null,
-        objectKecamatan: item.objectKecamatan ? item.objectKecamatan.toUpperCase() : null,
-        objectDesa: item.objectDesa ? item.objectDesa.toUpperCase() : null,
         landArea: Number(item.landArea) || 0,
-        buildingArea: item.buildingArea ? Number(item.buildingArea) : null,
-        certificate: item.certificate ? item.certificate.toUpperCase() : null,
-        isPrimary: idx === 0,
-        notes: item.notes ? item.notes.toUpperCase() : null
+        // ... map field lain sesuai kebutuhan (uppercase/null handling)
       })) : [],
       targetData: needTargetData ? targetData.map(item => ({
+        ...item,
         nopTemporary: item.nopTemporary ? item.nopTemporary.replace(/[.\-]/g, '') : null,
         ownerName: item.ownerName ? item.ownerName.toUpperCase() : '',
-        whatsappNumber: item.whatsappNumber || null,
-        ownerAddress: item.ownerAddress ? item.ownerAddress.toUpperCase() : null,
-        ownerBlock: item.ownerBlock ? item.ownerBlock.toUpperCase() : null,
-        ownerRt: item.ownerRt || null,
-        ownerRw: item.ownerRw || null,
-        ownerKecamatan: item.ownerKecamatan ? item.ownerKecamatan.toUpperCase() : null,
-        ownerDesa: item.ownerDesa ? item.ownerDesa.toUpperCase() : null,
-        objectAddress: item.objectAddress ? item.objectAddress.toUpperCase() : null,
-        objectBlock: item.objectBlock ? item.objectBlock.toUpperCase() : null,
-        objectRt: item.objectRt || null,
-        objectRw: item.objectRw || null,
-        objectKecamatan: item.objectKecamatan ? item.objectKecamatan.toUpperCase() : null,
-        objectDesa: item.objectDesa ? item.objectDesa.toUpperCase() : null,
         landArea: Number(item.landArea) || 0,
-        buildingArea: item.buildingArea ? Number(item.buildingArea) : null,
-        certificate: item.certificate ? item.certificate.toUpperCase() : null,
-        notes: item.notes ? item.notes.toUpperCase() : null
+        // ... map field lain sesuai kebutuhan
       })) : []
     };
 
-    setStatusModalTitle('Menyimpan Permohonan');
-    setStatusModalMessage('Sedang memproses dan menyimpan data permohonan ke server...');
-    setStatusModalStatus('loading');
-    setStatusModalOpen(true);
+    // Tampilkan Modal Loading
+    setStatusModal({ open: true, status: 'loading', title: 'Menyimpan Permohonan', message: 'Sedang memproses data ke server...' });
     setLoading(true);
 
     try {
-      const res: any = await createApplication(payload);
+      const res = await createApplication(payload);
       if (res.success) {
-        setStatusModalTitle('Penyimpanan Berhasil');
-        setStatusModalMessage('Data permohonan Anda berhasil disimpan dan didaftarkan ke sistem!');
-        setStatusModalStatus('success');
-        try { localStorage.removeItem('permohonan_form_draft'); } catch (e) { console.error(e); }
+        setStatusModal({ open: true, status: 'success', title: 'Berhasil', message: 'Permohonan berhasil didaftarkan!' });
+        localStorage.removeItem('permohonan_form_draft');
+        setTimeout(() => {
+          setStatusModal(prev => ({ ...prev, open: false }));
+          onSuccess?.();
+          onCancel?.();
+        }, 2000);
       } else {
-        if (res.issues && Array.isArray(res.issues)) {
+        // Handle Zod errors dari backend
+        if (res.issues) {
           const backendErrors: Record<string, string> = {};
-          res.issues.forEach((issue: any) => {
-            const key = issue.path ? issue.path.join('.') : 'general';
-            backendErrors[key] = issue.message;
-          });
-          if (Object.keys(backendErrors).length > 0) setFormErrors(backendErrors);
+          res.issues.forEach((issue: any) => { backendErrors[issue.path.join('.')] = issue.message; });
+          setFormErrors(backendErrors);
         }
-        setStatusModalTitle('Penyimpanan Gagal');
-        setStatusModalMessage(res.error || 'Gagal menyimpan data permohonan.');
-        setStatusModalStatus('error');
+        setStatusModal({ open: true, status: 'error', title: 'Gagal', message: res.error || 'Terjadi kesalahan.' });
       }
     } catch (err: any) {
-      setStatusModalTitle('Terjadi Kesalahan');
-      setStatusModalMessage(err.message || 'Terjadi kesalahan sistem.');
-      setStatusModalStatus('error');
+      setStatusModal({ open: true, status: 'error', title: 'Error Sistem', message: err.message || 'Gagal terhubung ke server.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const currentStepLabel = steps[currentStep - 1]?.label;
+  // UTILITIS
+  const handleResetDraft = useCallback(() => {
+    localStorage.removeItem('permohonan_form_draft');
+    setApplicationNumber('');
+    setServiceNumberDate(new Date().toISOString().split('T')[0]);
+    setPreviousData([createEmptyPreviousDataItem(), createEmptyPreviousDataItem()]);
+    setTargetData([createEmptyTargetDataItem()]);
+    setFormErrors({});
+    setError('');
+    setCurrentStep(1);
+    setDraftModal({ open: true, message: 'Draf dihapus dan form di-reset.' });
+  }, []);
+
+  const handleWhatsappChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^\d]/g, '');
+    if (val.startsWith('62')) val = val.slice(2);
+    if (val.startsWith('0')) val = val.slice(1);
+    const formatted = val ? '62' + val : '';
+    if (targetData.length > 0) {
+      updateTargetItem(0, 'whatsappNumber', formatted);
+    }
+  }, [targetData.length, updateTargetItem]);
 
   return {
-    applicationType,
-    applicationNumber,
-    setApplicationNumber,
-    serviceNumberDate,
-    setServiceNumberDate,
-    completionDate,
-    previousData,
-    targetData,
-    formErrors,
-    error,
-    loading,
-    currentStep,
-    setCurrentStep,
-    steps,
-    currentStepLabel,
-    needPreviousData,
-    needTargetData,
-    statusModalOpen,
-    setStatusModalOpen,
-    statusModalStatus,
-    statusModalTitle,
-    statusModalMessage,
-    draftModalOpen,
-    setDraftModalOpen,
-    draftModalMessage,
-    mounted,
-    handleCloseStatusModal,
-    handleApplicationTypeChange,
-    handleResetDraft,
-    handleAddPreviousItem,
-    handleRemovePreviousItem,
-    handlePreviousItemChange,
-    handleAddTargetItem,
-    handleRemoveTargetItem,
-    handleTargetItemChange,
-    handleCopyOwnerFromPrevious,
-    handleCopyObjectFromPrevious,
-    handleCopyObjectToOwner,
+    // State
+    applicationType, setApplicationType,
+    applicationNumber, setApplicationNumber,
+    serviceNumberDate, setServiceNumberDate,
+    completionDate, // Read-only di UI, dihitung otomatis
+    previousData, updatePreviousItem,
+    targetData, addTargetItem, removeTargetItem, updateTargetItem,
+
+    // UI State
+    currentStep, currentStepLabel, steps,
+    formErrors, error, loading,
+    statusModal, setStatusModal,
+    draftModal, setDraftModal,
+    draftLoaded,
+
+    // Handlers
     handleNextStep,
     handlePrevStep,
-    handleCreate
+    handleSubmit,
+    handleResetDraft,
+    handleWhatsappChange,
   };
 }

@@ -9,17 +9,18 @@ import { notifyAllUsersOfRole } from '@/lib/notifications';
 import { sendWhatsApp } from '@/lib/fonnte';
 import { ApplicationType, UserRole } from '@prisma/client';
 
-const SLA_MONTHS: Record<ApplicationType, number> = {
-  PARTIAL_MUTATION: 4,
-  MERGER_MUTATION: 4,
-  EXPIRED_UPDATE: 4,
-  EXPIRED_REGULAR: 4,
-  CORRECTION: 2,
-  REACTIVATION: 1,
-  NEW_TAX_OBJECT: 6,
+const typeLabelMap: Record<ApplicationType, string> = {
+  PARTIAL_MUTATION: 'Mutasi Sebagian',
+  MERGER_MUTATION: 'Mutasi Penggabungan',
+  EXPIRED_UPDATE: 'Mutasi Habis Update',
+  EXPIRED_REGULAR: 'Mutasi Habis Reguler',
+  NEW_TAX_OBJECT: 'Objek Pajak Baru',
+  CORRECTION: 'Pembetulan',
+  REACTIVATION: 'Pengaktifan',
 };
 
 export async function createApplication(rawInput: unknown) {
+  // AUTHENTICATION & AUTHORIZATION
   const session = await getServerSession(authOptions);
 
   if (!session?.user || !['DATA_ENTRY', 'SUPERVISOR'].includes(session.user.role as any)) {
@@ -29,6 +30,7 @@ export async function createApplication(rawInput: unknown) {
     };
   }
 
+  // VALIDASI DATA
   const validationResult = applicationSchema.safeParse(rawInput);
 
   if (!validationResult.success) {
@@ -42,6 +44,7 @@ export async function createApplication(rawInput: unknown) {
   const validated = validationResult.data;
 
   try {
+    // CEK DUPLIKASI DATA
     const existingApp = await prisma.application.findFirst({
       where: { applicationNumber: validated.applicationNumber },
       select: { id: true },
@@ -50,24 +53,18 @@ export async function createApplication(rawInput: unknown) {
     if (existingApp) {
       return {
         success: false,
-        error: `Nomor Pelayanan "${validated.applicationNumber}" sudah terdaftar di sistem.`,
+        error: `Nomor Permohonan "${validated.applicationNumber}" sudah terdaftar di sistem.`,
       };
     }
 
-    const serviceDate = new Date(validated.serviceNumberDate);
-    const slaMonths = SLA_MONTHS[validated.applicationType] || 4;
-
-    const completionDate = new Date(serviceDate);
-    completionDate.setMonth(completionDate.getMonth() + slaMonths);
-    completionDate.setHours(23, 59, 59, 999);
-
+    // EKSEKUSI DATABASE DALAM TRANSAKSI (All or Nothing)
     const result = await prisma.$transaction(async (tx) => {
       const newApplication = await tx.application.create({
         data: {
           applicationType: validated.applicationType,
           applicationNumber: validated.applicationNumber,
-          serviceNumberDate: serviceDate,
-          completionDate: completionDate,
+          serviceNumberDate: new Date(validated.serviceNumberDate),
+          completionDate: new Date(validated.completionDate),
           status: 'SUBMITTED',
           currentBundleId: null,
           isFavorite: false,
@@ -80,7 +77,7 @@ export async function createApplication(rawInput: unknown) {
         data: {
           applicationId: newApplication.id,
           snapshotType: 'INITIAL_SUBMIT',
-          note: validated.submissionNote || 'Pendaftaran awal permohonan',
+          note: 'Pendaftaran awal permohonan',
           actorId: session.user.id,
           snapshotData: {
             previousData: newApplication.previousData,
@@ -99,8 +96,8 @@ export async function createApplication(rawInput: unknown) {
           actorId: session.user.id,
           metadata: {
             applicationNumber: validated.applicationNumber,
-            serviceNumberDate: serviceDate.toISOString(),
-            slaDeadline: completionDate.toISOString(),
+            serviceNumberDate: new Date(validated.serviceNumberDate).toISOString(),
+            slaDeadline: new Date(validated.completionDate).toISOString(),
             totalPreviousData: newApplication.previousData.length,
             totalTargetData: newApplication.targetData.length,
           },
@@ -110,24 +107,36 @@ export async function createApplication(rawInput: unknown) {
       return newApplication;
     });
 
-    // =========================================================================
-    // 7. SIDE EFFECTS (Non-blocking, agar tidak menghambat response)
-    // =========================================================================
+    // SIDE EFFECTS (Non-blocking, agar tidak menghambat response)
     // Gunakan Promise.allSettled agar jika notifikasi gagal, transaksi utama tetap sukses.
-    Promise.allSettled([
-      ...(validated.targetData || [])
-        .filter((td) => td.whatsappNumber && td.whatsappNumber.trim().length > 0)
-        .map((td) =>
-          sendWhatsApp(
-            td.whatsappNumber!,
-            `Permohonan ${validated.applicationType} Anda (Pemilik: ${td.ownerName}) dengan nomor pelayanan ${result.applicationNumber} telah berhasil diajukan.`
-          )
-        ),
+    const applicationLabel = typeLabelMap[validated.applicationType] || validated.applicationType;
 
+    let recipients: { ownerName: string; whatsappNumber?: string | null }[] = [];
+    if (validated.applicationType === 'REACTIVATION') {
+      recipients = validated.previousData || [];
+    } else {
+      recipients = (validated.targetData && validated.targetData.length > 0)
+        ? validated.targetData
+        : (validated.previousData || []);
+    }
+
+    const waTargets = recipients.filter(
+      (item) => item.whatsappNumber && item.whatsappNumber.trim().length > 0
+    );
+
+    Promise.allSettled([
+      ...waTargets.map((target) =>
+        sendWhatsApp(
+          target.whatsappNumber!,
+          `Permohonan ${applicationLabel} atas nama Bapak/Ibu ${target.ownerName} dengan nomor permohonan ${result.applicationNumber} telah berhasil diajukan.`
+        )
+      ),
+
+      // Notifikasi Internal ke Role Peneliti
       notifyAllUsersOfRole(
         UserRole.RESEARCHER,
         'Permohonan Baru Diajukan',
-        `Permohonan ${validated.applicationType} nomor ${result.applicationNumber} masuk antrean penelitian.`,
+        `Permohonan ${applicationLabel} nomor ${result.applicationNumber} masuk antrean penelitian.`,
         { applicationId: result.id }
       ),
     ]).catch((err) => console.error('[SIDE-EFFECT-ERR]', err));
