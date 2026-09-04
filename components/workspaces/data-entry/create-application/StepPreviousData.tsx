@@ -1,3 +1,17 @@
+/**
+ * ============================================================================
+ * ANAK KOMPONEN: StepPreviousData (STEP 2: DATA LAMA / NOP ASAL)
+ * ============================================================================
+ * Terhubung dengan:
+ * 1. `CreateForm.tsx`   --> Rendernya dipicu saat `currentStepLabel === 'Data Lama (Asal)'`
+ * 2. `useCreateForm.ts` --> Menerima state & handler array NOP Asal:
+ *    - `previousData` (Array tempat menyimpan NOP asal, pemilik asal, alamat asal)
+ *    - `onAddPreviousItem` & `onRemovePreviousItem` (Tambah/Hapus NOP untuk Mutasi Penggabungan)
+ *    - `onPreviousItemChange` (Handler memperbarui bidang data per indeks array)
+ *    - `onSetPrimaryPreviousItem` (Menandai mana NOP Utama / Induk)
+ * ============================================================================
+ */
+
 "use client";
 import React from 'react';
 import { Plus, Trash2, Phone } from 'lucide-react';

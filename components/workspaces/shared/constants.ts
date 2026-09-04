@@ -212,3 +212,15 @@ export const JENIS_OPTIONS = APPLICATION_TYPE_OPTIONS;
 export const SERVICES_NEED_DATA_LAMA = SERVICES_NEED_PREVIOUS_DATA;
 export const SERVICES_NEED_DATA_BARU = SERVICES_NEED_TARGET_DATA;
 export const createEmptyDataBaruItem = createEmptyTargetDataItem;
+
+/**
+ * CLEAN PECAHAN SUFFIX FROM NAME
+ */
+export const cleanPecahanSuffix = (name?: string | null): string => {
+  if (!name) return '';
+  return name
+    .replace(/\s*\([^)]*pecahan[^)]*\)/gi, '')
+    .replace(/\s*\(Pecahan\s*\d+\)/gi, '')
+    .replace(/\s*Pecahan\s*\d+/gi, '')
+    .trim();
+};

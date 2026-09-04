@@ -1,3 +1,17 @@
+/**
+ * ============================================================================
+ * ANAK KOMPONEN: StepMainData (STEP 1: DATA UTAMA PERMOHONAN)
+ * ============================================================================
+ * Terhubung dengan:
+ * 1. `CreateForm.tsx`   --> Rendernya dipicu saat `form.currentStepLabel === 'Data Utama'`
+ * 2. `useCreateForm.ts` --> Menerima state & handler:
+ *    - `applicationType` & `onApplicationTypeChange` (Memilih jenis permohonan)
+ *    - `applicationNumber` & `onApplicationNumberChange` (Input 11 karakter / Auto Reactivation)
+ *    - `serviceNumberDate` & `onServiceNumberDateChange` (Tanggal permohonan)
+ *    - `completionDate` (Tanggal penyelesaian / SLA otomatis)
+ * ============================================================================
+ */
+
 "use client";
 
 import React from 'react';
@@ -42,8 +56,39 @@ export const StepMainData: React.FC<StepMainDataProps> = ({
           {formErrors.applicationType && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.applicationType}</span>}
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor Permohonan <span className="text-red-500">*</span></label>
-          <input type="text" id="applicationNumber" autoComplete="off" placeholder="Contoh: 20260903001 (11 Digit)" value={applicationNumber} onChange={(e) => onApplicationNumberChange(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors.applicationNumber, 'font-mono tracking-wide')} />
+          <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans flex items-center justify-between">
+            <span>Nomor Permohonan <span className="text-red-500">*</span></span>
+            {applicationType === 'REACTIVATION' ? (
+              <span className="text-[11px] font-medium text-[#008f78] bg-[#e6f6f4] px-2 py-0.5 rounded border border-[#00a389]/30 font-sans">
+                ✓ Otomatis Sistem (11 Digit)
+              </span>
+            ) : (
+              <span className={`text-xs font-mono pr-1 ${(applicationNumber || '').length === 11 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                {(applicationNumber || '').length}/11
+              </span>
+            )}
+          </label>
+          <input
+            type="text"
+            id="applicationNumber"
+            autoComplete="off"
+            maxLength={11}
+            placeholder={applicationType === 'REACTIVATION' ? "Otomatis dibuat oleh sistem" : "Contoh: 20260903001 (11 Karakter)"}
+            value={applicationNumber}
+            onChange={(e) => {
+              if (applicationType === 'REACTIVATION') return;
+              const val = e.target.value.toUpperCase().slice(0, 11);
+              onApplicationNumberChange(val);
+            }}
+            readOnly={applicationType === 'REACTIVATION'}
+            disabled={loading}
+            className={getInputClass(
+              !!formErrors.applicationNumber,
+              applicationType === 'REACTIVATION'
+                ? 'font-mono tracking-wide bg-slate-50 cursor-not-allowed text-slate-700 select-none'
+                : 'font-mono tracking-wide'
+            )}
+          />
           {formErrors.applicationNumber && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors.applicationNumber}</span>}
         </div>
         <div className="flex flex-col gap-1.5">

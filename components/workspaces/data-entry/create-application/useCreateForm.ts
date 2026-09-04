@@ -1,3 +1,20 @@
+/**
+ * ============================================================================
+ * CUSTOM HOOK: useCreateForm (OTAK & LOGIKA UTAMA FORMULIR PERMOHONAN)
+ * ============================================================================
+ * File ini mengelola seluruh state, validasi Zod, side-effect (draf, SLA, NOP),
+ * serta fungsi submit ke Server Action.
+ * 
+ * ALUR DATA & KONEKSI ANTAKOMPONEN:
+ * 1. Dipanggil oleh  : CreateForm.tsx (via `const form = useCreateForm(...)`)
+ * 2. Menyuplai Data ke:
+ *    - StepHeader.tsx       --> steps, currentStep, handleResetDraft
+ *    - StepMainData.tsx     --> applicationType, applicationNumber, serviceNumberDate, SLA
+ *    - StepPreviousData.tsx --> previousData (Array NOP Asal), handler ubah item
+ *    - StepTargetData.tsx   --> targetData (Array Data Baru), handler ubah & salin data
+ * ============================================================================
+ */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createApplication } from '@/app/actions/data-entry';
 import { applicationSchema } from '@/lib/validations/application'
@@ -8,6 +25,13 @@ import {
   createEmptyPreviousDataItem,
   createEmptyTargetDataItem
 } from '@/components/workspaces/shared/constants';
+
+// HELPER GENERATE NOMOR PERMOHONAN KHUSUS REACTIVATION (11 DIGIT)
+export const generateReactivationNumber = (dateStr: string): string => {
+  const cleanDate = (dateStr || '').replace(/[^\d]/g, '');
+  const yyyymmdd = cleanDate.length >= 8 ? cleanDate.slice(0, 8) : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  return `${yyyymmdd}901`;
+};
 
 // HELPER EKSTRAKSI NOP SEBAGAI DRAFT NOP SEMENTARA DATA BARU
 export const getPrimaryNopDisplay = (previousData: any[]): string => {
@@ -35,13 +59,11 @@ interface UseCreateFormOptions {
 export const useCreateForm = (options: UseCreateFormOptions = {}) => {
   const { initialData, onSuccess, onCancel } = options;
 
-  // STATE MANAGEMENT
+  // [BAGIAN 1] STATE MANAGEMENT (Variabel Utama Formulir & UI)
   const [applicationType, setApplicationType] = useState<string>('');
   const [applicationNumber, setApplicationNumber] = useState('');
   const [serviceNumberDate, setServiceNumberDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [completionDate, setCompletionDate] = useState('');
-
-  // STATE ARRAY UNTUK DATA LAMA & DATA BARU
   const [previousData, setPreviousData] = useState<any[]>(() => {
     const item1 = createEmptyPreviousDataItem();
     item1.isPrimary = true;
@@ -49,21 +71,19 @@ export const useCreateForm = (options: UseCreateFormOptions = {}) => {
   });
   const [targetData, setTargetData] = useState<any[]>([]);
 
-  // UI DAN VALIDATION STATE
   const [currentStep, setCurrentStep] = useState(1);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
 
-  // MODAL STATES
   const [statusModal, setStatusModal] = useState({ open: false, status: 'idle' as 'idle' | 'loading' | 'success' | 'error', title: '', message: '' });
   const [draftModal, setDraftModal] = useState({ open: false, message: '' });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // DERIVED VALUES
+  // [BAGIAN 2] DERIVED VALUES (Perhitungan Otomatis Kebutuhan Step berdasarkan Jenis Permohonan)
   const needPreviousData = useMemo(() => SERVICES_NEED_PREVIOUS_DATA.includes(applicationType), [applicationType]);
   const needTargetData = useMemo(() => SERVICES_NEED_TARGET_DATA.includes(applicationType), [applicationType]);
 
@@ -76,8 +96,8 @@ export const useCreateForm = (options: UseCreateFormOptions = {}) => {
 
   const currentStepLabel = steps[currentStep - 1]?.label;
 
-  // EFFECTS
-  // Auto-calculate Tanggal Penyelesaian (SLA)
+  // [BAGIAN 3] SIDE EFFECTS & OTOMATISASI
+  // A. Auto-calculate Tanggal Penyelesaian (SLA)
   useEffect(() => {
     if (!serviceNumberDate) return;
     const baseDate = new Date(serviceNumberDate);
@@ -90,6 +110,20 @@ export const useCreateForm = (options: UseCreateFormOptions = {}) => {
     const targetDate = new Date(baseDate);
     targetDate.setMonth(baseDate.getMonth() + monthsToAdd);
     setCompletionDate(targetDate.toISOString().split('T')[0]);
+  }, [applicationType, serviceNumberDate]);
+
+  // Auto-generate Nomor Permohonan khusus REACTIVATION (11 Digit)
+  useEffect(() => {
+    if (applicationType === 'REACTIVATION') {
+      const autoNum = generateReactivationNumber(serviceNumberDate);
+      setApplicationNumber(autoNum);
+      setFormErrors(prev => {
+        if (!prev.applicationNumber) return prev;
+        const next = { ...prev };
+        delete next.applicationNumber;
+        return next;
+      });
+    }
   }, [applicationType, serviceNumberDate]);
 
   // Restore Draft / Initial Data (Hanya sekali saat mount / initialData siap)
@@ -226,7 +260,6 @@ export const useCreateForm = (options: UseCreateFormOptions = {}) => {
     }
   }, [needTargetData, targetData.length, draftLoaded]);
 
-  // CLEAR ERROR HELPER (REAL-TIME)
   const clearFieldError = useCallback((fieldKey: string) => {
     setFormErrors(prev => {
       if (!prev[fieldKey]) return prev;
@@ -238,7 +271,12 @@ export const useCreateForm = (options: UseCreateFormOptions = {}) => {
   }, []);
 
   const handleApplicationTypeChange = useCallback((newType: string) => {
-    setApplicationType(newType);
+    setApplicationType(prevType => {
+      if (prevType === 'REACTIVATION' && newType !== 'REACTIVATION') {
+        setApplicationNumber('');
+      }
+      return newType;
+    });
     clearFieldError('applicationType');
   }, [clearFieldError]);
 

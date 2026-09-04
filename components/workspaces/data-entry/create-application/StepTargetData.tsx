@@ -1,3 +1,18 @@
+/**
+ * ============================================================================
+ * ANAK KOMPONEN: StepTargetData (STEP 3: DATA BARU / PEMILIK & OBJEK BARU)
+ * ============================================================================
+ * Terhubung dengan:
+ * 1. `CreateForm.tsx`   --> Rendernya dipicu saat `currentStepLabel === 'Data Baru'`
+ * 2. `useCreateForm.ts` --> Menerima state & handler array Data Baru:
+ *    - `targetData` (Array tempat menyimpan NOP Sementara, Pemilik Baru, Objek Baru, Sertifikat, Lampiran Dokumen)
+ *    - `onAddTargetItem` & `onRemoveTargetItem` (Tambah/Hapus Pemilik Baru untuk Mutasi Sebagian)
+ *    - `onTargetItemChange` (Handler memperbarui bidang data per indeks array)
+ *    - `onCopyOwnerFromPrevious`, `onCopyObjectFromPrevious`, `onCopyObjectToOwner` (Helper tombol salin alamat)
+ *    - `getPrimaryNopDisplay` (Helper placeholder NOP Sementara dari NOP Asal)
+ * ============================================================================
+ */
+
 "use client";
 import React from 'react';
 import { Plus, Trash2, Phone, Copy, RefreshCw, UploadCloud, FileText, X, Paperclip } from 'lucide-react';
@@ -61,18 +76,34 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-normal text-slate-700 font-sans">
-                    NOP Sementara {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs">(Opsional / Ditentukan Sistem)</span>}
+                  <label className="text-[13px] font-normal text-slate-700 font-sans flex items-center justify-between">
+                    <span>
+                      NOP Sementara {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs">(Opsional / Ditentukan Sistem)</span>}
+                    </span>
+                    <span className={`text-xs font-mono pr-1 ${(item.nopTemporary || '').replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                      {(item.nopTemporary || '').replace(/[^\d]/g, '').length}/18
+                    </span>
                   </label>
                   <input
                     type="text"
                     id={`targetData.${idx}.nopTemporary`}
+                    autoComplete="off"
                     maxLength={24}
                     placeholder={getPrimaryNopDisplay(previousData)}
                     value={item.nopTemporary || ''}
-                    onChange={(e) => onTargetItemChange(idx, 'nopTemporary', e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
+                      let fmt = raw;
+                      if (raw.length > 2) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
+                      if (raw.length > 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
+                      if (raw.length > 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
+                      if (raw.length > 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
+                      if (raw.length > 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
+                      if (raw.length > 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
+                      onTargetItemChange(idx, 'nopTemporary', fmt);
+                    }}
                     disabled={loading}
-                  className={getInputClass(!!formErrors[`targetData.${idx}.nopTemporary`], 'font-mono tracking-wide')}/>
+                    className={getInputClass(!!formErrors[`targetData.${idx}.nopTemporary`], 'font-mono tracking-wide')}/>
                   {applicationType !== 'NEW_TAX_OBJECT' && (
                     <span className="text-[11px] text-slate-400 font-sans">
                       * 15 digit lokasi menginduk otomatis pada NOP Asal

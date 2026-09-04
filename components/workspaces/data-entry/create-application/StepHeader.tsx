@@ -1,3 +1,17 @@
+/**
+ * ============================================================================
+ * ANAK KOMPONEN: StepHeader (HEADER & STEPPER NAVIGATION)
+ * ============================================================================
+ * Terhubung dengan:
+ * 1. `CreateForm.tsx`  --> Dipanggil di bagian paling atas tampilan formulir
+ * 2. `useCreateForm.ts`--> Menerima props state `steps`, `currentStep`, dan `onResetDraft`
+ * 
+ * TUGAS:
+ * - Menampilkan tombol Kembali & Reset Draf
+ * - Menampilkan Stepper Bar (Langkah 1, 2, 3) yang bisa diklik untuk navigasi ke step sebelumnya
+ * ============================================================================
+ */
+
 "use client";
 import React from 'react';
 import { ChevronLeft, RotateCcw } from 'lucide-react';
@@ -21,7 +35,6 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
 }) => {
   return (
     <>
-      {/* Top Header Buttons */}
       <div className="px-6 py-3.5 border-b border-slate-200/80 bg-white flex flex-row items-center justify-between gap-3 select-none">
         <button
           type="button"
@@ -39,11 +52,10 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
           title="Hapus draf"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset</span>
+          <span>Reset draf</span>
         </button>
       </div>
 
-      {/* Stepper Progress Bar - Stretched */}
       {steps.length > 1 && (
         <div className="border-b border-slate-200/80 bg-slate-50/80 px-6 sm:px-8 py-3 select-none">
           <div className="flex items-center justify-between gap-2 w-full">
@@ -60,17 +72,15 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
                     type="button"
                     disabled={stepNum > currentStep && !isCompleted}
                     onClick={() => { if (stepNum < currentStep) setCurrentStep(stepNum); }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${
-                      isActive
-                        ? 'bg-[#00a389] text-white shadow-3xs'
-                        : isCompleted
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all cursor-pointer text-[13px] font-normal font-sans ${isActive
+                      ? 'bg-[#00a389] text-white shadow-3xs'
+                      : isCompleted
                         ? 'bg-[#e6f6f4] text-[#008f78] hover:bg-[#d8f2ee]'
                         : 'bg-white text-slate-400 border border-slate-200/90 cursor-not-allowed'
-                    }`}
+                      }`}
                   >
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${
-                      isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
-                    }`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-normal ${isActive ? 'bg-white/20 text-white' : isCompleted ? 'bg-[#00a389] text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
                       {isCompleted ? '✓' : stepNum}
                     </span>
                     <span>{step.label}</span>

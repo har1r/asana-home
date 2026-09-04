@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * KOMPONEN UTAMA: CreateForm (MANAJER / KOORDINATOR TAMPILAN PERMOHONAN)
+ * ============================================================================
+ * Komponen ini bertindak sebagai pembungkus utama yang menghubungkan:
+ * 1. LOGIKA & STATE  --> Dari `useCreateForm` hook (diambil via `const form = useCreateForm(...)`)
+ * 2. TAMPILAN HEADER --> `StepHeader.tsx` (Progress bar & Tombol Atas)
+ * 3. STEP 1 (UTAMA)  --> `StepMainData.tsx` (Pilih jenis permohonan, No. permohonan, SLA)
+ * 4. STEP 2 (LAMA)   --> `StepPreviousData.tsx` (Data Lama / NOP Asal)
+ * 5. STEP 3 (BARU)   --> `StepTargetData.tsx` (Data Pemilik & Objek Baru)
+ * ============================================================================
+ */
+
 "use client";
 import React from 'react';
 import { createPortal } from 'react-dom';
@@ -15,6 +28,7 @@ interface CreateFormProps {
   initialData?: any;
 }
 
+// Helper Style Kelas Input
 const getInputClass = (hasError?: boolean, extraClass: string = '') => {
   const stateClass = hasError
     ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
@@ -22,6 +36,7 @@ const getInputClass = (hasError?: boolean, extraClass: string = '') => {
   return `w-full bg-white border ${stateClass} rounded-md px-3.5 py-2.5 text-[13px] font-normal text-slate-900 focus:outline-none focus:ring-2 transition-all font-sans ${extraClass}`.trim();
 };
 
+// Helper Style Container WhatsApp
 const getWhatsAppContainerClass = (hasError?: boolean) => {
   const stateClass = hasError
     ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10'
@@ -30,12 +45,13 @@ const getWhatsAppContainerClass = (hasError?: boolean) => {
 };
 
 export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, onCancel, initialData }) => {
+  // [1] PANGGIL OTAK/LOGIKA FORM DARI HOOK
   const form = useCreateForm({ onSuccess, onCancel, initialData });
 
   return (
     <div className="w-full bg-transparent animate-fadeIn">
       <div className="w-full bg-white rounded-md border border-slate-200/90 shadow-xs flex flex-col overflow-hidden">
-        {/* Step Header & Progress Bar */}
+        {/* [2] STEPHEADER: Menampilkan Stepper (1, 2, 3) dan Tombol Reset/Batal */}
         <StepHeader
           onCancel={onCancel}
           onResetDraft={form.handleResetDraft}
@@ -46,6 +62,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         />
 
         <div className="p-6 sm:p-8 flex flex-col gap-6">
+          {/* Notifikasi Pesan Error Umum */}
           {form.error && (
             <div className="bg-red-50/80 border border-red-200/65 text-red-750 text-xs font-bold rounded-md px-4 py-3 flex items-start gap-2.5 animate-fadeIn shrink-0">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
@@ -54,7 +71,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
           )}
 
           <form onSubmit={form.handleCreate} className="flex flex-col gap-6" autoComplete="off">
-            {/* Step 1: Data Utama */}
+            {/* [3] STEP 1: STEPMAINDATA (Data Utama Permohonan) */}
             {form.currentStepLabel === 'Data Utama' && (
               <StepMainData
                 applicationType={form.applicationType}
@@ -70,7 +87,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
               />
             )}
 
-            {/* Step 2: Data Lama (Asal) */}
+            {/* [4] STEP 2: STEPPREVIOUSDATA (Data Lama / NOP Asal - Tampil jika layanan memerlukan) */}
             {form.currentStepLabel === 'Data Lama (Asal)' && form.needPreviousData && (
               <StepPreviousData
                 applicationType={form.applicationType}
@@ -86,7 +103,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
               />
             )}
 
-            {/* Step 3: Data Baru */}
+            {/* [5] STEP 3: STEPTARGETDATA (Data Baru / Pemilik & Objek Baru - Tampil jika layanan memerlukan) */}
             {form.currentStepLabel === 'Data Baru' && form.needTargetData && (
               <StepTargetData
                 applicationType={form.applicationType}
@@ -107,7 +124,6 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
               />
             )}
 
-            {/* Navigation & Submit Buttons */}
             <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 mt-2 select-none">
               {form.currentStep > 1 ? (
                 <button
@@ -139,7 +155,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                   className="h-10 px-6 rounded-md bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  <span>Simpan & Daftarkan Permohonan</span>
+                  <span>Ajukan</span>
                 </button>
               )}
             </div>
@@ -147,7 +163,6 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         </div>
       </div>
 
-      {/* Action Status Modal */}
       <ActionStatusModal
         isOpen={form.statusModalOpen}
         status={form.statusModalStatus}
@@ -156,7 +171,6 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
         onClose={form.handleCloseStatusModal}
       />
 
-      {/* Draft Notification Modal */}
       {form.mounted && form.draftModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fadeIn">
           <div className="bg-white rounded-md p-6 max-w-sm w-full shadow-lg border border-slate-200/80 flex flex-col gap-4 animate-scaleUp font-sans">
