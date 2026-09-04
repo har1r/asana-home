@@ -115,6 +115,7 @@ export const NOP_MAPPING: Record<string, { name: string, villages: Record<string
 export const createEmptyPreviousDataItem = () => ({
   nop: '',
   ownerName: '',
+  whatsappNumber: '',
   ownerAddress: '',
   ownerBlock: '',
   ownerRt: '',
@@ -156,7 +157,8 @@ export const createEmptyTargetDataItem = () => ({
   landArea: 0,
   buildingArea: 0,
   certificate: '',
-  notes: ''
+  notes: '',
+  files: []
 });
 
 /**

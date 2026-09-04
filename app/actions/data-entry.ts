@@ -59,6 +59,25 @@ export async function createApplication(rawInput: unknown) {
 
     // EKSEKUSI DATABASE DALAM TRANSAKSI (All or Nothing)
     const result = await prisma.$transaction(async (tx) => {
+      const formattedTargetData = (validated.targetData || []).map((item) => {
+        const { files, ...targetDataWithoutFiles } = item as any;
+
+        const archives = (files || []).map((fileInfo: any) => ({
+          idArchive: crypto.randomUUID(),
+          urlBlob: fileInfo.urlBlob || fileInfo.url || '',
+          fileName: fileInfo.name || fileInfo.fileName || 'Dokumen Utama',
+          status: 'ACTIVE' as const,
+          uploadedBy: session.user.id,
+          createdAt: new Date(),
+        }));
+
+        return {
+          ...targetDataWithoutFiles,
+          idTargetData: crypto.randomUUID(),
+          digitalArchives: archives,
+        };
+      });
+
       const newApplication = await tx.application.create({
         data: {
           applicationType: validated.applicationType,
@@ -69,7 +88,7 @@ export async function createApplication(rawInput: unknown) {
           currentBundleId: null,
           isFavorite: false,
           previousData: validated.previousData || [],
-          targetData: validated.targetData || [],
+          targetData: formattedTargetData || [],
         },
       });
 
@@ -120,17 +139,21 @@ export async function createApplication(rawInput: unknown) {
         : (validated.previousData || []);
     }
 
-    const waTargets = recipients.filter(
+    const waRecipients = recipients.filter(
       (item) => item.whatsappNumber && item.whatsappNumber.trim().length > 0
     );
 
     Promise.allSettled([
-      ...waTargets.map((target) =>
-        sendWhatsApp(
-          target.whatsappNumber!,
+      ...waRecipients.map((target) => {
+        let cleanPhone = target.whatsappNumber!.replace(/[\s\-]/g, '');
+        if (cleanPhone.startsWith('+')) {
+          cleanPhone = cleanPhone.substring(1);
+        }
+        return sendWhatsApp(
+          cleanPhone,
           `Permohonan ${applicationLabel} atas nama Bapak/Ibu ${target.ownerName} dengan nomor permohonan ${result.applicationNumber} telah berhasil diajukan.`
-        )
-      ),
+        );
+      }),
 
       // Notifikasi Internal ke Role Peneliti
       notifyAllUsersOfRole(

@@ -8,7 +8,7 @@ export const ApplicationTypeEnum = z.enum([
   'NEW_TAX_OBJECT',         // Objek Pajak Baru
   'CORRECTION',             // Pembetulan
   'REACTIVATION',           // Pengaktifan
-]);
+], { message: 'Jenis permohonan wajib dipilih' });
 
 export type ApplicationType = z.infer<typeof ApplicationTypeEnum>;
 
@@ -54,6 +54,7 @@ export const targetDataItemSchema = z.object({
   landArea: z.coerce.number(),
   buildingArea: z.coerce.number().nullable().optional(),
   certificate: z.string(),
+  files: z.array(z.any()).optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -71,6 +72,13 @@ function requireNonNegativeNumber(value: number | null | undefined, path: (strin
   }
 }
 
+function isValidWhatsApp(phone?: string | null): boolean {
+  if (!phone || phone.trim() === '') return true;
+  const cleanPhone = phone.replace(/[\s\-]/g, '');
+  return /^(08|628|\+628)\d{8,12}$/.test(cleanPhone);
+}
+
+
 function validatePreviousDataItem(item: z.infer<typeof previousDataItemSchema>, index: number, ctx: z.RefinementCtx) {
   const basePath = ['previousData', index] as (string | number)[];
 
@@ -80,6 +88,10 @@ function validatePreviousDataItem(item: z.infer<typeof previousDataItemSchema>, 
   requireString(item.objectKecamatan, [...basePath, 'objectKecamatan'], 'Kecamatan objek lama wajib diisi', ctx);
   requireString(item.objectDesa, [...basePath, 'objectDesa'], 'Desa objek lama wajib diisi', ctx);
   requireNonNegativeNumber(item.landArea, [...basePath, 'landArea'], 'Luas tanah lama wajib diisi dan harus > 0', ctx);
+
+  if (item.whatsappNumber && !isValidWhatsApp(item.whatsappNumber)) {
+    ctx.addIssue({ code: 'custom', message: 'Nomor WhatsApp tidak valid', path: [...basePath, 'whatsappNumber'] });
+  }
 }
 
 function validateTargetDataItem(item: z.infer<typeof targetDataItemSchema>, index: number, ctx: z.RefinementCtx,) {
@@ -88,8 +100,8 @@ function validateTargetDataItem(item: z.infer<typeof targetDataItemSchema>, inde
   requireString(item.nopTemporary, [...basePath, 'nopTemporary'], 'NOP sementara wajib diisi', ctx);
   requireString(item.ownerName, [...basePath, 'ownerName'], 'Nama pemilik baru wajib diisi', ctx);
   requireString(item.whatsappNumber, [...basePath, 'whatsappNumber'], 'Nomor WhatsApp wajib diisi', ctx);
-  if (item.whatsappNumber && !/^(08|628)\d{8,12}$/.test(item.whatsappNumber)) {
-    ctx.addIssue({ code: 'custom', message: 'Nomor WhatsApp tidak valid (contoh: 08123456789)', path: [...basePath, 'whatsappNumber'] });
+  if (item.whatsappNumber && !isValidWhatsApp(item.whatsappNumber)) {
+    ctx.addIssue({ code: 'custom', message: 'Nomor WhatsApp tidak valid', path: [...basePath, 'whatsappNumber'] });
   }
   requireString(item.ownerAddress, [...basePath, 'ownerAddress'], 'Alamat pemilik baru wajib diisi', ctx);
   requireString(item.ownerKecamatan, [...basePath, 'ownerKecamatan'], 'Kecamatan pemilik baru wajib diisi', ctx);

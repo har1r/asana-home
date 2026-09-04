@@ -78,9 +78,11 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                 onAddPreviousItem={form.handleAddPreviousItem}
                 onRemovePreviousItem={form.handleRemovePreviousItem}
                 onPreviousItemChange={form.handlePreviousItemChange}
+                onSetPrimaryPreviousItem={form.setPrimaryPreviousItem}
                 formErrors={form.formErrors}
                 loading={form.loading}
                 getInputClass={getInputClass}
+                getWhatsAppContainerClass={getWhatsAppContainerClass}
               />
             )}
 
@@ -101,6 +103,7 @@ export const CreateForm: React.FC<CreateFormProps> = React.memo(({ onSuccess, on
                 loading={form.loading}
                 getInputClass={getInputClass}
                 getWhatsAppContainerClass={getWhatsAppContainerClass}
+                getPrimaryNopDisplay={form.getPrimaryNopDisplay}
               />
             )}
 
