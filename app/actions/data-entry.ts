@@ -190,7 +190,7 @@ export async function createApplication(rawInput: unknown) {
   }
 }
 
-export async function updatePermohonan(id: string, rawInput: any) {
+export async function updateApplication(id: string, rawInput: any) {
   const session = await getServerSession(authOptions);
 
   if (!session || !['DATA_ENTRY', 'SUPERVISOR', 'PENGINPUT'].includes((session.user as any).role)) {
@@ -223,7 +223,7 @@ export async function updatePermohonan(id: string, rawInput: any) {
   }
 }
 
-export async function resubmitPermohonan(id: string) {
+export async function resubmitApplication(id: string) {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, error: 'Unauthorized' };
 
@@ -240,7 +240,7 @@ export async function resubmitPermohonan(id: string) {
   }
 }
 
-export async function getPenginputPermohonan() {
+export async function getActiveApplications() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -249,17 +249,42 @@ export async function getPenginputPermohonan() {
 
   try {
     const list = await prisma.application.findMany({
+      where: {
+        status: { in: ['SUBMITTED', 'REVISION'] }
+      },
       orderBy: { createdAt: 'desc' }
     });
 
     return { success: true, list };
   } catch (error: any) {
-    console.error('[ACTION-GET-ERR]', error);
-    return { success: false, list: [], error: 'Gagal mengambil data permohonan.' };
+    console.error('[ACTION-GET-ACTIVE-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil data permohonan aktif.' };
   }
 }
 
-export async function togglePermohonanFavorite(id: string) {
+export async function getHistoryApplications() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return { success: false, list: [], error: 'Unauthorized: Sesi tidak ditemukan.' };
+  }
+
+  try {
+    const list = await prisma.application.findMany({
+      where: {
+        status: { in: ['BUNDLED', 'ARCHIVED', 'MANIFESTED', 'DELIVERED', 'COMPLETED'] }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-HISTORY-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil data riwayat permohonan.' };
+  }
+}
+
+export async function toggleFavoriteApplication(id: string) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -289,7 +314,7 @@ export async function togglePermohonanFavorite(id: string) {
   }
 }
 
-export async function getRevisionPermohonans() {
+export async function getRevisionApplications() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -309,7 +334,7 @@ export async function getRevisionPermohonans() {
   }
 }
 
-export async function getLatestPermohonans(limit = 10) {
+export async function getLatestApplications(limit = 10) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -332,7 +357,7 @@ export async function getLatestPermohonans(limit = 10) {
   }
 }
 
-export async function getPermohonanStats() {
+export async function getApplicationStats() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -382,7 +407,7 @@ export async function getPermohonanStats() {
   }
 }
 
-export async function getFavoritePermohonans() {
+export async function getFavoriteApplications() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -406,3 +431,15 @@ export async function getFavoritePermohonans() {
     return { success: false, error: 'Gagal mengambil data favorit.', list: [] };
   }
 }
+
+// ==================== ALIASES FOR BACKWARD COMPATIBILITY ====================
+export const updatePermohonan = updateApplication;
+export const resubmitPermohonan = resubmitApplication;
+export const getPenginputPermohonan = getActiveApplications;
+export const getPenginputHistoryPermohonan = getHistoryApplications;
+export const togglePermohonanFavorite = toggleFavoriteApplication;
+export const getRevisionPermohonans = getRevisionApplications;
+export const getLatestPermohonans = getLatestApplications;
+export const getPermohonanStats = getApplicationStats;
+export const getFavoritePermohonans = getFavoriteApplications;
+

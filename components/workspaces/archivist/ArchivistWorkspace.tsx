@@ -44,7 +44,7 @@ import {
   uploadArsipDigital,
   ajukanKembalikanKePeneliti,
 } from "@/app/actions/archivist";
-import { togglePermohonanFavorite } from "@/app/actions/data-entry";
+import { toggleFavoriteApplication } from "@/app/actions/data-entry";
 import { useDashboard } from "@/context/DashboardContext";
 import {
   SkeletonBox,
@@ -601,7 +601,7 @@ export default function PengarsipWorkspace() {
   // Toggle Favorit Permohonan
   const handleToggleFavorite = async (permohonanId: string) => {
     try {
-      const res = await togglePermohonanFavorite(permohonanId);
+      const res = await toggleFavoriteApplication(permohonanId);
       if (res.success) {
         if (selectedBundle) {
           fetchBundleDetail(selectedBundle.id);

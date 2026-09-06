@@ -1,16 +1,9 @@
 "use client";
 
 import React from "react";
+import { BundleStatusCounts } from "./useResearcherStatistics";
 
-export interface BundleStatusCounts {
-  DRAFT: number;
-  LOCKED: number;
-  IN_MANIFEST: number;
-  VOID: number;
-  [key: string]: number;
-}
-
-export interface PenelitiKPIProps {
+export interface ResearcherKpiStripProps {
   totalBundles: number;
   bundleStatusCounts: BundleStatusCounts;
   returnedFromPengarsipCount: number;
@@ -22,7 +15,7 @@ export interface PenelitiKPIProps {
   onSelectZoneBRevisionSource: (source: string) => void;
 }
 
-export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
+export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(({
   totalBundles,
   bundleStatusCounts,
   returnedFromPengarsipCount,
@@ -72,7 +65,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Draf</span>
-            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.DRAFT}</span>
+            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.DRAFT || 0}</span>
           </div>
           <span
             className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${
@@ -81,7 +74,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
                 : "bg-slate-100 text-slate-500 border-slate-200/80"
             }`}
           >
-            {totalBundles > 0 ? `${((bundleStatusCounts.DRAFT / totalBundles) * 100).toFixed(0)}%` : "0%"}
+            {totalBundles > 0 ? `${(((bundleStatusCounts.DRAFT || 0) / totalBundles) * 100).toFixed(0)}%` : "0%"}
           </span>
         </div>
 
@@ -96,7 +89,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Terkunci</span>
-            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.LOCKED}</span>
+            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.LOCKED || 0}</span>
           </div>
           <span
             className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${
@@ -105,7 +98,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
                 : "bg-slate-100 text-slate-500 border-slate-200/80"
             }`}
           >
-            {totalBundles > 0 ? `${((bundleStatusCounts.LOCKED / totalBundles) * 100).toFixed(0)}%` : "0%"}
+            {totalBundles > 0 ? `${(((bundleStatusCounts.LOCKED || 0) / totalBundles) * 100).toFixed(0)}%` : "0%"}
           </span>
         </div>
 
@@ -120,7 +113,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dimanifest</span>
-            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.IN_MANIFEST}</span>
+            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.IN_MANIFEST || 0}</span>
           </div>
           <span
             className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${
@@ -129,7 +122,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
                 : "bg-slate-100 text-slate-500 border-slate-200/80"
             }`}
           >
-            {totalBundles > 0 ? `${((bundleStatusCounts.IN_MANIFEST / totalBundles) * 100).toFixed(0)}%` : "0%"}
+            {totalBundles > 0 ? `${(((bundleStatusCounts.IN_MANIFEST || 0) / totalBundles) * 100).toFixed(0)}%` : "0%"}
           </span>
         </div>
 
@@ -144,7 +137,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-[13px] font-normal text-slate-600 capitalize font-sans">Dibatalkan</span>
-            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.VOID}</span>
+            <span className="text-lg font-bold font-mono text-slate-800">{bundleStatusCounts.VOID || 0}</span>
           </div>
           <span
             className={`text-[11px] font-semibold font-mono px-1.5 py-0.5 rounded border transition-all ${
@@ -153,14 +146,14 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
                 : "bg-slate-100 text-slate-500 border-slate-200/80"
             }`}
           >
-            {totalBundles > 0 ? `${((bundleStatusCounts.VOID / totalBundles) * 100).toFixed(0)}%` : "0%"}
+            {totalBundles > 0 ? `${(((bundleStatusCounts.VOID || 0) / totalBundles) * 100).toFixed(0)}%` : "0%"}
           </span>
         </div>
       </div>
 
-      {/* ZONA B: PENGEMBALIAN BERKAS & ALERT REVISI (Ultra-Compact Alert Cards) */}
+      {/* ZONA B: PENGEMBALIAN BERKAS & ALERT REVISI */}
       <div className="xl:w-[410px] grid grid-cols-1 sm:grid-cols-3 gap-1.5 shrink-0 pl-0 xl:pl-2 xl:border-l border-slate-200/80">
-        {/* Metric 6: 🟡 Revisi - Badge: Pengarsip */}
+        {/* Metric 6: Retur Pengarsip */}
         <div
           onClick={() => onSelectZoneBRevisionSource("PENGARSIP")}
           className={`p-2 px-2.5 flex items-center justify-between transition-all cursor-pointer rounded-md border ${
@@ -184,7 +177,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
           </span>
         </div>
 
-        {/* Metric 7: 🟠 Retur - Badge: Pengirim */}
+        {/* Metric 7: Retur Pengirim */}
         <div
           onClick={() => onSelectZoneBRevisionSource("PENGIRIM_LOGISTIK")}
           className={`p-2 px-2.5 flex items-center justify-between transition-all cursor-pointer rounded-md border ${
@@ -208,7 +201,7 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
           </span>
         </div>
 
-        {/* Metric 8: 🔴 Retur - Badge: Pusat */}
+        {/* Metric 8: Retur Pusat */}
         <div
           onClick={() => onSelectZoneBRevisionSource("PENGIRIM_PUSAT")}
           className={`p-2 px-2.5 flex items-center justify-between transition-all cursor-pointer rounded-md border ${
@@ -236,4 +229,4 @@ export const PenelitiKPI: React.FC<PenelitiKPIProps> = React.memo(({
   );
 });
 
-PenelitiKPI.displayName = "PenelitiKPI";
+ResearcherKpiStrip.displayName = "ResearcherKpiStrip";

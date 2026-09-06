@@ -223,4 +223,102 @@ export const cleanPecahanSuffix = (name?: string | null): string => {
     .replace(/\s*\(Pecahan\s*\d+\)/gi, '')
     .replace(/\s*Pecahan\s*\d+/gi, '')
     .trim();
-};
+};
+
+export const JENIS_LABEL_MAP: Record<string, string> = {
+  PARTIAL_MUTATION: 'Mutasi Sebagian',
+  MERGER_MUTATION: 'Mutasi Penggabungan',
+  EXPIRED_UPDATE: 'Mutasi Habis Update',
+  EXPIRED_REGULAR: 'Mutasi Habis Reguler',
+  NEW_TAX_OBJECT: 'Objek Pajak Baru',
+  CORRECTION: 'Pembetulan',
+  REACTIVATION: 'Pengaktifan',
+  MUTASI_SEBAGIAN: 'Mutasi Sebagian',
+  MUTASI_PENGGABUNGAN: 'Mutasi Penggabungan',
+  MUTASI_HABIS_UPDATE: 'Mutasi Habis Update',
+  MUTASI_HABIS_REGULER: 'Mutasi Habis Reguler',
+  OBJEK_PAJAK_BARU: 'Objek Pajak Baru',
+  PEMBETULAN: 'Pembetulan',
+  PENGAKTIFAN: 'Pengaktifan',
+};
+
+export const getAbbreviatedJenis = (jenis: string) => {
+  switch (jenis) {
+    case 'OBJEK_PAJAK_BARU':
+    case 'NEW_TAX_OBJECT':
+      return 'OPB';
+    case 'MUTASI_SEBAGIAN':
+    case 'PARTIAL_MUTATION':
+      return 'MS';
+    case 'MUTASI_HABIS_REGULER':
+    case 'EXPIRED_REGULAR':
+      return 'MHR';
+    case 'MUTASI_HABIS_UPDATE':
+    case 'EXPIRED_UPDATE':
+      return 'MHU';
+    case 'PEMBETULAN':
+    case 'CORRECTION':
+      return 'PBT';
+    case 'PENGAKTIFAN':
+    case 'REACTIVATION':
+      return 'AKT';
+    case 'MUTASI_PENGGABUNGAN':
+    case 'MERGER_MUTATION':
+      return 'MPG';
+    default:
+      return jenis;
+  }
+};
+
+/**
+ * FORMAT NOMOR BUNDLE MENJADI 973/{no_bundle}-UPT.PD.WIL.IV/{tahun}
+ * no_bundle dimulai dari 1 (001) dan di-reset setiap tahun.
+ */
+export const formatBundleNumber = (rawNum?: string | null, createdAt?: string | Date | null): string => {
+  const currentYear = new Date().getFullYear();
+  if (!rawNum) return `973/001-UPT.PD.WIL.IV/${currentYear}`;
+
+  let str = String(rawNum).trim();
+  let year = currentYear;
+
+  // Extract year from createdAt if available
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!isNaN(d.getTime())) {
+      year = d.getFullYear();
+    }
+  }
+
+  let numPart = str;
+
+  // If already formatted like 973/XXX-UPT.PD.WIL.IV/YYYY
+  if (str.includes('973/') && str.includes('UPT.PD.WIL.IV')) {
+    const match = str.match(/^973\/(.+?)-UPT\.PD\.WIL\.IV\/(.+)$/);
+    if (match) {
+      numPart = match[1];
+      if (match[2] && !isNaN(parseInt(match[2], 10))) {
+        year = parseInt(match[2], 10);
+      }
+    }
+  } else {
+    // Strip BUNDLE- or BDL- prefix
+    numPart = str.replace(/^(BUNDLE|BDL)[-_]?/i, '').trim();
+  }
+
+  // Format numPart into 3-digit sequence (e.g., 001, 002, ...)
+  let seqStr = '001';
+  if (/^\d+$/.test(numPart)) {
+    const parsed = parseInt(numPart, 10);
+    // If it was a long timestamp (e.g. > 9999), default to 001
+    if (parsed > 9999) {
+      seqStr = '001';
+    } else {
+      seqStr = String(parsed).padStart(3, '0');
+    }
+  } else if (numPart) {
+    seqStr = numPart;
+  }
+
+  return `973/${seqStr}-UPT.PD.WIL.IV/${year}`;
+};
+

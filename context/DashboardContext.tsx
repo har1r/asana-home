@@ -6,7 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { isValidTab } from '@/lib/constants';
 import { useSyncToLocalStorage } from '@/lib/useLocalStorage';
 import { Task, Project, Team, TeamMessage, TeamMember, FavoriteTile } from '@/types';
-import { getFavoritePermohonans } from '@/app/actions/data-entry';
+import { getFavoriteApplications } from '@/app/actions/data-entry';
 import {
   INITIAL_MEMBERS,
   INITIAL_TASKS,
@@ -373,7 +373,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
 
   const refreshFavorites = useCallback(async () => {
     try {
-      const res = await getFavoritePermohonans();
+      const res = await getFavoriteApplications();
       if (res.success) {
         setFavoritePermohonans(res.list || []);
       }

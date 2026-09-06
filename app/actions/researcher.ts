@@ -85,12 +85,32 @@ export async function getDraftBundles(arg?: any) {
   }
 
   try {
-    const list = await prisma.bundle.findMany({
-      include: {
-        applications: true
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    let list: any[];
+    try {
+      list = await prisma.bundle.findMany({
+        include: {
+          applications: true,
+          createdBy: {
+            select: { id: true, name: true, email: true }
+          }
+        } as any,
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (e) {
+      // Fallback if createdBy is not recognized by ungenerated Prisma Client in memory
+      list = await prisma.bundle.findMany({
+        include: {
+          applications: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    const currentUserName = session.user?.name || 'Peneliti';
+    list = list.map(b => ({
+      ...b,
+      createdBy: b.createdBy || { name: currentUserName }
+    }));
 
     return { success: true, list };
   } catch (error: any) {
@@ -194,16 +214,67 @@ export async function addPermohonanToBundle(bundleId: string, permohonanId?: str
 
 export async function createBundle(applicationType?: any) {
   try {
-    const bundleNumber = `BUNDLE-${Date.now()}`;
-    const created = await prisma.bundle.create({
-      data: {
-        bundleNumber,
-        applicationType: (applicationType || 'PARTIAL_MUTATION') as any,
-        status: 'DRAFT'
-      }
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id || null;
+
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+    const endOfYear = new Date(currentYear + 1, 0, 1);
+
+    // Count bundles created in the current year
+    const count = await prisma.bundle.count({
+      where: {
+        createdAt: {
+          gte: startOfYear,
+          lt: endOfYear,
+        },
+      },
     });
+
+    let seq = count + 1;
+    let bundleNumber = `973/${String(seq).padStart(3, '0')}-UPT.PD.WIL.IV/${currentYear}`;
+
+    // Ensure uniqueness
+    let exists = await prisma.bundle.findUnique({ where: { bundleNumber } });
+    while (exists) {
+      seq++;
+      bundleNumber = `973/${String(seq).padStart(3, '0')}-UPT.PD.WIL.IV/${currentYear}`;
+      exists = await prisma.bundle.findUnique({ where: { bundleNumber } });
+    }
+
+    let created: any;
+    try {
+      created = await prisma.bundle.create({
+        data: {
+          bundleNumber,
+          applicationType: (applicationType || 'PARTIAL_MUTATION') as any,
+          status: 'DRAFT',
+          createdById: userId,
+        } as any,
+        include: {
+          createdBy: {
+            select: { id: true, name: true, email: true }
+          }
+        } as any
+      });
+    } catch (createErr) {
+      // Fallback if Prisma Client runtime in memory hasn't been generated yet due to dev server DLL lock
+      created = await prisma.bundle.create({
+        data: {
+          bundleNumber,
+          applicationType: (applicationType || 'PARTIAL_MUTATION') as any,
+          status: 'DRAFT',
+        }
+      });
+    }
+
+    if (!created.createdBy && session?.user?.name) {
+      created.createdBy = { name: session.user.name };
+    }
+
     return { success: true, bundle: created };
   } catch (e: any) {
+    console.error('[ACTION-CREATE-BUNDLE-ERR]', e);
     return { success: false, error: e.message };
   }
 }

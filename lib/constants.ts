@@ -5,6 +5,9 @@ export const ROLE_COOKIE_NAME = 'architax_user_role';
 export const VALID_TABS = [
   'beranda',
   'my-tasks',
+  'submission-history',
+  'bundle-history',
+  'researcher-history',
   'inbox',
   'tracking',
   'help',

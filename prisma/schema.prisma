@@ -105,6 +105,7 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  createdBundles Bundle[]
   auditLogs    AuditLog[]
   snapshots    ApplicationSnapshot[]
 }
@@ -198,9 +199,11 @@ model Bundle {
   applicationType   ApplicationType 
   status            BundleStatus    @default(DRAFT)
   currentManifestId String?         @db.ObjectId 
+  createdById       String?         @db.ObjectId
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  createdBy         User?           @relation(fields: [createdById], references: [id])
   bundleDocuments   DocumentContainer[] 
   currentManifest   Manifest?                   @relation(fields: [currentManifestId], references: [id])
   applications      Application[]             

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, X, ChevronDown, Check, RefreshCw } from 'lucide-react';
+import { Search, X, ChevronDown, Check, RefreshCw, Plus } from 'lucide-react';
 
 export interface DataEntryToolbarProps {
   searchQuery: string;
@@ -11,17 +11,15 @@ export interface DataEntryToolbarProps {
   onJenisFilterChange: (val: string) => void;
   filterJenisApp: string;
   onFilterJenisAppChange: (val: string) => void;
-  startDate: string;
-  onStartDateChange: (val: string) => void;
-  endDate: string;
-  onEndDateChange: (val: string) => void;
+  jenisCounts: Record<string, number>;
   sortBy: 'last_modified' | 'newest' | 'oldest' | 'a_z';
   onSortByChange: (val: 'last_modified' | 'newest' | 'oldest' | 'a_z') => void;
-  displayMode: 'berkas' | 'pemohon';
-  onSwitchDisplayMode: (mode: 'berkas' | 'pemohon') => void;
+  displayMode: 'permohonan' | 'pemohon';
+  onSwitchDisplayMode: (mode: 'permohonan' | 'pemohon') => void;
   isRefreshing: boolean;
   onRefresh: () => void;
-  jenisOptions: readonly { value: string; label: string }[];
+  jenisOptions?: readonly { value: string; label: string }[];
+  onAddNew?: () => void;
 }
 
 export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
@@ -32,17 +30,14 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
   onJenisFilterChange,
   filterJenisApp,
   onFilterJenisAppChange,
-  startDate,
-  onStartDateChange,
-  endDate,
-  onEndDateChange,
+  jenisCounts,
   sortBy,
   onSortByChange,
   displayMode,
   onSwitchDisplayMode,
   isRefreshing,
   onRefresh,
-  jenisOptions
+  onAddNew
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
 
@@ -55,6 +50,17 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
       default: return 'Urutkan';
     }
   };
+
+  const jenisPills = [
+    { value: 'ALL', label: 'Semua' },
+    { value: 'MUTASI_SEBAGIAN', label: 'Mutasi Sebagian' },
+    { value: 'MUTASI_PENGGABUNGAN', label: 'Mutasi Penggabungan' },
+    { value: 'MUTASI_HABIS_UPDATE', label: 'Mutasi Habis Update' },
+    { value: 'MUTASI_HABIS_REGULER', label: 'Mutasi Habis Reguler' },
+    { value: 'OBJEK_PAJAK_BARU', label: 'Objek Pajak Baru' },
+    { value: 'PEMBETULAN', label: 'Pembetulan' },
+    { value: 'PENGAKTIFAN', label: 'Pengaktifan' },
+  ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -80,56 +86,65 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
           )}
         </div>
 
-        {/* Right Side: Filters, Refresh, and Sort */}
+        {/* Right Side: Refresh & Add Button */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Dropdown Filter Jenis Layanan */}
-          <select
-            value={jenisFilter}
-            onChange={(e) => {
-              onJenisFilterChange(e.target.value);
-              onFilterJenisAppChange(e.target.value);
-            }}
-            className="h-10 px-3 bg-white border border-slate-200/90 rounded-md text-[13px] font-normal text-slate-700 focus:outline-none focus:border-[#00a389] focus:ring-2 focus:ring-[#00a389]/10 transition-all cursor-pointer font-sans"
-          >
-            <option value="ALL">Semua Jenis Layanan</option>
-            {jenisOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Date Filter Range */}
-          <div className="flex items-center gap-1.5 bg-white border border-slate-200/90 rounded-md px-2.5 py-1.5 text-[13px]">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => onStartDateChange(e.target.value)}
-              className="text-slate-700 text-xs focus:outline-none bg-transparent font-sans cursor-pointer"
-            />
-            <span className="text-slate-400">-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => onEndDateChange(e.target.value)}
-              className="text-slate-700 text-xs focus:outline-none bg-transparent font-sans cursor-pointer"
-            />
-          </div>
-
-          {/* Tombol Refresh Table */}
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="h-10 w-10 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
-          </button>
+          {/* Tombol Tambah Entri Baru */}
+          {onAddNew && (
+            <button
+              onClick={onAddNew}
+              className="h-10 px-4 bg-[#00a389] hover:bg-[#008f78] active:bg-[#007a67] text-white rounded-md text-[13px] font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-3xs font-sans shrink-0"
+              title="Tambah Permohonan / Entri Baru"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Ajukan Permohonan</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* FILTER CHIPS & TAB SWITCHER BAR */}
-      <div className="flex items-center justify-between gap-3 flex-wrap select-none pt-1">
+      {/* HORIZONTAL FILTER PILLS FOR JENIS LAYANAN */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden select-none">
+        {jenisPills.map((opt) => {
+          const isSelected =
+            jenisFilter === opt.value ||
+            (opt.value === 'MUTASI_SEBAGIAN' && (jenisFilter === 'PARTIAL_MUTATION' || jenisFilter === 'MUTASI_SEBAGIAN')) ||
+            (opt.value === 'MUTASI_PENGGABUNGAN' && (jenisFilter === 'MERGER_MUTATION' || jenisFilter === 'MUTASI_PENGGABUNGAN')) ||
+            (opt.value === 'MUTASI_HABIS_UPDATE' && (jenisFilter === 'EXPIRED_UPDATE' || jenisFilter === 'MUTASI_HABIS_UPDATE')) ||
+            (opt.value === 'MUTASI_HABIS_REGULER' && (jenisFilter === 'EXPIRED_REGULAR' || jenisFilter === 'MUTASI_HABIS_REGULER')) ||
+            (opt.value === 'OBJEK_PAJAK_BARU' && (jenisFilter === 'NEW_TAX_OBJECT' || jenisFilter === 'OBJEK_PAJAK_BARU')) ||
+            (opt.value === 'PEMBETULAN' && (jenisFilter === 'CORRECTION' || jenisFilter === 'PEMBETULAN')) ||
+            (opt.value === 'PENGAKTIFAN' && (jenisFilter === 'REACTIVATION' || jenisFilter === 'PENGAKTIFAN'));
+
+          const count = jenisCounts[opt.value] ?? (opt.value === 'ALL' ? jenisCounts.ALL : 0);
+
+          return (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onJenisFilterChange(opt.value);
+                onFilterJenisAppChange(opt.value);
+              }}
+              className={`h-8 px-3 rounded-md text-[12px] font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 font-sans shrink-0 border ${isSelected
+                ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs font-semibold'
+                : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+            >
+              <span>{opt.label}</span>
+              <span
+                className={`px-1.5 py-0.2 text-[10px] font-extrabold rounded-full ${isSelected
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-100 text-slate-500'
+                  }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* SORT & DISPLAY MODE SWITCHER BAR */}
+      <div className="flex items-center justify-between gap-3 flex-wrap select-none pt-0.5">
         {/* Left Side: Sort Popover Dropdown */}
         <div className="relative">
           <button
@@ -150,8 +165,8 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
               <div className="absolute left-0 mt-1 w-52 bg-white rounded-md shadow-md border border-slate-200/90 py-1 z-30 animate-fadeIn font-sans">
                 {[
                   { id: 'last_modified', label: 'Terbaru Diperbarui' },
-                  { id: 'newest', label: 'Terbaru (Tgl. Nopel)' },
-                  { id: 'oldest', label: 'Terlama (Tgl. Nopel)' },
+                  { id: 'newest', label: 'Terbaru (Tgl. Permohonan)' },
+                  { id: 'oldest', label: 'Terlama (Tgl. Permohonan)' },
                   { id: 'a_z', label: 'A - Z (Nama Pemohon)' }
                 ].map((opt) => (
                   <button
@@ -176,14 +191,14 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
         {/* Right Side: Tab Mode Switcher (Nopel & Pemohon) */}
         <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans">
           <button
-            onClick={() => onSwitchDisplayMode('berkas')}
-            className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'berkas'
+            onClick={() => onSwitchDisplayMode('permohonan')}
+            className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'permohonan'
               ? 'bg-white text-slate-900 shadow-3xs font-normal'
               : 'text-slate-600 hover:text-slate-900'
               }`}
             title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
           >
-            <span>Nopel</span>
+            <span>Permohonan</span>
           </button>
           <button
             onClick={() => onSwitchDisplayMode('pemohon')}

@@ -3,7 +3,7 @@
 import React from "react";
 import { SkeletonBox, SkeletonText, SkeletonBadge } from "@/components/skeletons/SkeletonBase";
 
-/** Skeleton komponen dasar KPI Strip & Tabs untuk PenelitiWorkspace */
+/** Skeleton komponen dasar KPI Strip & Tabs untuk ResearcherWorkspace */
 export function PenelitiBaseHeaderSkeleton() {
   return (
     <>

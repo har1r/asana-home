@@ -43,6 +43,14 @@ const DataEntryWorkspace = dynamic(() => import('@/components/workspaces/data-en
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
+const DataEntryHistory = dynamic(() => import('@/components/workspaces/data-entry-history/DataEntryHistory'), {
+  ssr: false,
+  loading: () => <MascotLoadingSpinner />
+});
+const ResearcherHistory = dynamic(() => import('@/components/workspaces/researcher-history/ResearcherHistory'), {
+  ssr: false,
+  loading: () => <MascotLoadingSpinner />
+});
 const ResearcherWorkspace = dynamic(() => import('@/components/workspaces/researcher/ResearcherWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
@@ -672,6 +680,14 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
 
           {activeTab === 'my-tasks' && (
             <MyTasksTab initialRole={initialRole} />
+          )}
+
+          {activeTab === 'submission-history' && (
+            <DataEntryHistory />
+          )}
+
+          {(activeTab === 'bundle-history' || activeTab === 'researcher-history') && (
+            <ResearcherHistory />
           )}
 
           {activeTab === 'penginput' && (

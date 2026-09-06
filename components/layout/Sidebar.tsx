@@ -27,11 +27,12 @@ import {
   Folder,
   Layers,
   Clock,
+  History,
   X
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getGlobalBerandaStats } from '@/app/actions/dashboard';
-import { getPermohonanStats } from '@/app/actions/data-entry';
+import { getApplicationStats } from '@/app/actions/data-entry';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonCircle } from '@/components/skeletons/SkeletonBase';
 
 // ==========================================
@@ -128,7 +129,7 @@ export default function Sidebar() {
       try {
         const [globalRes, statsRes] = await Promise.all([
           getGlobalBerandaStats(),
-          getPermohonanStats()
+          getApplicationStats()
         ]);
         if (globalRes.success && globalRes.recentList) {
           setPermohonanList(globalRes.recentList);
@@ -188,10 +189,17 @@ export default function Sidebar() {
     });
   }, []);
 
+  const isResearcherRole = ['RESEARCHER', 'PENELITI'].includes(userRoleRaw);
+
   // Menu Navigasi Utama
   const mainMenuItems: MenuItem[] = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
+    {
+      id: isResearcherRole ? 'bundle-history' : 'submission-history',
+      label: isResearcherRole ? 'Riwayat Bundle' : 'Riwayat Pengajuan',
+      icon: History
+    },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },
     { id: 'tracking', label: 'Lacak Permohonan', icon: Search },
     { id: 'help', label: 'Bantuan', icon: HelpCircle },
