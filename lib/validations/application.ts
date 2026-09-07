@@ -123,6 +123,8 @@ export const applicationSchema = z.object({
   previousData: z.array(previousDataItemSchema).nullable().optional(),
   targetData: z.array(targetDataItemSchema).nullable().optional(),
 
+  duplicatedFromAppId: z.string().nullable().optional(),
+  duplicatedFromNumber: z.string().nullable().optional(),
 }).superRefine((data, ctx) => {
   const { applicationType, previousData, targetData } = data;
 

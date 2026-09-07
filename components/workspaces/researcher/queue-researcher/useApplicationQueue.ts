@@ -119,12 +119,15 @@ export function useApplicationQueue() {
     }
   }, []);
 
-  const handleAddToBundle = useCallback(async (bundleId: string, permohonanId: string) => {
+  const handleAddToBundle = useCallback(async (bundleId: string, permohonanId: string, onSuccessCallback?: () => void) => {
     try {
       const res = await addPermohonanToBundle(bundleId, permohonanId);
       if (res.success) {
         setSuccess('Permohonan berhasil dimasukkan ke dalam bundle.');
         await fetchSubmittedQueue();
+        if (onSuccessCallback) {
+          await onSuccessCallback();
+        }
       } else {
         setError(res.error || 'Gagal memasukkan permohonan ke bundle.');
       }

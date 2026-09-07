@@ -23,6 +23,11 @@ export function useBundleManagement() {
       const res = await getBundles();
       if (res.success && res.list) {
         setBundlesList(res.list);
+        setSelectedBundle((prev) => {
+          if (!prev) return null;
+          const updated = res.list.find((b: any) => b.id === prev.id);
+          return updated || prev;
+        });
       } else {
         setError(res.error || 'Gagal mengambil data bundle.');
       }
@@ -82,12 +87,18 @@ export function useBundleManagement() {
   const filteredBundles = useMemo(() => {
     return bundlesList.filter((b) => {
       const type = b.applicationType || b.jenisPermohonan || '';
+      const apps = b.permohonan || b.applications || [];
+      const isEmptyBundle = apps.length === 0;
+
       // Filter jenis layanan
       if (filterJenisLayanan !== 'ALL') {
-        if (filterJenisLayanan === 'MUTASI_PENGGABUNGAN' || filterJenisLayanan === 'MERGER_MUTATION') {
-          if (type !== 'MUTASI_PENGGABUNGAN' && type !== 'MERGER_MUTATION') return false;
-        } else if (type !== filterJenisLayanan) {
-          return false;
+        // Bundle kosong dapat menerima jenis permohonan apapun sehingga tetap tampil di filter
+        if (!isEmptyBundle) {
+          if (filterJenisLayanan === 'MUTASI_PENGGABUNGAN' || filterJenisLayanan === 'MERGER_MUTATION') {
+            if (type !== 'MUTASI_PENGGABUNGAN' && type !== 'MERGER_MUTATION') return false;
+          } else if (type !== filterJenisLayanan) {
+            return false;
+          }
         }
       }
       // Filter status
@@ -117,6 +128,10 @@ export function useBundleManagement() {
       PENGAKTIFAN: 0
     };
     bundlesList.forEach(b => {
+      const apps = b.permohonan || b.applications || [];
+      // Bundle kosong (0 Pemohon) hanya dihitung pada total ALL
+      if (apps.length === 0) return;
+
       let type = b.applicationType || b.jenisPermohonan;
       if (type === 'MERGER_MUTATION') type = 'MUTASI_PENGGABUNGAN';
       if (type === 'PARTIAL_MUTATION') type = 'MUTASI_SEBAGIAN';

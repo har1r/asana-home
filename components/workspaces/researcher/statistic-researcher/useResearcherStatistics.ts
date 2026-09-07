@@ -4,7 +4,6 @@ export interface BundleStatusCounts {
   DRAFT: number;
   LOCKED: number;
   IN_MANIFEST: number;
-  VOID: number;
   [key: string]: number;
 }
 
@@ -21,7 +20,6 @@ export function useResearcherStatistics({ bundlesList, submittedList }: UseResea
       DRAFT: 0,
       LOCKED: 0,
       IN_MANIFEST: 0,
-      VOID: 0,
     };
 
     bundlesList.forEach((bundle) => {

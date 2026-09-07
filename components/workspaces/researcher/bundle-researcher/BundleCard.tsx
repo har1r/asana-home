@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Folder, FolderLock, Lock, Send, X, Unlock } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Folder, FolderLock, Lock, Send, X, Unlock, MoreVertical, Layers } from "lucide-react";
 import { getAbbreviatedJenis, formatBundleNumber } from "@/components/workspaces/shared/constants";
 
 const getInitials = (name?: string | null): string => {
@@ -78,6 +78,7 @@ export interface BundleCardProps {
   isSelected: boolean;
   onSelect: (bundle: any) => void;
   onLock?: (bundleId: string) => void;
+  onOpenVersionDrawer?: (bundle: any) => void;
   isLoading?: boolean;
 }
 
@@ -85,8 +86,24 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
   bundle: b,
   isSelected,
   onSelect,
+  onLock,
+  onOpenVersionDrawer,
   isLoading = false,
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Properti fallback kompatibel DB Prisma & Mock State
   const rawBundleNumber = b.nomorBundle || b.bundleNumber || '';
   const bundleNumber = rawBundleNumber ? formatBundleNumber(rawBundleNumber, b.createdAt) : '—';
@@ -104,9 +121,14 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
   }, 0);
 
   const statusCfg = BUNDLE_STATUS_CONFIG[status] || BUNDLE_STATUS_CONFIG.DRAFT;
-  const typeStyle = jenisPermohonan && BUNDLE_TYPE_STYLES[jenisPermohonan]
+
+  // Jika belum ada permohonan (berkasCount === 0), tampilkan neutral badge '—' (Belum ada permohonan)
+  const hasApplications = berkasCount > 0;
+  const displayJenis = hasApplications && jenisPermohonan ? getAbbreviatedJenis(jenisPermohonan) : '—';
+  const displayJenisTitle = hasApplications && jenisPermohonan ? jenisPermohonan.replace(/_/g, ' ') : 'Belum ada permohonan';
+  const typeStyle = hasApplications && jenisPermohonan && BUNDLE_TYPE_STYLES[jenisPermohonan]
     ? BUNDLE_TYPE_STYLES[jenisPermohonan]
-    : { bg: 'bg-slate-50', text: 'text-slate-400', border: 'border-slate-200/30' };
+    : { bg: 'bg-slate-100/80', text: 'text-slate-400', border: 'border-slate-200/60' };
 
   const renderStatusIcon = () => {
     const iconClass = "w-2.5 h-2.5 shrink-0";
@@ -119,24 +141,71 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
   return (
     <div
       onClick={() => onSelect(b)}
-      className={`p-4 rounded-md border flex flex-col justify-between gap-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[125px] ${
+      className={`p-3.5 rounded-md border flex flex-col justify-between gap-2.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
         isSelected
           ? 'bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20'
           : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
       }`}
     >
-      {/* Top Row: Number */}
-      <div className="flex items-center justify-between gap-3 w-full">
+      {/* Top Row: Number & Vertical 3-Dots Dropdown (Sejajar dengan Nomor Bundle) */}
+      <div className="flex items-start justify-between gap-2 w-full">
         <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight break-all whitespace-normal block" title={bundleNumber}>
           {bundleNumber}
         </span>
+
+        {/* Three Dots Vertical Dropdown Button */}
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((prev) => !prev);
+            }}
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Opsi Bundle"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200/90 rounded-md shadow-lg z-30 py-1 text-xs font-sans animate-fadeIn">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  if (onOpenVersionDrawer) onOpenVersionDrawer(b);
+                }}
+                className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 hover:text-[#00a389] flex items-center gap-2 transition-colors cursor-pointer font-sans"
+              >
+                <Layers className="w-3.5 h-3.5 text-[#00a389]" />
+                <span>Riwayat Versi Bundle</span>
+              </button>
+
+              {status === 'DRAFT' && onLock && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onLock(b.id);
+                  }}
+                  className="w-full px-3 py-2 text-left text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 transition-colors cursor-pointer border-t border-slate-100 font-sans"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Kunci Bundle</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Middle Row: Service Type Tag | Status | Count Badge Centered Horizontally */}
-      <div className="flex items-center justify-center gap-2 w-full py-1 flex-wrap sm:flex-nowrap">
+      <div className="flex items-center justify-center gap-2 w-full py-0.5 flex-wrap sm:flex-nowrap">
         {/* Service Type Tag */}
-        <span className={`inline-flex px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={jenisPermohonan ? jenisPermohonan.replace(/_/g, ' ') : 'Umum'}>
-          {jenisPermohonan ? getAbbreviatedJenis(jenisPermohonan) : '—'}
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={displayJenisTitle}>
+          {displayJenis}
         </span>
 
         {/* Thin Vertical Line Separator 1 */}

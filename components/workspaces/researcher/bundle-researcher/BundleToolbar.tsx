@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, X, RefreshCw } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 
 export interface BundleToolbarProps {
   searchQuery: string;
@@ -44,8 +44,9 @@ export const BundleToolbar: React.FC<BundleToolbarProps> = React.memo(({
   ];
 
   return (
-    <div className="flex flex-col gap-2.5 bg-slate-50/90 border border-slate-200/80 p-3 rounded-md shadow-3xs select-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div className="flex flex-col gap-3 font-sans select-none">
+      {/* Search Bar & Controls Card */}
+      <div className="p-3 border border-slate-200/90 rounded-md bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-3xs">
         {/* Search input for Bundles */}
         <div className="relative w-full md:w-[403px] max-w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
@@ -74,7 +75,7 @@ export const BundleToolbar: React.FC<BundleToolbarProps> = React.memo(({
           )}
         </div>
 
-        {/* Right side controls: Buat Button + Refresh Button */}
+        {/* Right side controls: Buat Button */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onCreateBundle}
@@ -82,24 +83,13 @@ export const BundleToolbar: React.FC<BundleToolbarProps> = React.memo(({
             className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Buat</span>
+            <span>Buat Bundle</span>
           </button>
-
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isRefreshing || isLoading}
-              className="p-2.5 h-10 w-10 rounded-md border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-500 shadow-3xs transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 transition-all duration-300 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Filter Jenis Layanan Pills for Bundles */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 shrink-0 select-none font-sans">
+      {/* Filter Jenis Layanan Pills (Outside Card) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 shrink-0 select-none font-sans">
         {jenisFilterOptions.map((item) => {
           const isActive = filterJenisLayanan === item.val;
           const count = bundleJenisCounts[item.val] ?? 0;
@@ -108,17 +98,15 @@ export const BundleToolbar: React.FC<BundleToolbarProps> = React.memo(({
               key={item.val}
               type="button"
               onClick={() => onFilterJenisChange(item.val)}
-              className={`h-7 px-2.5 rounded-md text-[13px] font-normal font-sans transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
-                isActive
+              className={`h-7 px-2.5 rounded-md text-[13px] font-normal font-sans transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${isActive
                   ? 'bg-[#00a389] text-white border-[#00a389] shadow-3xs'
                   : 'bg-white text-slate-600 border-slate-200/90 hover:bg-slate-100 hover:border-slate-300'
-              }`}
+                }`}
             >
               <span>{item.label}</span>
               {bundleJenisCounts[item.val] !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold font-mono ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                }`}>
+                <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                  }`}>
                   {count}
                 </span>
               )}

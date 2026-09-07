@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Boxes, ListFilter, Printer, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
 import { PenelitiBundleSkeleton, PenelitiListSkeleton, PenelitiPrintSkeleton } from '@/components/skeletons/ResearcherSkeleton';
@@ -24,6 +24,7 @@ import { RecommendationPrintView } from './recommendation-researcher/Recommendat
 import { RevisionRequestModal } from './modal-researcher/RevisionRequestModal';
 import { RemoveFromBundleModal } from './modal-researcher/RemoveFromBundleModal';
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { BundleVersionDrawer } from '@/components/workspaces/shared/BundleVersionDrawer';
 
 export interface ResearcherWorkspaceProps {
   initialTab?: 'bundle' | 'list' | 'print';
@@ -38,6 +39,8 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
   const [viewMode, setViewMode] = useState<'bundle' | 'list' | 'print'>(
     (viewQuery as 'bundle' | 'list' | 'print') || 'bundle'
   );
+
+  const [versionDrawerBundle, setVersionDrawerBundle] = useState<any>(null);
 
   useEffect(() => {
     if (viewQuery && ['bundle', 'list', 'print'].includes(viewQuery)) {
@@ -62,6 +65,20 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
     bundlesList: bundleMgmt.bundlesList,
     submittedList: appQueue.submittedList,
   });
+
+  const [isGlobalRefreshing, setIsGlobalRefreshing] = useState(false);
+
+  const handleGlobalRefresh = useCallback(async () => {
+    setIsGlobalRefreshing(true);
+    try {
+      await Promise.all([
+        bundleMgmt.fetchBundles(),
+        appQueue.fetchSubmittedQueue()
+      ]);
+    } finally {
+      setIsGlobalRefreshing(false);
+    }
+  }, [bundleMgmt, appQueue]);
 
   // Initial Data Load
   useEffect(() => {
@@ -141,8 +158,62 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
 
   return (
     <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
-      {/* 1. TOP KPI STRIP */}
+      {/* HEADER RUANG KERJA (TOP BANNER) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none font-sans">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">Ruang Kerja Saya</h1>
+        </div>
+
+        {/* Action Header: Tombol Refresh Data */}
+        <button
+          onClick={handleGlobalRefresh}
+          disabled={isGlobalRefreshing}
+          className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
+          title="Refresh Seluruh Data Workspace"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isGlobalRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+        </button>
+      </div>
+
+      {/* 1. VIEW MODE SWITCHER TABS (NAV TABS ABOVE KPI) */}
+      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-lg grid grid-cols-3 gap-1 shadow-2xs">
+        <button
+          onClick={() => handleSwitchStep('bundle')}
+          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+            viewMode === 'bundle'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+          }`}
+        >
+          <span>Kelola Bundle</span>
+        </button>
+
+        <button
+          onClick={() => handleSwitchStep('list')}
+          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+            viewMode === 'list'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+          }`}
+        >
+          <span>Antrean Permohonan</span>
+        </button>
+
+        <button
+          onClick={() => handleSwitchStep('print')}
+          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+            viewMode === 'print'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+          }`}
+        >
+          <span>Cetak Rekomendasi</span>
+        </button>
+      </div>
+
+      {/* 2. TOP KPI STRIP */}
       <ResearcherKpiStrip
+        viewMode={viewMode}
         totalBundles={statistics.totalBundles}
         bundleStatusCounts={statistics.bundleStatusCounts}
         returnedFromPengarsipCount={statistics.returnedFromPengarsipCount}
@@ -160,48 +231,9 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
         }}
       />
 
-      {/* 2. VIEW MODE SWITCHER TABS */}
-      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-lg grid grid-cols-3 gap-1 shadow-2xs">
-        <button
-          onClick={() => handleSwitchStep('bundle')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            viewMode === 'bundle'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <Boxes className="w-4 h-4" />
-          <span>1. Kelola Bundle ({bundleMgmt.bundlesList.length})</span>
-        </button>
-
-        <button
-          onClick={() => handleSwitchStep('list')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            viewMode === 'list'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <ListFilter className="w-4 h-4" />
-          <span>2. Antrean Permohonan ({appQueue.submittedList.length})</span>
-        </button>
-
-        <button
-          onClick={() => handleSwitchStep('print')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            viewMode === 'print'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <Printer className="w-4 h-4" />
-          <span>3. Cetak Rekomendasi</span>
-        </button>
-      </div>
-
       {/* 3. TAB 1: BUNDLE MANAGEMENT VIEW */}
       {viewMode === 'bundle' && (
-        <div className="bg-white border border-slate-200/90 rounded-xl p-5 sm:p-6 shadow-2xs flex flex-col gap-6 min-h-[350px]">
+        <div className="flex flex-col gap-4">
           <BundleToolbar
             searchQuery={bundleMgmt.searchQuery}
             onSearchChange={bundleMgmt.setSearchQuery}
@@ -209,36 +241,39 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
             onFilterJenisChange={bundleMgmt.setFilterJenisLayanan}
             filterBundleStatus={bundleMgmt.filterBundleStatus}
             onFilterStatusChange={bundleMgmt.setFilterBundleStatus}
-            onCreateBundle={() => bundleMgmt.handleCreateBundle()}
+            onCreateBundle={() => bundleMgmt.handleCreateBundle(bundleMgmt.filterJenisLayanan !== 'ALL' ? bundleMgmt.filterJenisLayanan : undefined)}
             isLoading={bundleMgmt.loading}
             onRefresh={() => bundleMgmt.fetchBundles()}
             isRefreshing={bundleMgmt.loading}
             bundleJenisCounts={bundleMgmt.bundleJenisCounts}
           />
 
-          {/* Bundle Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {bundleMgmt.visibleBundles.length > 0 ? (
-              bundleMgmt.visibleBundles.map((b) => (
-                <BundleCard
-                  key={b.id}
-                  bundle={b}
-                  isSelected={bundleMgmt.selectedBundle?.id === b.id}
-                  onSelect={(bundle) => bundleMgmt.setSelectedBundle(bundle)}
-                  onLock={(id) => bundleMgmt.handleLockBundleAction(id)}
-                  isLoading={bundleMgmt.loading}
-                />
-              ))
-            ) : (
-              <div className="col-span-full py-12 text-center text-xs text-slate-400">
-                Tidak ada bundle yang cocok dengan filter.
-              </div>
-            )}
+          {/* Bundle Cards Grid (Directly on main content background) */}
+          <div className="min-h-[300px] w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {bundleMgmt.visibleBundles.length > 0 ? (
+                bundleMgmt.visibleBundles.map((b) => (
+                  <BundleCard
+                    key={b.id}
+                    bundle={b}
+                    isSelected={bundleMgmt.selectedBundle?.id === b.id}
+                    onSelect={(bundle) => bundleMgmt.setSelectedBundle(bundle)}
+                    onLock={(id) => bundleMgmt.handleLockBundleAction(id)}
+                    onOpenVersionDrawer={(bundle) => setVersionDrawerBundle(bundle)}
+                    isLoading={bundleMgmt.loading}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full py-12 text-center text-xs text-slate-400">
+                  Tidak ada bundle yang cocok dengan filter.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Infinite Scroll Sentinel & Footer Indicator */}
           {bundleMgmt.filteredBundles.length > 0 && (
-            <div ref={loadMoreRef} className="py-3 flex flex-col items-center justify-center gap-1 mt-2 text-xs text-slate-400 font-sans border-t border-slate-100">
+            <div ref={loadMoreRef} className="py-3 flex flex-col items-center justify-center gap-1 mt-2 text-xs text-slate-400 font-sans border-t border-slate-200/60">
               {bundleMgmt.hasMore ? (
                 <div className="flex items-center gap-2 text-slate-500 font-normal">
                   <Loader2 className="w-4 h-4 animate-spin text-[#00a389]" />
@@ -258,6 +293,9 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
       {viewMode === 'list' && (
         <div className="flex flex-col gap-4">
           <QueueToolbar
+            selectedBundle={bundleMgmt.selectedBundle}
+            bundlesList={bundleMgmt.bundlesList}
+            onSelectBundle={bundleMgmt.setSelectedBundle}
             searchQuery={appQueue.searchSubmittedQuery}
             onSearchChange={appQueue.setSearchSubmittedQuery}
             onClearSearch={() => appQueue.setSearchSubmittedQuery('')}
@@ -344,7 +382,9 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
                             onToggleFavorite={appQueue.handleToggleFavorite}
                             onViewDetails={setSelectedRequestDetails}
                             onAddToBundle={(bundleId, permohonanId) =>
-                              appQueue.handleAddToBundle(bundleId, permohonanId)
+                              appQueue.handleAddToBundle(bundleId, permohonanId, () => {
+                                bundleMgmt.fetchBundles();
+                              })
                             }
                             onRequestRevision={setRevisionTarget}
                           />
@@ -443,7 +483,12 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
       {viewMode === 'print' && (
         <RecommendationPrintView
           selectedBundle={bundleMgmt.selectedBundle}
+          bundlesList={bundleMgmt.bundlesList}
+          onSelectBundle={bundleMgmt.setSelectedBundle}
           onViewDetails={setSelectedRequestDetails}
+          onRefresh={() => bundleMgmt.fetchBundles()}
+          isRefreshing={bundleMgmt.loading}
+          onLockBundle={(id) => bundleMgmt.handleLockBundleAction(id)}
         />
       )}
 
@@ -480,6 +525,12 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
         title={statusModalTitle}
         message={statusModalMessage}
         onClose={() => setStatusModalOpen(false)}
+      />
+
+      <BundleVersionDrawer
+        isOpen={Boolean(versionDrawerBundle)}
+        onClose={() => setVersionDrawerBundle(null)}
+        bundle={versionDrawerBundle}
       />
     </div>
   );

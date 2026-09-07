@@ -92,20 +92,33 @@ export async function createApplication(rawInput: unknown) {
         },
       });
 
-      await tx.applicationSnapshot.create({
+      const isDuplicated = Boolean(validated.duplicatedFromAppId || validated.duplicatedFromNumber);
+      const snapshotType = isDuplicated ? 'DUPLICATE_SUBMIT' : 'INITIAL_SUBMIT';
+      const note = isDuplicated
+        ? `Duplikasi dari permohonan No. ${validated.duplicatedFromNumber || validated.duplicatedFromAppId}`
+        : 'Pendaftaran awal permohonan';
+
+      const newSnapshot = await tx.applicationSnapshot.create({
         data: {
           applicationId: newApplication.id,
-          snapshotType: 'INITIAL_SUBMIT',
-          note: 'Pendaftaran awal permohonan',
+          snapshotType,
+          note,
           actorId: session.user.id,
           snapshotData: {
+            applicationType: newApplication.applicationType,
+            applicationNumber: newApplication.applicationNumber,
+            serviceNumberDate: newApplication.serviceNumberDate,
+            completionDate: newApplication.completionDate,
+            status: newApplication.status,
             previousData: newApplication.previousData,
             targetData: newApplication.targetData,
+            ...(validated.duplicatedFromAppId ? { duplicatedFromAppId: validated.duplicatedFromAppId } : {}),
+            ...(validated.duplicatedFromNumber ? { duplicatedFromNumber: validated.duplicatedFromNumber } : {}),
           } as any,
         },
       });
 
-      await tx.auditLog.create({
+      const newAuditLog = await tx.auditLog.create({
         data: {
           action: 'SUBMIT_DATA',
           entityType: 'APPLICATION',
@@ -119,9 +132,23 @@ export async function createApplication(rawInput: unknown) {
             slaDeadline: new Date(validated.completionDate).toISOString(),
             totalPreviousData: newApplication.previousData.length,
             totalTargetData: newApplication.targetData.length,
+            ...(isDuplicated ? { isDuplicated: true } : {}),
+            ...(validated.duplicatedFromAppId ? { duplicatedFromAppId: validated.duplicatedFromAppId } : {}),
+            ...(validated.duplicatedFromNumber ? { duplicatedFromNumber: validated.duplicatedFromNumber } : {}),
           },
         },
       });
+
+      console.log('\n=================== [TAHAP 1: PENDAFTARAN PERMOHONAN BARU] ===================');
+      console.log('1. [MODEL: Application]');
+      console.log(JSON.stringify(newApplication, null, 2));
+
+      console.log('\n2. [MODEL: ApplicationSnapshot]');
+      console.log(JSON.stringify(newSnapshot, null, 2));
+
+      console.log('\n3. [MODEL: AuditLog]');
+      console.log(JSON.stringify(newAuditLog, null, 2));
+      console.log('===============================================================================\n');
 
       return newApplication;
     });
@@ -206,35 +233,165 @@ export async function updateApplication(id: string, rawInput: any) {
       return { success: false, error: 'Data permohonan tidak ditemukan.' };
     }
 
-    const updated = await prisma.application.update({
-      where: { id },
-      data: {
-        ...(rawInput.applicationNumber ? { applicationNumber: rawInput.applicationNumber } : {}),
-        ...(rawInput.targetData ? { targetData: rawInput.targetData } : {}),
-        ...(rawInput.previousData ? { previousData: rawInput.previousData } : {})
-      }
+    let formattedTargetData = undefined;
+    if (rawInput.targetData && Array.isArray(rawInput.targetData)) {
+      formattedTargetData = rawInput.targetData.map((item: any) => {
+        const { files, ...targetDataWithoutFiles } = item;
+
+        const newArchives = (files || []).map((fileInfo: any) => ({
+          idArchive: crypto.randomUUID(),
+          urlBlob: fileInfo.urlBlob || fileInfo.url || '',
+          fileName: fileInfo.name || fileInfo.fileName || 'Dokumen Utama',
+          status: 'ACTIVE' as const,
+          uploadedBy: session.user.id,
+          createdAt: new Date(),
+        }));
+
+        const existingArchives = item.digitalArchives || [];
+
+        return {
+          ...targetDataWithoutFiles,
+          idTargetData: item.idTargetData || crypto.randomUUID(),
+          digitalArchives: [...existingArchives, ...newArchives],
+        };
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.application.update({
+        where: { id },
+        data: {
+          ...(rawInput.applicationType ? { applicationType: rawInput.applicationType } : {}),
+          ...(rawInput.applicationNumber ? { applicationNumber: rawInput.applicationNumber } : {}),
+          ...(rawInput.serviceNumberDate ? { serviceNumberDate: new Date(rawInput.serviceNumberDate) } : {}),
+          ...(rawInput.completionDate ? { completionDate: new Date(rawInput.completionDate) } : {}),
+          ...(formattedTargetData ? { targetData: formattedTargetData } : {}),
+          ...(rawInput.previousData ? { previousData: rawInput.previousData } : {})
+        }
+      });
+
+      const newSnapshot = await tx.applicationSnapshot.create({
+        data: {
+          applicationId: id,
+          snapshotType: 'UPDATE_DATA',
+          note: 'Pengeditan data permohonan oleh Data Entry',
+          actorId: session.user.id,
+          snapshotData: {
+            applicationType: updated.applicationType,
+            applicationNumber: updated.applicationNumber,
+            serviceNumberDate: updated.serviceNumberDate,
+            completionDate: updated.completionDate,
+            status: updated.status,
+            previousData: updated.previousData,
+            targetData: updated.targetData,
+          } as any,
+        },
+      });
+
+      const newAuditLog = await tx.auditLog.create({
+        data: {
+          action: 'UPDATE_STATUS',
+          entityType: 'APPLICATION',
+          entityId: id,
+          oldStatus: existing.status,
+          newStatus: updated.status,
+          actorId: session.user.id,
+          metadata: {
+            note: 'Pengeditan data permohonan oleh Data Entry',
+            applicationNumber: updated.applicationNumber,
+          },
+        },
+      });
+
+      console.log('\n=================== [PENGEDITAN PERMOHONAN] ===================');
+      console.log('1. [MODEL: Application (Updated)]');
+      console.log(JSON.stringify(updated, null, 2));
+
+      console.log('\n2. [MODEL: ApplicationSnapshot (Edit Version Snapshot Created)]');
+      console.log(JSON.stringify(newSnapshot, null, 2));
+
+      console.log('\n3. [MODEL: AuditLog (Edit Recorded)]');
+      console.log(JSON.stringify(newAuditLog, null, 2));
+      console.log('=================================================================\n');
+
+      return updated;
     });
 
     revalidatePath('/');
-    return { success: true, permohonan: updated, application: updated };
+    return { success: true, permohonan: result, application: result };
   } catch (error: any) {
     console.error('[ACTION-UPDATE-APP-ERR]', error);
     return { success: false, error: error.message || 'Gagal mengupdate permohonan.' };
   }
 }
 
-export async function resubmitApplication(id: string) {
+export async function resubmitApplication(id: string, note?: string) {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, error: 'Unauthorized' };
 
   try {
-    const updated = await prisma.application.update({
-      where: { id },
-      data: { status: 'SUBMITTED' }
+    const result = await prisma.$transaction(async (tx) => {
+      const application = await tx.application.findUnique({ where: { id } });
+      if (!application) throw new Error('Permohonan tidak ditemukan.');
+
+      const oldStatusVal = application.status;
+
+      const updated = await tx.application.update({
+        where: { id },
+        data: {
+          status: 'SUBMITTED',
+          currentBundleId: null,
+        },
+      });
+
+      const newSnapshot = await tx.applicationSnapshot.create({
+        data: {
+          applicationId: id,
+          snapshotType: 'RESUBMIT_AFTER_REVISION',
+          note: note || 'Perbaikan data setelah revisi',
+          actorId: session.user.id,
+          snapshotData: {
+            applicationType: updated.applicationType,
+            applicationNumber: updated.applicationNumber,
+            serviceNumberDate: updated.serviceNumberDate,
+            completionDate: updated.completionDate,
+            status: updated.status,
+            previousData: updated.previousData,
+            targetData: updated.targetData,
+          } as any,
+        },
+      });
+
+      const newAuditLog = await tx.auditLog.create({
+        data: {
+          action: 'UPDATE_STATUS',
+          entityType: 'APPLICATION',
+          entityId: id,
+          oldStatus: oldStatusVal,
+          newStatus: 'SUBMITTED',
+          actorId: session.user.id,
+          metadata: {
+            note: note || 'Data telah diperbaiki dan diajukan ulang',
+          },
+        },
+      });
+
+      console.log('\n=================== [TAHAP 3: PERBAIKAN DATA & RESUBMIT] ===================');
+      console.log('1. [MODEL: Application (Resubmitted)]');
+      console.log(JSON.stringify(updated, null, 2));
+
+      console.log('\n2. [MODEL: ApplicationSnapshot (Revision Version Snapshot Created)]');
+      console.log(JSON.stringify(newSnapshot, null, 2));
+
+      console.log('\n3. [MODEL: AuditLog (Resubmit Recorded)]');
+      console.log(JSON.stringify(newAuditLog, null, 2));
+      console.log('============================================================================\n');
+
+      return updated;
     });
 
     revalidatePath('/');
-    return { success: true, permohonan: updated };
+    return { success: true, permohonan: result };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -429,6 +586,36 @@ export async function getFavoriteApplications() {
   } catch (error: any) {
     console.error('[ACTION-GET-FAVORITES-ERR]', error);
     return { success: false, error: 'Gagal mengambil data favorit.', list: [] };
+  }
+}
+
+export async function getApplicationSnapshots(applicationId: string) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return { success: false, error: 'Unauthorized: Sesi tidak ditemukan.', list: [] };
+  }
+
+  try {
+    const list = await prisma.applicationSnapshot.findMany({
+      where: { applicationId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-SNAPSHOTS-ERR]', error);
+    return { success: false, error: 'Gagal mengambil riwayat snapshot permohonan.', list: [] };
   }
 }
 

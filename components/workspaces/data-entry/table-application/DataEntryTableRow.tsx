@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Star, Copy, Check, FileText, Edit, RefreshCw, MoreVertical } from 'lucide-react';
+import { Star, Copy, Check, FileText, Edit, RefreshCw, MoreVertical, History, BookCopy } from 'lucide-react';
 import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
 
 const JENIS_ABBR_MAP: Record<string, string> = {
@@ -104,6 +104,7 @@ export interface DataEntryTableRowProps {
   onEdit: (item: any) => void;
   onDuplicate: (item: any) => void;
   onResubmit: (id: string) => void;
+  onViewSnapshots?: (item: any) => void;
 }
 
 export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
@@ -119,6 +120,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
   onEdit,
   onDuplicate,
   onResubmit,
+  onViewSnapshots,
 }) => {
   const isFavorite = item.isFavorite;
 
@@ -373,6 +375,21 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
                   <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
                   <span>Duplikasi Berkas</span>
                 </button>
+
+                {onViewSnapshots && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      onViewSnapshots(item);
+                    }}
+                    className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+                  >
+                    <BookCopy className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00a389] transition-colors" />
+                    <span>Riwayat Versi</span>
+                  </button>
+                )}
               </div>
 
               {item.status === 'REVISION' && (

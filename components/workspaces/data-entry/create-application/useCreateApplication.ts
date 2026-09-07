@@ -349,6 +349,8 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
             applicationNumber: applicationNumber.toUpperCase(),
             serviceNumberDate,
             completionDate,
+            ...(initialData?.id ? { duplicatedFromAppId: initialData.id } : {}),
+            ...(initialData?.applicationNumber ? { duplicatedFromNumber: initialData.applicationNumber } : {}),
             previousData: needPreviousData ? previousData.map((item, idx) => ({
                 ...item,
                 nop: item.nop ? item.nop.replace(/[.\-]/g, '') : '',

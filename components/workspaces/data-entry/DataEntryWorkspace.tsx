@@ -12,6 +12,7 @@ import {
 } from '@/app/actions/data-entry';
 import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
 import { ActionStatusModal } from '@/components/workspaces/shared/ActionStatusModal';
+import { ApplicationSnapshotDrawer } from '@/components/workspaces/shared/ApplicationSnapshotDrawer';
 import { EmptyDataAnimation } from '@/components/workspaces/shared/EmptyDataAnimation';
 import { RevisionAlertBanner } from '@/components/workspaces/shared/RevisionAlertBanner';
 import { JENIS_OPTIONS } from '@/components/workspaces/shared/constants';
@@ -43,12 +44,25 @@ export default function PenginputWorkspace() {
     viewParam === 'edit' ? 'edit' : (viewParam === 'create' || viewParam === 'form' ? 'create' : 'list')
   );
 
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<any | null>(null);
+  const [snapshotDrawerTarget, setSnapshotDrawerTarget] = useState<any | null>(null);
+
   // Sync viewMode when URL query params change (e.g. Browser Back/Forward buttons)
   useEffect(() => {
-    if (viewParam === 'edit') setViewMode('edit');
+    if (viewParam === 'edit' && editTarget) setViewMode('edit');
     else if (viewParam === 'create' || viewParam === 'form') setViewMode('create');
     else setViewMode('list');
-  }, [viewParam]);
+  }, [viewParam, editTarget]);
+
+  // Fallback protection: If viewMode is 'edit' but editTarget is null, revert to 'list' view and clean URL query
+  useEffect(() => {
+    if (viewMode === 'edit' && !editTarget) {
+      setViewMode('list');
+      router.replace('/?tab=my-tasks', { scroll: false });
+    }
+  }, [viewMode, editTarget, router]);
 
   // Helper to switch view and update URL query param
   const switchViewMode = useCallback((mode: 'list' | 'create' | 'edit') => {
@@ -62,13 +76,9 @@ export default function PenginputWorkspace() {
     }
   }, [router]);
 
-  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const handleCloseDetails = useCallback(() => {
     setSelectedRequest(null);
   }, []);
-
-  const [editTarget, setEditTarget] = useState<any | null>(null);
-  const [duplicateTarget, setDuplicateTarget] = useState<any | null>(null);
 
   const handleDuplicate = useCallback((targetItem: any) => {
     setDuplicateTarget(targetItem);
@@ -416,6 +426,7 @@ export default function PenginputWorkspace() {
                               onEdit={handleEdit}
                               onDuplicate={handleDuplicate}
                               onResubmit={handleResubmit}
+                              onViewSnapshots={setSnapshotDrawerTarget}
                             />
                           ))
                         )}
@@ -530,6 +541,13 @@ export default function PenginputWorkspace() {
           onClose={handleCloseDetails}
         />
       )}
+
+      {/* Application Snapshot & Audit History Drawer */}
+      <ApplicationSnapshotDrawer
+        isOpen={!!snapshotDrawerTarget}
+        application={snapshotDrawerTarget}
+        onClose={() => setSnapshotDrawerTarget(null)}
+      />
 
       {/* Global Status Action Modal */}
       <ActionStatusModal
