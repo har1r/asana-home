@@ -157,20 +157,20 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
           {/* Header Minimalist */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 select-none shrink-0 bg-white">
             <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-slate-900 font-sans tracking-tight flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-900 font-sans tracking-tight flex items-center gap-2">
                 <FolderLock className="w-4 h-4 text-[#00a389]" />
                 <span>Riwayat Versi Bundle</span>
               </h3>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="h-8 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <div className="h-7 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                 <span>{versions.length} Versi</span>
               </div>
 
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-md border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-md border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                 title="Tutup Modal"
               >
                 <X className="w-4 h-4" />
@@ -192,7 +192,7 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
 
             {/* Error Message */}
             {!loading && error && (
-              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-medium p-4 rounded-md">
+              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-[12px] font-medium p-4 rounded-md">
                 {error}
               </div>
             )}
@@ -208,7 +208,7 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                   Bundle Masih Berstatus Draf
                 </h4>
 
-                <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed font-sans">
+                <p className="text-[12px] text-slate-500 max-w-[260px] leading-relaxed font-sans">
                   Riwayat versi resmi (<span className="font-semibold text-slate-700">Versi 1.0</span>) akan terbentuk secara otomatis setelah Bundle ini dikunci (<span className="font-semibold text-emerald-700">LOCKED</span>).
                 </p>
               </div>
@@ -222,11 +222,11 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                   <div className="p-5 border-b border-slate-100 bg-white flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2 select-none font-sans">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-xs font-bold text-slate-900 font-mono tracking-tight truncate">{bundleNum}</span>
+                        <span className="text-[12px] font-semibold text-slate-800 font-mono tracking-tight truncate">{bundleNum}</span>
                       </div>
 
                       <div className="shrink-0">
-                        <span className="text-[11px] font-semibold text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2 py-0.5 rounded-md font-sans">
+                        <span className="text-[11px] font-semibold text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2.5 py-0.5 rounded-md font-sans">
                           {displayType}
                         </span>
                       </div>
@@ -243,12 +243,12 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-md bg-white border border-[#00a389]/20 text-[#00a389] flex items-center justify-center shrink-0 shadow-3xs">
-                              {bundle.status === 'LOCKED' ? <Lock className="w-4.5 h-4.5 text-[#00a389]" /> : <FileEdit className="w-4.5 h-4.5 text-[#00a389]" />}
+                            <div className="w-9 h-9 rounded-md bg-white border border-[#00a389]/20 text-[#00a389] flex items-center justify-center shrink-0 shadow-3xs">
+                              {bundle.status === 'LOCKED' ? <Lock className="w-4 h-4 text-[#00a389]" /> : <FileEdit className="w-4 h-4 text-[#00a389]" />}
                             </div>
 
                             <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-bold text-slate-900 tracking-tight font-sans">
+                              <span className="text-[12px] font-semibold text-slate-900 tracking-tight font-sans">
                                 {latestVersion.versionLabel || 'Versi Terbaru'}
                               </span>
 
@@ -256,7 +256,7 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                                 {snapshotTypeLabelMap[latestVersion.snapshotType] || 'Versi Aktif'}
                               </span>
 
-                              <span className="text-[11px] text-slate-400 font-sans truncate mt-0.5">
+                              <span className="text-[11px] text-slate-500 font-sans truncate mt-0.5">
                                 {new Date(latestVersion.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} • Oleh {latestVersion.actor?.name || 'Peneliti'}
                               </span>
                             </div>
@@ -288,18 +288,18 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                         <div key={ver.id} className="relative flex flex-col">
                           <div
                             onClick={(e) => handleItemClick(e, ver.id)}
-                            className={`px-6 py-4 transition-colors flex flex-col gap-1.5 cursor-pointer group relative ${
+                            className={`px-6 py-3.5 transition-colors flex flex-col gap-1.5 cursor-pointer group relative ${
                               isExpanded ? 'bg-emerald-50/50' : 'hover:bg-slate-50/70'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3.5 min-w-0">
-                                <div className="w-9 h-9 rounded-md bg-emerald-50/70 border border-emerald-100/80 text-[#00a389] flex items-center justify-center shrink-0 group-hover:bg-emerald-100/70 transition-colors">
+                                <div className="w-8.5 h-8.5 rounded-md bg-emerald-50/70 border border-emerald-100/80 text-[#00a389] flex items-center justify-center shrink-0 group-hover:bg-emerald-100/70 transition-colors">
                                   <Layers className="w-4 h-4 text-[#00a389]" />
                                 </div>
 
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-xs font-semibold text-slate-900 font-sans tracking-tight">
+                                  <span className="text-[12px] font-semibold text-slate-900 font-sans tracking-tight">
                                     Versi {versionNum}
                                   </span>
 
@@ -307,7 +307,7 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                                     {snapshotTypeLabelMap[ver.snapshotType] || 'Log Versi Bundle'}
                                   </span>
 
-                                  <span className="text-[11px] text-slate-400 font-sans truncate mt-0.5">
+                                  <span className="text-[11px] text-slate-500 font-sans truncate mt-0.5">
                                     {dateStr} • Oleh {actorName}
                                   </span>
                                 </div>
@@ -328,7 +328,7 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
                     <button
                       type="button"
                       onClick={() => setShowMore(true)}
-                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-xs font-medium text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
+                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-[12px] font-medium text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
                     >
                       Tampilkan Lebih Banyak ({historicalVersions.length - 4} Versi Lagi)
                     </button>
@@ -342,14 +342,14 @@ export const BundleVersionDrawer: React.FC<BundleVersionDrawerProps> = React.mem
 
           {/* Footer Minimalist */}
           <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between select-none shrink-0 bg-white font-sans">
-            <span className="text-xs text-slate-400 font-normal">
+            <span className="text-[12px] text-slate-500 font-normal">
               {versions.length} versi tercatat
             </span>
 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors cursor-pointer font-sans"
+              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[12px] font-semibold transition-colors cursor-pointer font-sans"
             >
               Tutup
             </button>
@@ -412,32 +412,37 @@ const PortalBundlePopover: React.FC<{
   const bundleNum = rawBundleNumber ? formatBundleNumber(rawBundleNumber, bundle?.createdAt) : '—';
   const appsList: any[] = snapData.applications || bundle?.applications || bundle?.permohonan || [];
 
-  const cardH = popoverRef.current ? popoverRef.current.getBoundingClientRect().height : 300;
-  const minCaretY = adjustedTop + 20;
-  const maxCaretY = adjustedTop + cardH - 24;
+  const windowH = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const minCaretY = 32;
+  const maxCaretY = windowH - 40;
   const caretY = Math.max(minCaretY, Math.min(targetY - 7, maxCaretY));
 
   return createPortal(
     <>
       <div
         style={{ top: `${caretY}px`, left: `${left - 7}px` }}
-        className="fixed z-[10001] w-3.5 h-3.5 bg-white border-b border-l border-slate-200/90 rotate-45 pointer-events-none transition-all duration-150"
+        className="fixed z-[10001] w-3.5 h-3.5 bg-white border-b border-l border-slate-200/90 rotate-45 pointer-events-none transition-[top] duration-200 ease-out"
       />
 
       <div
         ref={popoverRef}
-        style={{ top: `${adjustedTop}px`, left: `${left}px` }}
-        className="fixed z-[10000] w-[440px] max-w-[calc(100vw-480px)] max-h-[calc(100vh-32px)] overflow-y-auto scrollbar-thin bg-white border border-slate-200/90 rounded-md shadow-2xl p-5 flex flex-col gap-4 font-sans animate-scaleUp text-xs select-text cursor-default transition-[top] duration-150"
+        style={{
+          top: '16px',
+          left: `${left}px`,
+          height: 'calc(100vh - 32px)',
+          maxHeight: 'calc(100vh - 32px)'
+        }}
+        className="fixed z-[10000] w-[540px] max-w-[calc(100vw-420px)] overflow-y-auto scrollbar-thin bg-white border border-slate-200/90 rounded-md shadow-2xl flex flex-col font-sans animate-scaleUp text-[12px] select-text cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
 
-        {/* Floating Card Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 font-sans z-20">
+        {/* Sticky Floating Card Header */}
+        <div className="sticky top-0 bg-white/95 backdrop-blur-xs z-30 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between font-sans shrink-0 shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-900 font-sans tracking-tight">
+            <span className="text-sm font-semibold text-slate-900 font-sans tracking-tight">
               Detail {versionLabel}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15' : 'text-slate-600 bg-slate-100'}`}>
+            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15 border border-[#00a389]/20' : 'text-slate-600 bg-slate-100 border border-slate-200'}`}>
               {snapshotTypeLabelMap[versionItem.snapshotType] || 'Snapshot Bundle'}
             </span>
           </div>
@@ -452,38 +457,41 @@ const PortalBundlePopover: React.FC<{
           </button>
         </div>
 
+        {/* Scrollable Content Body */}
+        <div className="p-5 flex flex-col gap-4">
+
         {/* Note Block */}
         {versionItem.note && (
-          <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-xs text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Catatan Versi:</span>
-            <p className="italic text-slate-600 font-sans">"{versionItem.note}"</p>
+          <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-[12px] font-semibold text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">Catatan Versi:</span>
+            <p className="italic font-semibold text-slate-600 font-sans">"{versionItem.note}"</p>
           </div>
         )}
 
         {/* Summary Header Rows */}
-        <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-150 grid grid-cols-2 gap-2.5 text-[11px] font-sans">
+        <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-150 grid grid-cols-2 gap-2.5 text-[12px] font-sans">
           <div>
-            <span className="text-slate-400 block text-[10px] font-sans">Nomor Bundle</span>
+            <span className="text-slate-500 block text-[11px] font-semibold font-sans">Nomor Bundle</span>
             <span className="font-mono font-semibold text-slate-800">{bundleNum}</span>
           </div>
           <div>
-            <span className="text-slate-400 block text-[10px] font-sans">Status Bundle</span>
+            <span className="text-slate-500 block text-[11px] font-semibold font-sans">Status Bundle</span>
             <span className="font-semibold text-[#008f78] capitalize">{snapData.status || bundle?.status || 'DRAFT'}</span>
           </div>
           <div>
-            <span className="text-slate-400 block text-[10px] font-sans">Total Permohonan</span>
+            <span className="text-slate-500 block text-[11px] font-semibold font-sans">Total Permohonan</span>
             <span className="font-semibold text-slate-800">{appsList.length} Permohonan</span>
           </div>
           <div>
-            <span className="text-slate-400 block text-[10px] font-sans">Peneliti / Pembuat</span>
-            <span className="font-medium text-slate-700 font-sans">{versionItem.actor?.name || bundle?.createdBy?.name || 'Peneliti'}</span>
+            <span className="text-slate-500 block text-[11px] font-semibold font-sans">Peneliti / Pembuat</span>
+            <span className="font-semibold text-slate-700 font-sans">{versionItem.actor?.name || bundle?.createdBy?.name || 'Peneliti'}</span>
           </div>
         </div>
 
         {/* List Applications in Bundle Version */}
         {appsList.length > 0 ? (
           <div className="flex flex-col gap-2.5 font-sans">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 font-sans">
+            <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
               <Users className="w-3.5 h-3.5 text-[#00a389]" />
               <span>Daftar Permohonan Terbundel ({appsList.length})</span>
             </span>
@@ -529,9 +537,9 @@ const PortalBundlePopover: React.FC<{
               }
 
               return (
-                <div key={idx} className="bg-white p-3 rounded-md border border-slate-200/90 flex flex-col gap-1 text-[11px] font-sans shadow-3xs">
-                  <div className="flex items-center justify-between font-mono font-semibold text-slate-900 pb-1 border-b border-slate-100">
-                    <span>No. Permohonan: {appNo}</span>
+                <div key={idx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-1.5 text-[12px] font-sans shadow-3xs">
+                  <div className="flex items-center justify-between font-mono font-semibold text-slate-800 pb-1.5 border-b border-slate-100">
+                    <span className="font-semibold">No. Permohonan: {appNo}</span>
                     {appNop !== '-' && (
                       <button
                         type="button"
@@ -544,14 +552,14 @@ const PortalBundlePopover: React.FC<{
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 font-sans">
+                  <div className="grid grid-cols-2 gap-2 text-[12px] pt-1 font-sans">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Pemohon:</span>
-                      <span className="font-medium text-slate-800 truncate block capitalize">{appName}</span>
+                      <span className="text-slate-500 block text-[11px] font-semibold">Pemohon:</span>
+                      <span className="font-semibold text-slate-800 truncate block capitalize">{appName}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">NOP Objek Pajak:</span>
-                      <span className="font-mono text-slate-700">{appNop !== '-' ? formatNop(appNop) : '-'}</span>
+                      <span className="text-slate-500 block text-[11px] font-semibold">NOP Objek Pajak:</span>
+                      <span className="font-mono text-slate-800 font-semibold">{appNop !== '-' ? formatNop(appNop) : '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -559,11 +567,12 @@ const PortalBundlePopover: React.FC<{
             })}
           </div>
         ) : (
-          <div className="p-4 bg-slate-50 rounded-md border border-slate-200 text-center text-slate-400 text-xs font-sans">
+          <div className="p-4 bg-slate-50 rounded-md border border-slate-200 text-center text-slate-500 text-[12px] font-semibold font-sans">
             Wadah bundle ini belum memiliki permohonan.
           </div>
         )}
 
+        </div>
       </div>
     </>,
     document.body

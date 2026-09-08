@@ -33,7 +33,13 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
       if (isReactivation) {
         calculatedOwnerName = firstPrev.ownerName || firstPrev.namaPemilikLama || '-';
       } else if (isPartialMutation) {
-        calculatedOwnerName = firstTarget.ownerName || firstTarget.namaPemilikBaru || '-';
+        const firstName = firstTarget.ownerName || firstTarget.namaPemilikBaru || '';
+        const totalCount = targetData.length;
+        if (firstName && totalCount > 1) {
+          calculatedOwnerName = `${firstName} (${totalCount})`;
+        } else {
+          calculatedOwnerName = firstName || '-';
+        }
       } else {
         if (targetData.length > 0) {
           calculatedOwnerName = targetData

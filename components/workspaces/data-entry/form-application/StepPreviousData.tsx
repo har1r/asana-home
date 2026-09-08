@@ -53,9 +53,11 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                         const item = rawItem || {};
                         const availableDesa = KECAMATAN_DATA[item.objectKecamatan || ''] || [];
                         return (
-                            <div key={idx} className="flex flex-col gap-4 p-5 border border-slate-200/80 rounded-md pt-10 relative shadow-3xs bg-white">
-                                <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
-                                    <span className="text-[13px] font-medium text-[#008f78] tracking-wide font-sans">NOP Asal #{idx + 1}</span>
+                            <div key={idx} className={`flex flex-col gap-4 ${idx > 0 ? 'border-t border-slate-200/80 pt-6 mt-2' : ''}`}>
+                                <div className="flex items-center justify-between select-none border-b border-slate-100/80 pb-2.5 mb-1">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-[#e6f6f4] text-[#008f78] border border-[#00a389]/30 font-sans">
+                                        NOP Asal #{idx + 1}
+                                    </span>
                                     <div className="flex items-center gap-3">
                                         <label className="flex items-center gap-2 cursor-pointer text-xs font-normal text-slate-600 select-none">
                                             <span className={item.isPrimary ? "font-semibold text-[#00a389]" : "text-slate-500"}>
@@ -75,8 +77,15 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                             </button>
                                         </label>
                                         {previousData.length > 2 && (
-                                            <button type="button" onClick={() => onRemovePreviousItem(idx)} disabled={loading} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
-                                                <Trash2 className="w-4 h-4" />
+                                            <button
+                                                type="button"
+                                                onClick={() => onRemovePreviousItem(idx)}
+                                                disabled={loading}
+                                                className="h-7 px-2.5 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 border border-red-200/60 rounded-md transition-all cursor-pointer flex items-center gap-1 font-sans"
+                                                title="Hapus NOP Asal Ini"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <span>Hapus</span>
                                             </button>
                                         )}
                                     </div>

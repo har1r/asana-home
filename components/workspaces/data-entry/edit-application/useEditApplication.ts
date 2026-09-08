@@ -180,7 +180,11 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
         })));
     }, []);
 
-    const addTargetItem = useCallback(() => setTargetData(prev => [...prev, createEmptyTargetDataItem()]), []);
+    const addTargetItem = useCallback(() => {
+        const newItem = createEmptyTargetDataItem();
+        newItem.nopTemporary = getPrimaryNopDisplay(previousData);
+        setTargetData(prev => [...prev, newItem]);
+    }, [previousData]);
     const removeTargetItem = useCallback((index: number) => setTargetData(prev => prev.filter((_, i) => i !== index)), []);
     const updateTargetItem = useCallback((index: number, field: string, value: any) => {
         setTargetData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
@@ -232,6 +236,28 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
         e.preventDefault();
         if (!editTarget?.id) return;
         setError('');
+
+        const result = applicationSchema.safeParse({ applicationType, applicationNumber, serviceNumberDate, completionDate, previousData, targetData });
+        if (!result.success) {
+            const errors: Record<string, string> = {};
+            result.error.issues.forEach(issue => { errors[issue.path.join('.')] = issue.message; });
+            setFormErrors(errors);
+            setError('Formulir belum lengkap. Harap periksa bagian berpembatas merah.');
+
+            const firstKey = Object.keys(errors)[0];
+            if (firstKey.includes('previousData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Lama') + 1 || 1);
+            else if (firstKey.includes('targetData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Baru') + 1 || 1);
+            else setCurrentStep(1);
+
+            setTimeout(() => {
+                const el = document.getElementById(firstKey);
+                if (el) {
+                    el.focus();
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+            return;
+        }
 
         const payload = {
             applicationType,
@@ -317,7 +343,11 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
                 ownerKecamatan: prev.ownerKecamatan || '',
                 ownerDesa: prev.ownerDesa || '',
             } : item));
-        }, [previousData]),
+            clearFieldError(`targetData.${targetIdx}.ownerName`);
+            clearFieldError(`targetData.${targetIdx}.ownerAddress`);
+            clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
+            clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+        }, [previousData, clearFieldError]),
 
         handleCopyObjectFromPrevious: useCallback((targetIdx: number) => {
             const prev = previousData[0];
@@ -331,7 +361,10 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
                 objectKecamatan: prev.objectKecamatan || '',
                 objectDesa: prev.objectDesa || '',
             } : item));
-        }, [previousData]),
+            clearFieldError(`targetData.${targetIdx}.objectAddress`);
+            clearFieldError(`targetData.${targetIdx}.objectKecamatan`);
+            clearFieldError(`targetData.${targetIdx}.objectDesa`);
+        }, [previousData, clearFieldError]),
 
         handleCopyObjectToOwner: useCallback((targetIdx: number) => {
             setTargetData(prevTargets => prevTargets.map((item, i) => i === targetIdx ? {
@@ -343,7 +376,10 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
                 ownerKecamatan: item.objectKecamatan || '',
                 ownerDesa: item.objectDesa || '',
             } : item));
-        }, []),
+            clearFieldError(`targetData.${targetIdx}.ownerAddress`);
+            clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
+            clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+        }, [clearFieldError]),
 
         // Stepper & UI
         currentStep, setCurrentStep, currentStepLabel, steps,

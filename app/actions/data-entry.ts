@@ -444,23 +444,48 @@ export async function getHistoryApplications() {
 export async function toggleFavoriteApplication(id: string) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session?.user) {
     return { success: false, error: 'Unauthorized: Peran Anda tidak memiliki akses untuk menandai favorit.' };
   }
 
   try {
     const existing = await prisma.application.findUnique({
       where: { id },
-      select: { isFavorite: true }
+      select: { id: true, isFavorite: true, applicationNumber: true, status: true }
     });
 
     if (!existing) {
       return { success: false, error: 'Permohonan tidak ditemukan.' };
     }
 
-    const updated = await prisma.application.update({
-      where: { id },
-      data: { isFavorite: !existing.isFavorite }
+    const newFavoriteState = !existing.isFavorite;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const app = await tx.application.update({
+        where: { id },
+        data: { isFavorite: newFavoriteState }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'UPDATE_STATUS',
+          entityType: 'APPLICATION',
+          entityId: id,
+          oldStatus: existing.status,
+          newStatus: existing.status,
+          actorId: (session.user as any).id,
+          metadata: {
+            field: 'isFavorite',
+            isFavorite: newFavoriteState,
+            applicationNumber: existing.applicationNumber,
+            description: newFavoriteState
+              ? `Permohonan No. ${existing.applicationNumber} ditandai sebagai favorit`
+              : `Permohonan No. ${existing.applicationNumber} dihapus dari favorit`
+          }
+        }
+      });
+
+      return app;
     });
 
     revalidatePath('/');

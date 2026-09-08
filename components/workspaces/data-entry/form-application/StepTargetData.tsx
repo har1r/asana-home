@@ -61,19 +61,22 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                     return (
                         <div
                             key={idx}
-                            className={`flex flex-col gap-4 relative ${targetData.length > 1 ? 'p-5 border border-slate-200/80 rounded-md pt-10 shadow-3xs bg-white' : ''
-                                }`}
+                            className={`flex flex-col gap-4 ${idx > 0 ? 'border-t border-slate-200/80 pt-6 mt-2' : ''}`}
                         >
                             {targetData.length > 1 && (
-                                <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between select-none border-b border-slate-100 pb-1">
-                                    <span className="text-[13px] font-normal text-[#008f78] tracking-wide font-sans">Pemilik Baru #{idx + 1}</span>
+                                <div className="flex items-center justify-between select-none border-b border-slate-100/80 pb-2.5 mb-1">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-[#e6f6f4] text-[#008f78] border border-[#00a389]/30 font-sans">
+                                        Pemilik Baru #{idx + 1}
+                                    </span>
                                     <button
                                         type="button"
                                         onClick={() => onRemoveTargetItem(idx)}
                                         disabled={loading}
-                                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                                        className="h-7 px-2.5 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 border border-red-200/60 rounded-md transition-all cursor-pointer flex items-center gap-1 font-sans"
+                                        title="Hapus Pemilik Baru Ini"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Hapus Pemilik Baru</span>
                                     </button>
                                 </div>
                             )}
@@ -82,7 +85,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-[13px] font-normal text-slate-700 font-sans flex items-center justify-between">
                                         <span>
-                                            NOP Sementara {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs">(Opsional / Ditentukan Sistem)</span>}
+                                            NOP Sementara {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs">(Opsional)</span>}
                                         </span>
                                         <span className={`text-xs font-mono pr-1 ${(item.nopTemporary || '').replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
                                             {(item.nopTemporary || '').replace(/[^\d]/g, '').length}/18
@@ -117,7 +120,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Nomor WhatsApp Pemilik Baru <span className="text-red-500">*</span></label>
+                                    <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No. WhatsApp Pemilik Baru <span className="text-red-500">*</span></label>
                                     <div className={getWhatsAppContainerClass(!!formErrors[`targetData.${idx}.whatsappNumber`])}>
                                         <span className="bg-slate-50 border-r border-slate-200 px-3.5 py-2.5 text-[13px] font-normal text-slate-600 select-none flex items-center gap-1 shrink-0 font-sans">
                                             <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -148,22 +151,22 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                 </div>
 
                                 <div className="flex flex-col gap-5">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Pemilik Baru <span className="text-red-500">*</span></label>
-                                        <div className="flex items-center gap-1.5 flex-wrap select-none">
-                                            {needPreviousData && previousData.length > 0 && (
-                                                <button type="button" onClick={() => onCopyOwnerFromPrevious(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Salin alamat pemilik dari Data Lama">
-                                                    <Copy className="w-3 h-3" />
-                                                    <span>Salin Pemilik Lama</span>
-                                                </button>
-                                            )}
-                                            <button type="button" onClick={() => onCopyObjectToOwner(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Samakan alamat pemilik dengan alamat objek baru">
-                                                <RefreshCw className="w-3 h-3" />
-                                                <span>Samakan dg Objek</span>
-                                            </button>
-                                        </div>
-                                    </div>
                                     <div className="flex flex-col gap-1.5">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Pemilik Baru <span className="text-red-500">*</span></label>
+                                            <div className="flex items-center gap-1.5 flex-wrap select-none">
+                                                {needPreviousData && previousData.length > 0 && (
+                                                    <button type="button" onClick={() => onCopyOwnerFromPrevious(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Salin alamat pemilik dari Data Lama">
+                                                        <Copy className="w-3 h-3" />
+                                                        <span>Salin Pemilik Lama</span>
+                                                    </button>
+                                                )}
+                                                <button type="button" onClick={() => onCopyObjectToOwner(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Samakan alamat pemilik dengan alamat objek baru">
+                                                    <Copy className="w-3 h-3" />
+                                                    <span>Samakan alamat objek lama</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                         <input type="text" id={`targetData.${idx}.ownerAddress`} placeholder="JL. MERDEKA NO. 45" value={item.ownerAddress} onChange={(e) => onTargetItemChange(idx, 'ownerAddress', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerAddress`])} />
                                         {formErrors[`targetData.${idx}.ownerAddress`] && <span className="text-xs text-red-600 pl-1 mt-0.5">{formErrors[`targetData.${idx}.ownerAddress`]}</span>}
                                     </div>
@@ -172,22 +175,39 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                         <div className="flex flex-col gap-1"><label className="text-[13px] font-normal text-slate-700 font-sans">RT <span className="text-slate-400 text-xs">(Opsional)</span></label><input type="text" placeholder="002" value={item.ownerRt} onChange={(e) => onTargetItemChange(idx, 'ownerRt', e.target.value)} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerRt`])} /></div>
                                         <div className="flex flex-col gap-1"><label className="text-[13px] font-normal text-slate-700 font-sans">RW <span className="text-slate-400 text-xs">(Opsional)</span></label><input type="text" placeholder="008" value={item.ownerRw} onChange={(e) => onTargetItemChange(idx, 'ownerRw', e.target.value)} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerRw`])} /></div>
                                     </div>
-                                    <div className="flex flex-col gap-1.5"><label className="text-[13px] font-normal text-slate-700 font-sans">Kecamatan Pemilik <span className="text-red-500">*</span></label><input type="text" id={`targetData.${idx}.ownerKecamatan`} placeholder="PAKUHAJI" value={item.ownerKecamatan} onChange={(e) => onTargetItemChange(idx, 'ownerKecamatan', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerKecamatan`])} /></div>
-                                    <div className="flex flex-col gap-1.5"><label className="text-[13px] font-normal text-slate-700 font-sans">Desa Pemilik <span className="text-red-500">*</span></label><input type="text" id={`targetData.${idx}.ownerDesa`} placeholder="KOHOD" value={item.ownerDesa} onChange={(e) => onTargetItemChange(idx, 'ownerDesa', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerDesa`])} /></div>
+                                    <div className="flex flex-col gap-1.5"><label className="text-[13px] font-normal text-slate-700 font-sans">Kecamatan Pemilik Baru<span className="text-red-500">*</span></label><input type="text" id={`targetData.${idx}.ownerKecamatan`} placeholder="PAKUHAJI" value={item.ownerKecamatan} onChange={(e) => onTargetItemChange(idx, 'ownerKecamatan', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerKecamatan`])} />
+                                        {formErrors[`targetData.${idx}.ownerKecamatan`] && (
+                                            <span className="text-xs text-red-600 pl-1 mt-0.5">
+                                                {formErrors[`targetData.${idx}.ownerKecamatan`]}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-1.5"><label className="text-[13px] font-normal text-slate-700 font-sans">Desa Pemilik Baru<span className="text-red-500">*</span></label><input type="text" id={`targetData.${idx}.ownerDesa`} placeholder="KOHOD" value={item.ownerDesa} onChange={(e) => onTargetItemChange(idx, 'ownerDesa', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.ownerDesa`])} />
+                                        {formErrors[`targetData.${idx}.ownerDesa`] && (
+                                            <span className="text-xs text-red-600 pl-1 mt-0.5">
+                                                {formErrors[`targetData.${idx}.ownerDesa`]}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col gap-5">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Objek <span className="text-red-500">*</span></label>
-                                        {needPreviousData && previousData.length > 0 && (
-                                            <button type="button" onClick={() => onCopyObjectFromPrevious(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Salin alamat objek dari Data Lama">
-                                                <Copy className="w-3 h-3" />
-                                                <span>Salin Objek Lama</span>
-                                            </button>
-                                        )}
-                                    </div>
                                     <div className="flex flex-col gap-1.5">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Objek Baru<span className="text-red-500">*</span></label>
+                                            {needPreviousData && previousData.length > 0 && (
+                                                <button type="button" onClick={() => onCopyObjectFromPrevious(idx)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans" title="Salin alamat objek dari Data Lama">
+                                                    <Copy className="w-3 h-3" />
+                                                    <span>Salin alamat objek Lama</span>
+                                                </button>
+                                            )}
+                                        </div>
                                         <input type="text" id={`targetData.${idx}.objectAddress`} placeholder="JL. MERDEKA NO. 45" value={item.objectAddress} onChange={(e) => onTargetItemChange(idx, 'objectAddress', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.objectAddress`])} />
+                                        {formErrors[`targetData.${idx}.objectAddress`] && (
+                                            <span className="text-xs text-red-600 pl-1 mt-0.5">
+                                                {formErrors[`targetData.${idx}.objectAddress`]}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="flex flex-col gap-1"><label className="text-[13px] font-normal text-slate-700 font-sans">Blok <span className="text-slate-400 text-xs">(Opsional)</span></label><input type="text" placeholder="C2" value={item.objectBlock} onChange={(e) => onTargetItemChange(idx, 'objectBlock', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass()} /></div>
@@ -195,7 +215,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                         <div className="flex flex-col gap-1"><label className="text-[13px] font-normal text-slate-700 font-sans">RW <span className="text-slate-400 text-xs">(Opsional)</span></label><input type="text" placeholder="008" value={item.objectRw} onChange={(e) => onTargetItemChange(idx, 'objectRw', e.target.value)} disabled={loading} className={getInputClass()} /></div>
                                     </div>
                                     <div className="flex flex-col gap-1.5 font-sans">
-                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Kecamatan Objek <span className="text-red-500">*</span></label>
+                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Kecamatan Objek Baru<span className="text-red-500">*</span></label>
                                         <select id={`targetData.${idx}.objectKecamatan`} value={item.objectKecamatan || ''} onChange={(e) => onTargetItemChange(idx, 'objectKecamatan', e.target.value)} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.objectKecamatan`], 'cursor-pointer')}>
                                             <option value="">-- Pilih Kecamatan --</option>
                                             {Object.keys(KECAMATAN_DATA).map(kec => (
@@ -208,7 +228,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                         {formErrors[`targetData.${idx}.objectKecamatan`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5">{formErrors[`targetData.${idx}.objectKecamatan`]}</span>}
                                     </div>
                                     <div className="flex flex-col gap-1.5 font-sans">
-                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Desa Objek <span className="text-red-500">*</span></label>
+                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Desa Objek Baru<span className="text-red-500">*</span></label>
                                         <select id={`targetData.${idx}.objectDesa`} value={item.objectDesa || ''} onChange={(e) => onTargetItemChange(idx, 'objectDesa', e.target.value)} disabled={loading || !item.objectKecamatan} className={getInputClass(!!formErrors[`targetData.${idx}.objectDesa`], 'cursor-pointer')}>
                                             <option value="">-- Pilih Desa --</option>
                                             {availableDesa.map(desa => (
@@ -233,17 +253,16 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                     <div className="relative"><input type="number" placeholder="120 (0 jika tanah kosong)" value={item.buildingArea} onChange={(e) => onTargetItemChange(idx, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} /><span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span></div>
                                 </div>
 
-                                <div className="flex flex-col gap-1.5 sm:col-span-2">
-                                    <label className="text-[13px] font-normal text-slate-700 font-sans">No/Jenis Sertifikat <span className="text-red-500">*</span></label>
-                                    <input type="text" id={`targetData.${idx}.certificate`} placeholder="SHM NO. 67890" value={item.certificate} onChange={(e) => onTargetItemChange(idx, 'certificate', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.certificate`])} />
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[13px] font-normal text-slate-700 font-sans">Bukti Kepemilikan <span className="text-red-500">*</span></label>
+                                    <input type="text" id={`targetData.${idx}.certificate`} placeholder="SHM NO. 67890/2026" value={item.certificate} onChange={(e) => onTargetItemChange(idx, 'certificate', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`targetData.${idx}.certificate`])} />
                                     {formErrors[`targetData.${idx}.certificate`] && <span className="text-xs text-red-600 pl-1 mt-0.5">{formErrors[`targetData.${idx}.certificate`]}</span>}
                                 </div>
 
                                 <div className="flex flex-col gap-1.5 font-sans">
                                     <label className="text-[13px] font-normal text-slate-700 font-sans flex items-center justify-between">
                                         <span className="flex items-center gap-1.5">
-                                            <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                                            <span>Upload Berkas / Lampiran Dokumen <span className="text-slate-400 text-xs">(Opsional)</span></span>
+                                            <span>Upload PDF Permohonan <span className="text-slate-400 text-xs">(Opsional)</span></span>
                                         </span>
                                     </label>
 
@@ -322,7 +341,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
 
                                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                                     <label className="text-[13px] font-normal text-slate-700 font-sans">Catatan <span className="text-slate-400">(Opsional)</span></label>
-                                    <textarea rows={2} placeholder="Catatan tambahan data baru..." value={item.notes || ''} onChange={(e) => onTargetItemChange(idx, 'notes', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(false, 'resize-y')} />
+                                    <textarea rows={2} placeholder="Silahkan tinggalkan catatan kalau perlu..." value={item.notes || ''} onChange={(e) => onTargetItemChange(idx, 'notes', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(false, 'resize-y')} />
                                 </div>
                             </div>
                         </div>

@@ -24,7 +24,7 @@ export async function getSubmittedApplications() {
 
   try {
     const all = await prisma.application.findMany({
-      where: { status: 'SUBMITTED' },
+      where: { status: { in: ['SUBMITTED', 'REVISION'] } },
       orderBy: { createdAt: 'asc' }
     });
 
@@ -655,15 +655,82 @@ export async function getBundleVersions(bundleId: string) {
 /**
  * 10. RESUBMIT RESEARCHER APPLICATION
  */
-export async function resubmitResearcherApplication(permohonanId: string) {
+export async function resubmitResearcherApplication(permohonanId: string, note?: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized: Sesi tidak ditemukan.' };
+  }
+
   try {
-    const updated = await prisma.application.update({
+    const existing = await prisma.application.findUnique({
       where: { id: permohonanId },
-      data: { status: 'SUBMITTED' }
+      select: {
+        id: true,
+        status: true,
+        applicationType: true,
+        applicationNumber: true,
+        serviceNumberDate: true,
+        completionDate: true,
+        previousData: true,
+        targetData: true,
+      }
     });
+
+    if (!existing) {
+      return { success: false, error: 'Permohonan tidak ditemukan.' };
+    }
+
+    if (existing.status !== 'REVISION') {
+      return { success: false, error: 'Hanya permohonan berstatus REVISION yang dapat di-resubmit.' };
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const app = await tx.application.update({
+        where: { id: permohonanId },
+        data: { status: 'SUBMITTED' }
+      });
+
+      await tx.applicationSnapshot.create({
+        data: {
+          applicationId: permohonanId,
+          snapshotType: 'RESUBMIT_AFTER_REVISION',
+          note: note || 'Permohonan telah direvisi dan diajukan ulang ke antrean oleh Peneliti',
+          actorId: (session.user as any).id,
+          snapshotData: {
+            applicationType: existing.applicationType,
+            applicationNumber: existing.applicationNumber,
+            serviceNumberDate: existing.serviceNumberDate,
+            completionDate: existing.completionDate,
+            status: 'SUBMITTED',
+            previousData: existing.previousData,
+            targetData: existing.targetData,
+          } as any
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'UPDATE_STATUS',
+          entityType: 'APPLICATION',
+          entityId: permohonanId,
+          oldStatus: 'REVISION',
+          newStatus: 'SUBMITTED',
+          actorId: (session.user as any).id,
+          metadata: {
+            applicationNumber: existing.applicationNumber,
+            description: `Peneliti melakukan resubmit permohonan No. ${existing.applicationNumber} dari REVISION ke SUBMITTED`
+          }
+        }
+      });
+
+      return app;
+    });
+
+    revalidatePath('/');
     return { success: true, permohonan: updated };
   } catch (e: any) {
-    return { success: false, error: e.message };
+    console.error('[ACTION-RESUBMIT-RESEARCHER-ERR]', e);
+    return { success: false, error: e.message || 'Gagal melakukan resubmit permohonan.' };
   }
 }
 

@@ -105,9 +105,11 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  createdBundles Bundle[]
-  auditLogs    AuditLog[]
-  snapshots    ApplicationSnapshot[]
+  createdBundles     Bundle[]
+  auditLogs          AuditLog[]
+  applicationSnapshots          ApplicationSnapshot[]
+  bundleSnapshots    BundleSnapshot[]
+  manifestSnapshots  ManifestSnapshot[]
 }
 
 model Application {
@@ -210,6 +212,7 @@ model Bundle {
   returnRequests    ReturnRequest[]
   applicationHistory ApplicationBundleHistory[]
   manifestHistory   ManifestBundleHistory[]
+  snapshots         BundleSnapshot[]
   // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
@@ -225,6 +228,7 @@ model Manifest {
   bundles           Bundle[]       
   returnRequests    ReturnRequest[] 
   bundleHistory     ManifestBundleHistory[]
+  snapshots         ManifestSnapshot[]
   // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
@@ -302,4 +306,28 @@ model ApplicationSnapshot {
   createdAt      DateTime       @default(now())
   actor          User           @relation(fields: [actorId], references: [id])
   application    Application    @relation(fields: [applicationId], references: [id])
+}
+
+model BundleSnapshot {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  bundleId       String         @db.ObjectId
+  snapshotData   Json           
+  snapshotType   String         
+  note           String?        
+  actorId        String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  actor          User           @relation(fields: [actorId], references: [id])
+  bundle         Bundle         @relation(fields: [bundleId], references: [id])
+}
+
+model ManifestSnapshot {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  manifestId     String         @db.ObjectId
+  snapshotData   Json           
+  snapshotType   String         
+  note           String?        
+  actorId        String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  actor          User           @relation(fields: [actorId], references: [id])
+  manifest       Manifest       @relation(fields: [manifestId], references: [id])
 }

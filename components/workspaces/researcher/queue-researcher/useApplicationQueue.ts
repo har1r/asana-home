@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { getSubmittedPermohonan, addPermohonanToBundle } from '@/app/actions/researcher';
+import { getSubmittedPermohonan, addPermohonanToBundle, resubmitResearcherApplication } from '@/app/actions/researcher';
 import { toggleFavoriteApplication } from '@/app/actions/data-entry';
 
 export function useApplicationQueue() {
@@ -61,7 +61,13 @@ export function useApplicationQueue() {
           if (isReactivation) {
             calculatedOwnerName = firstPrev.ownerName || firstPrev.namaPemilikLama || '-';
           } else if (isPartialMutation) {
-            calculatedOwnerName = firstTarget.ownerName || firstTarget.namaPemilikBaru || '-';
+            const firstName = firstTarget.ownerName || firstTarget.namaPemilikBaru || '';
+            const totalCount = targetData.length;
+            if (firstName && totalCount > 1) {
+              calculatedOwnerName = `${firstName} (${totalCount})`;
+            } else {
+              calculatedOwnerName = firstName || '-';
+            }
           } else {
             if (targetData.length > 0) {
               calculatedOwnerName = targetData
@@ -133,6 +139,20 @@ export function useApplicationQueue() {
       }
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan saat memasukkan ke bundle.');
+    }
+  }, [fetchSubmittedQueue]);
+
+  const handleResubmitRevision = useCallback(async (id: string, note?: string) => {
+    try {
+      const res = await resubmitResearcherApplication(id, note);
+      if (res.success) {
+        setSuccess('Permohonan berhasil di-resubmit ke antrean.');
+        await fetchSubmittedQueue();
+      } else {
+        setError(res.error || 'Gagal melakukan resubmit permohonan.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan saat resubmit permohonan.');
     }
   }, [fetchSubmittedQueue]);
 
@@ -268,6 +288,7 @@ export function useApplicationQueue() {
     fetchSubmittedQueue,
     handleToggleFavorite,
     handleAddToBundle,
+    handleResubmitRevision,
     filteredQueue,
     jenisCounts,
   };

@@ -105,6 +105,7 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
     // LOCALSTORAGE DRAFT MANAGEMENT
     useEffect(() => {
         if (initialData) {
+            localStorage.removeItem('permohonan_form_draft');
             setApplicationType(initialData.applicationType || '');
             setApplicationNumber(initialData.applicationNumber || '');
             setServiceNumberDate(initialData.serviceNumberDate ? new Date(initialData.serviceNumberDate).toISOString().split('T')[0] : '');
@@ -273,7 +274,12 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
         })));
     }, []);
 
-    const addTargetItem = useCallback(() => setTargetData(prev => [...prev, createEmptyTargetDataItem()]), []);
+    const addTargetItem = useCallback(
+        () => {
+            const newItem = createEmptyTargetDataItem();
+            newItem.nopTemporary = getPrimaryNopDisplay(previousData);
+            setTargetData(prev => [...prev, newItem])
+        }, [previousData]);
     const removeTargetItem = useCallback((index: number) => setTargetData(prev => prev.filter((_, i) => i !== index)), []);
     const updateTargetItem = useCallback((index: number, field: string, value: any) => {
         setTargetData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
@@ -341,6 +347,14 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
             if (firstKey.includes('previousData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Lama') + 1 || 1);
             else if (firstKey.includes('targetData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Baru') + 1 || 1);
             else setCurrentStep(1);
+
+            setTimeout(() => {
+                const el = document.getElementById(firstKey);
+                if (el) {
+                    el.focus();
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
             return;
         }
 
@@ -453,7 +467,11 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
             ownerKecamatan: prev.ownerKecamatan || '',
             ownerDesa: prev.ownerDesa || '',
         } : item));
-    }, [previousData]);
+        clearFieldError(`targetData.${targetIdx}.ownerName`);
+        clearFieldError(`targetData.${targetIdx}.ownerAddress`);
+        clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
+        clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+    }, [previousData, clearFieldError]);
 
     const handleCopyObjectFromPrevious = useCallback((targetIdx: number) => {
         const prev = previousData[0];
@@ -467,7 +485,10 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
             objectKecamatan: prev.objectKecamatan || '',
             objectDesa: prev.objectDesa || '',
         } : item));
-    }, [previousData]);
+        clearFieldError(`targetData.${targetIdx}.objectAddress`);
+        clearFieldError(`targetData.${targetIdx}.objectKecamatan`);
+        clearFieldError(`targetData.${targetIdx}.objectDesa`);
+    }, [previousData, clearFieldError]);
 
     const handleCopyObjectToOwner = useCallback((targetIdx: number) => {
         setTargetData(prevTargets => prevTargets.map((item, i) => i === targetIdx ? {
@@ -479,7 +500,10 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
             ownerKecamatan: item.objectKecamatan || '',
             ownerDesa: item.objectDesa || '',
         } : item));
-    }, []);
+        clearFieldError(`targetData.${targetIdx}.ownerAddress`);
+        clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
+        clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+    }, [clearFieldError]);
 
     const handleAddPreviousItem = useCallback(() => {
         setPreviousData(prev => [...prev, createEmptyPreviousDataItem()]);

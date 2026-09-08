@@ -149,19 +149,19 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
           {/* Header Minimalist */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 select-none shrink-0 bg-white">
             <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-slate-900 font-sans tracking-tight">
+              <h3 className="text-sm font-semibold text-slate-900 font-sans tracking-tight">
                 Riwayat Versi
               </h3>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="h-8 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                <span>{snapshots.length}</span>
+              <div className="h-7 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                <span>{snapshots.length} Versi</span>
               </div>
 
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-md border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-md border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                 title="Tutup Modal"
               >
                 <X className="w-4 h-4" />
@@ -183,7 +183,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
 
             {/* Error Message */}
             {!loading && error && (
-              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-medium p-4 rounded-md">
+              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-[12px] font-medium p-4 rounded-md">
                 {error}
               </div>
             )}
@@ -192,7 +192,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
             {!loading && !error && snapshots.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400">
                 <FileText className="w-9 h-9 stroke-[1.5] mb-2 text-slate-300" />
-                <span className="text-xs font-medium">Belum ada riwayat versi.</span>
+                <span className="text-[12px] font-medium text-slate-500">Belum ada riwayat versi.</span>
               </div>
             )}
 
@@ -205,11 +205,11 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                     {/* Header Row above latest card: Nomor Permohonan (Left) & Jenis Permohonan (Right) */}
                     <div className="flex items-center justify-between gap-2 select-none font-sans">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-xs font-bold text-slate-900 font-mono tracking-tight truncate">{appNumber}</span>
+                        <span className="text-[12px] font-semibold text-slate-800 font-mono tracking-tight truncate">{appNumber}</span>
                       </div>
 
                       <div className="shrink-0">
-                        <span className="text-[11px] font-semibold text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2 py-0.5 rounded-md font-sans">
+                        <span className="text-[11px] font-semibold text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2.5 py-0.5 rounded-md font-sans">
                           {displayType}
                         </span>
                       </div>
@@ -227,12 +227,12 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-md bg-white border border-[#00a389]/20 text-[#00a389] flex items-center justify-center shrink-0 shadow-3xs">
-                              <FileEdit className="w-4.5 h-4.5 text-[#00a389]" />
+                            <div className="w-9 h-9 rounded-md bg-white border border-[#00a389]/20 text-[#00a389] flex items-center justify-center shrink-0 shadow-3xs">
+                              <FileEdit className="w-4 h-4 text-[#00a389]" />
                             </div>
 
                             <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-bold text-slate-900 tracking-tight font-sans">
+                              <span className="text-[12px] font-semibold text-slate-900 tracking-tight font-sans">
                                 Versi Terbaru
                               </span>
 
@@ -241,7 +241,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                                 {snapshotTypeLabelMap[latestSnapshot.snapshotType] || 'Pendaftaran Awal'}
                               </span>
 
-                              <span className="text-[11px] text-slate-400 font-sans truncate mt-0.5">
+                              <span className="text-[11px] text-slate-500 font-sans truncate mt-0.5">
                                 {new Date(latestSnapshot.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} • Oleh {latestSnapshot.actor?.name || 'Petugas'}
                               </span>
                             </div>
@@ -275,18 +275,18 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                           {/* Historical Row Item */}
                           <div
                             onClick={(e) => handleItemClick(e, snap.id)}
-                            className={`px-6 py-4 transition-colors flex flex-col gap-1.5 cursor-pointer group relative ${isExpanded ? 'bg-indigo-50/50' : 'hover:bg-slate-50/70'
+                            className={`px-6 py-3.5 transition-colors flex flex-col gap-1.5 cursor-pointer group relative ${isExpanded ? 'bg-indigo-50/50' : 'hover:bg-slate-50/70'
                               }`}
                           >
                             <div className="flex items-center justify-between gap-3">
 
                               <div className="flex items-center gap-3.5 min-w-0">
-                                <div className="w-9 h-9 rounded-md bg-indigo-50/70 border border-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-100/70 transition-colors">
+                                <div className="w-8.5 h-8.5 rounded-md bg-indigo-50/70 border border-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-100/70 transition-colors">
                                   <FileText className="w-4 h-4 text-indigo-600" />
                                 </div>
 
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-xs font-semibold text-slate-900 font-sans tracking-tight">
+                                  <span className="text-[12px] font-semibold text-slate-900 font-sans tracking-tight">
                                     Versi {versionNum}
                                   </span>
 
@@ -295,7 +295,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                                     {snapshotTypeLabelMap[snap.snapshotType] || 'Snapshot Data'}
                                   </span>
 
-                                  <span className="text-[11px] text-slate-400 font-sans truncate mt-0.5">
+                                  <span className="text-[11px] text-slate-500 font-sans truncate mt-0.5">
                                     {dateStr} • Oleh {actorName}
                                   </span>
                                 </div>
@@ -318,7 +318,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                     <button
                       type="button"
                       onClick={() => setShowMore(true)}
-                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-xs font-medium text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
+                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-[12px] font-medium text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
                     >
                       Tampilkan Lebih Banyak ({historicalSnapshots.length - 4} Versi Lagi)
                     </button>
@@ -332,14 +332,14 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
 
           {/* Footer Minimalist */}
           <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between select-none shrink-0 bg-white font-sans">
-            <span className="text-xs text-slate-400 font-normal">
+            <span className="text-[12px] text-slate-500 font-normal">
               {snapshots.length} versi tercatat
             </span>
 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors cursor-pointer font-sans"
+              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[12px] font-semibold transition-colors cursor-pointer font-sans"
             >
               Tutup
             </button>
@@ -430,10 +430,10 @@ const PortalFloatingPopover: React.FC<{
   const targetList = rawTargetList;
 
   // Calculate Caret Arrow Y coordinate:
-  // Points at targetY (middle of clicked row), clamped within popover vertical boundary
-  const cardH = popoverRef.current ? popoverRef.current.getBoundingClientRect().height : 300;
-  const minCaretY = adjustedTop + 20;
-  const maxCaretY = adjustedTop + cardH - 24;
+  // Points at targetY (middle of clicked row), clamped within screen vertical boundary
+  const windowH = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const minCaretY = 32;
+  const maxCaretY = windowH - 40;
   const caretY = Math.max(minCaretY, Math.min(targetY - 7, maxCaretY));
 
   return createPortal(
@@ -441,72 +441,80 @@ const PortalFloatingPopover: React.FC<{
       {/* Dynamic Caret Arrow pointing to clicked row in left drawer panel */}
       <div
         style={{ top: `${caretY}px`, left: `${left - 7}px` }}
-        className="fixed z-[10001] w-3.5 h-3.5 bg-white border-b border-l border-slate-200/90 rotate-45 pointer-events-none transition-all duration-150"
+        className="fixed z-[10001] w-3.5 h-3.5 bg-white border-b border-l border-slate-200/90 rotate-45 pointer-events-none transition-[top] duration-200 ease-out"
       />
 
       <div
         ref={popoverRef}
-        style={{ top: `${adjustedTop}px`, left: `${left}px` }}
-        className="fixed z-[10000] w-[440px] max-w-[calc(100vw-480px)] max-h-[calc(100vh-32px)] overflow-y-auto scrollbar-thin bg-white border border-slate-200/90 rounded-md shadow-2xl p-5 flex flex-col gap-4 font-sans animate-scaleUp text-xs select-text cursor-default transition-[top] duration-150"
+        style={{
+          top: '16px',
+          left: `${left}px`,
+          height: 'calc(100vh - 32px)',
+          maxHeight: 'calc(100vh - 32px)'
+        }}
+        className="fixed z-[10000] w-[540px] max-w-[calc(100vw-420px)] overflow-y-auto scrollbar-thin bg-white border border-slate-200/90 rounded-md shadow-2xl flex flex-col font-sans animate-scaleUp text-[12px] select-text cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
 
-      {/* Floating Card Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 font-sans z-20">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-900 font-sans tracking-tight">
-            Detail {versionLabel}
-          </span>
-          {snapshotTypeLabelMap[snap.snapshotType] && (
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15' : 'text-slate-600 bg-slate-100'
-              }`}>
-              {snapshotTypeLabelMap[snap.snapshotType]}
+        {/* Sticky Floating Card Header */}
+        <div className="sticky top-0 bg-white/95 backdrop-blur-xs z-30 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between font-sans shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900 font-sans tracking-tight">
+              Detail {versionLabel}
             </span>
-          )}
+            {snapshotTypeLabelMap[snap.snapshotType] && (
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15 border border-[#00a389]/20' : 'text-slate-600 bg-slate-100 border border-slate-200'
+                }`}>
+                {snapshotTypeLabelMap[snap.snapshotType]}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Tutup Detail"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          title="Tutup Detail"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+        {/* Scrollable Content Body */}
+        <div className="p-5 flex flex-col gap-4">
 
       {/* Note Block (Exclusive to Portal Popover) */}
       {snap.note && (
-        <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-xs text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Catatan Versi:</span>
-          <p className="italic text-slate-600 font-sans">"{snap.note}"</p>
+        <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-[12px] font-semibold text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">Catatan Versi:</span>
+          <p className="italic font-semibold text-slate-600 font-sans">"{snap.note}"</p>
         </div>
       )}
 
       {/* Summary Header Rows */}
-      <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-150 grid grid-cols-2 gap-2.5 text-[11px] font-sans">
+      <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-150 grid grid-cols-2 gap-2.5 text-[12px] font-sans">
         <div>
-          <span className="text-slate-400 block text-[10px] font-sans">No. Permohonan</span>
+          <span className="text-slate-500 block text-[11px] font-semibold font-sans">No. Permohonan</span>
           <span className="font-mono font-semibold text-slate-800">{appNumber}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] font-sans">Jenis Layanan</span>
-          <span className="font-medium text-slate-800 font-sans">{typeLabelMap[appType] || appType || '-'}</span>
+          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Jenis Layanan</span>
+          <span className="font-semibold text-slate-800 font-sans">{typeLabelMap[appType] || appType || '-'}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] font-sans">Tanggal Permohonan</span>
-          <span className="font-medium text-slate-700 font-sans">{serviceDate ? new Date(serviceDate).toLocaleDateString('id-ID') : '-'}</span>
+          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Tanggal Permohonan</span>
+          <span className="font-semibold text-slate-700 font-sans">{serviceDate ? new Date(serviceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] font-sans">Estimasi Selesai (SLA)</span>
-          <span className="font-medium text-slate-700 font-sans">{compDate ? new Date(compDate).toLocaleDateString('id-ID') : '-'}</span>
+          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Estimasi Selesai (SLA)</span>
+          <span className="font-semibold text-slate-700 font-sans">{compDate ? new Date(compDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
         </div>
       </div>
 
       {/* Data SPPT Lama */}
       {prevList.length > 0 && (
         <div className="flex flex-col gap-2.5 font-sans">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 font-sans">
+          <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
             <Layers className="w-3.5 h-3.5 text-amber-600" />
             <span>Data SPPT Lama ({prevList.length})</span>
           </span>
@@ -532,13 +540,13 @@ const PortalFloatingPopover: React.FC<{
             const isPrimary = Boolean(item.isPrimary);
 
             return (
-              <div key={pIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2 text-[11px] shadow-3xs font-sans">
+              <div key={pIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
                 {/* Header NOP & Copy/WA */}
-                <div className="flex items-center justify-between font-mono font-semibold text-slate-900 pb-1.5 border-b border-slate-100">
+                <div className="flex items-center justify-between font-mono font-semibold text-slate-800 pb-2 border-b border-slate-100">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-slate-800 truncate">NOP: {nopVal ? formatNop(nopVal) : '-'}</span>
+                    <span className="text-slate-800 truncate font-semibold">NOP: {nopVal ? formatNop(nopVal) : '-'}</span>
                     {isPrimary && (
-                      <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-sans shrink-0">
+                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded font-sans shrink-0">
                         Induk
                       </span>
                     )}
@@ -559,7 +567,7 @@ const PortalFloatingPopover: React.FC<{
                         href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
+                        className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
                         title="Chat WhatsApp WP"
                       >
                         WA: {waVal}
@@ -568,47 +576,45 @@ const PortalFloatingPopover: React.FC<{
                   </div>
                 </div>
 
-                {/* Grid Details */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-sans pt-0.5">
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block text-[10px]">Pemilik:</span>
+                {/* Grid Details (2 Balanced Columns) */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
+                  {/* Row 1: Pemilik (Left) vs No/Jenis Sertifikat (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Pemilik:</span>
                     <span className="font-semibold text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
                   </div>
 
-                  {ownerAddrStr && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Alamat Pemilik:</span>
-                      <span className="text-slate-700 capitalize">{toTitleCase(ownerAddrStr)}</span>
-                    </div>
-                  )}
-
-                  {objAddrStr && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Alamat Objek Pajak:</span>
-                      <span className="text-slate-700 capitalize">{toTitleCase(objAddrStr)}</span>
-                    </div>
-                  )}
-
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Luas Tanah:</span>
-                    <span className="font-medium text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                    <span className="text-slate-500 block text-[11px] font-semibold">No/Jenis Sertifikat:</span>
+                    <span className="font-semibold text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
+                  </div>
+
+                  {/* Row 2: Alamat Pemilik (Left) vs Alamat Objek Pajak (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Pemilik:</span>
+                    <span className="font-semibold text-slate-700 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Luas Bangunan:</span>
-                    <span className="font-medium text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Objek Pajak:</span>
+                    <span className="font-semibold text-slate-700 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
                   </div>
 
-                  {certVal && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">No/Jenis Sertifikat:</span>
-                      <span className="font-medium text-slate-800 capitalize">{toTitleCase(certVal)}</span>
-                    </div>
-                  )}
+                  {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Tanah:</span>
+                    <span className="font-semibold text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                  </div>
 
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Bangunan:</span>
+                    <span className="font-semibold text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                  </div>
+
+                  {/* Row 4: Catatan SPPT (Full Width if exists) */}
                   {notesVal && (
-                    <div className="col-span-2 bg-slate-50 p-2 rounded border border-slate-150 text-[10px] text-slate-600 italic">
-                      <span className="font-semibold not-italic text-slate-500">Catatan SPPT: </span>
+                    <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-semibold text-slate-600 italic mt-0.5">
+                      <span className="font-semibold not-italic text-slate-600">Catatan SPPT: </span>
                       "{notesVal}"
                     </div>
                   )}
@@ -622,7 +628,7 @@ const PortalFloatingPopover: React.FC<{
       {/* Data SPPT Baru */}
       {targetList.length > 0 && (
         <div className="flex flex-col gap-2.5 font-sans">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 font-sans">
+          <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
             <Layers className="w-3.5 h-3.5 text-emerald-600" />
             <span>Data SPPT Baru ({targetList.length})</span>
           </span>
@@ -647,10 +653,10 @@ const PortalFloatingPopover: React.FC<{
             const notesVal = item.notes || item.catatan;
 
             return (
-              <div key={tIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2 text-[11px] shadow-3xs font-sans">
+              <div key={tIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
                 {/* Header NOP Temp & Copy/WA */}
-                <div className="flex items-center justify-between font-mono font-semibold text-slate-900 pb-1.5 border-b border-slate-100">
-                  <span className="text-slate-800 truncate">NOP Temp: {nopVal ? formatNop(nopVal) : '-'}</span>
+                <div className="flex items-center justify-between font-mono font-semibold text-slate-800 pb-2 border-b border-slate-100">
+                  <span className="text-slate-800 truncate font-semibold">NOP Temp: {nopVal ? formatNop(nopVal) : '-'}</span>
                   <div className="flex items-center gap-1.5 font-sans shrink-0">
                     {nopVal && (
                       <button
@@ -667,7 +673,7 @@ const PortalFloatingPopover: React.FC<{
                         href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
+                        className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
                         title="Chat WhatsApp WP"
                       >
                         WA: {waVal}
@@ -676,47 +682,45 @@ const PortalFloatingPopover: React.FC<{
                   </div>
                 </div>
 
-                {/* Grid Details */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-sans pt-0.5">
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block text-[10px]">Pemilik Baru:</span>
+                {/* Grid Details (2 Balanced Columns) */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
+                  {/* Row 1: Pemilik Baru (Left) vs No/Jenis Sertifikat (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Pemilik Baru:</span>
                     <span className="font-semibold text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
                   </div>
 
-                  {ownerAddrStr && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Alamat Pemilik Baru:</span>
-                      <span className="text-slate-700 capitalize">{toTitleCase(ownerAddrStr)}</span>
-                    </div>
-                  )}
-
-                  {objAddrStr && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Alamat Objek Pajak Baru:</span>
-                      <span className="text-slate-700 capitalize">{toTitleCase(objAddrStr)}</span>
-                    </div>
-                  )}
-
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Luas Tanah:</span>
-                    <span className="font-medium text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                    <span className="text-slate-500 block text-[11px] font-semibold">No/Jenis Sertifikat:</span>
+                    <span className="font-semibold text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
+                  </div>
+
+                  {/* Row 2: Alamat Pemilik Baru (Left) vs Alamat Objek Pajak Baru (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Pemilik Baru:</span>
+                    <span className="font-semibold text-slate-700 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Luas Bangunan:</span>
-                    <span className="font-medium text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Objek Pajak Baru:</span>
+                    <span className="font-semibold text-slate-700 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
                   </div>
 
-                  {certVal && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">No/Jenis Sertifikat:</span>
-                      <span className="font-medium text-slate-800 capitalize">{toTitleCase(certVal)}</span>
-                    </div>
-                  )}
+                  {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Tanah:</span>
+                    <span className="font-semibold text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                  </div>
 
+                  <div>
+                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Bangunan:</span>
+                    <span className="font-semibold text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                  </div>
+
+                  {/* Row 4: Catatan SPPT (Full Width if exists) */}
                   {notesVal && (
-                    <div className="col-span-2 bg-slate-50 p-2 rounded border border-slate-150 text-[10px] text-slate-600 italic">
-                      <span className="font-semibold not-italic text-slate-500">Catatan SPPT: </span>
+                    <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-semibold text-slate-600 italic mt-0.5">
+                      <span className="font-semibold not-italic text-slate-600">Catatan SPPT: </span>
                       "{notesVal}"
                     </div>
                   )}
@@ -729,11 +733,12 @@ const PortalFloatingPopover: React.FC<{
 
       {/* Fallback if both lists are empty */}
       {prevList.length === 0 && targetList.length === 0 && (
-        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-md text-center text-slate-400 text-xs font-sans">
+        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-md text-center text-slate-500 text-[12px] font-semibold font-sans">
           Tidak ada rincian data SPPT pada versi ini.
         </div>
       )}
-    </div>
+        </div>
+      </div>
     </>,
     document.body
   );

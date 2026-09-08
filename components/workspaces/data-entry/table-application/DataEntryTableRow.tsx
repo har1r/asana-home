@@ -103,7 +103,7 @@ export interface DataEntryTableRowProps {
   onCopy: (e: React.MouseEvent, text: string) => void;
   onEdit: (item: any) => void;
   onDuplicate: (item: any) => void;
-  onResubmit: (id: string) => void;
+  onResubmit?: (id: string) => void;
   onViewSnapshots?: (item: any) => void;
 }
 
@@ -391,24 +391,6 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
                   </button>
                 )}
               </div>
-
-              {item.status === 'REVISION' && (
-                <div className="py-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMenuOpen(false);
-                      onResubmit(item.id);
-                    }}
-                    disabled={loading}
-                    className="w-full px-3 py-2 text-[12px] text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-amber-600 group-hover:text-amber-700 transition-colors" />
-                    <span>Kirim Ulang Revisi</span>
-                  </button>
-                </div>
-              )}
             </div>,
             document.body
           )}

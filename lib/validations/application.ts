@@ -98,11 +98,11 @@ function validateTargetDataItem(item: z.infer<typeof targetDataItemSchema>, inde
   const basePath = ['targetData', index] as (string | number)[];
 
   requireString(item.nopTemporary, [...basePath, 'nopTemporary'], 'NOP sementara wajib diisi', ctx);
-  requireString(item.ownerName, [...basePath, 'ownerName'], 'Nama pemilik baru wajib diisi', ctx);
   requireString(item.whatsappNumber, [...basePath, 'whatsappNumber'], 'Nomor WhatsApp wajib diisi', ctx);
   if (item.whatsappNumber && !isValidWhatsApp(item.whatsappNumber)) {
     ctx.addIssue({ code: 'custom', message: 'Nomor WhatsApp tidak valid', path: [...basePath, 'whatsappNumber'] });
   }
+  requireString(item.ownerName, [...basePath, 'ownerName'], 'Nama pemilik baru wajib diisi', ctx);
   requireString(item.ownerAddress, [...basePath, 'ownerAddress'], 'Alamat pemilik baru wajib diisi', ctx);
   requireString(item.ownerKecamatan, [...basePath, 'ownerKecamatan'], 'Kecamatan pemilik baru wajib diisi', ctx);
   requireString(item.ownerDesa, [...basePath, 'ownerDesa'], 'Desa pemilik baru wajib diisi', ctx);
