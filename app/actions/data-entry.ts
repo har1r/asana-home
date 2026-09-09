@@ -429,7 +429,13 @@ export async function getHistoryApplications() {
   try {
     const list = await prisma.application.findMany({
       where: {
-        status: { in: ['BUNDLED', 'ARCHIVED', 'MANIFESTED', 'DELIVERED', 'COMPLETED'] }
+        OR: [
+          { status: { in: ['BUNDLED', 'ARCHIVED', 'MANIFESTED', 'DELIVERED', 'COMPLETED'] } },
+          { currentBundleId: { not: null } }
+        ]
+      },
+      include: {
+        currentBundle: true
       },
       orderBy: { createdAt: 'desc' }
     });

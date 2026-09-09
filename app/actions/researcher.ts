@@ -734,6 +734,50 @@ export async function resubmitResearcherApplication(permohonanId: string, note?:
   }
 }
 
+/**
+ * 12. GET HISTORY BUNDLES (Mengambil Seluruh Riwayat Bundle Peneliti)
+ */
+export async function getHistoryBundles() {
+  const session = await getServerSession(authOptions);
+  if (!session || !['RESEARCHER', 'SUPERVISOR', 'PENELITI'].includes((session.user as any).role)) {
+    return { success: false, list: [], error: 'Unauthorized' };
+  }
+
+  try {
+    const rawList = await prisma.bundle.findMany({
+      include: {
+        applications: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const userIds = Array.from(new Set(rawList.map((b: any) => b.createdById).filter(Boolean))) as string[];
+    let userMap = new Map<string, any>();
+    if (userIds.length > 0) {
+      try {
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, email: true }
+        });
+        userMap = new Map(users.map(u => [u.id, u]));
+      } catch (uErr) {
+        // Fallback
+      }
+    }
+
+    const currentUserName = session.user?.name || 'Peneliti';
+    const list = rawList.map((b: any) => ({
+      ...b,
+      createdBy: b.createdBy || (b.createdById ? userMap.get(b.createdById) : null) || { name: currentUserName }
+    }));
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-HISTORY-BUNDLES-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil riwayat bundle.' };
+  }
+}
+
 // =========================================================================
 // BACKWARD COMPATIBILITY EXPORT ALIASES
 // =========================================================================
@@ -744,3 +788,4 @@ export const removePermohonanFromBundle = removeApplicationFromBundle;
 export const getPendingKoreksiForPermohonan = getPendingReturnForApplication;
 export const resubmitPermohonanPeneliti = resubmitResearcherApplication;
 export { getDraftBundles as getBundles };
+

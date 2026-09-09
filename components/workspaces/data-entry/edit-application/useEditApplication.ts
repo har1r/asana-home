@@ -43,9 +43,12 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [statusModal, setStatusModal] = useState({ open: false, status: 'idle' as 'idle' | 'loading' | 'success' | 'error', title: '', message: '' });
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => { setMounted(true); }, []);
 
     // SINKRONISASI DATA EDIT TARGET KE STATE FORM
-    useEffect(() => {
+    const syncDataFromEditTarget = useCallback(() => {
         if (!editTarget) return;
 
         setApplicationType(editTarget.applicationType || editTarget.jenisPermohonan || '');
@@ -114,11 +117,11 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
                 ownerRw: item.rwPemilikBaru || '',
                 ownerKecamatan: item.kecamatanPemilikBaru || '',
                 ownerDesa: item.desaPemilikBaru || '',
-                objectAddress: item.alamatObjekBaru || '',
-                objectBlock: item.blokObjekBaru || '',
-                objectRt: item.rtObjekBaru || '',
-                objectRw: item.rwObjekBaru || '',
-                objectKecamatan: item.kecamatanObjekBaru || '',
+                objectAddress: item.objectAddress || '',
+                objectBlock: item.objectBlock || '',
+                objectRt: item.objectRt || '',
+                objectRw: item.objectRw || '',
+                objectKecamatan: item.objectKecamatan || '',
                 objectDesa: item.desaObjekBaru || '',
                 landArea: item.luasTanahBaru || '',
                 buildingArea: item.luasBangunanBaru || '',
@@ -128,6 +131,18 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
             setTargetData([createEmptyTargetDataItem()]);
         }
     }, [editTarget]);
+
+    useEffect(() => {
+        syncDataFromEditTarget();
+    }, [syncDataFromEditTarget]);
+
+    const handleResetChanges = useCallback(() => {
+        syncDataFromEditTarget();
+        setFormErrors({});
+        setError('');
+        setCurrentStep(1);
+        setStatusModal({ open: true, status: 'success', title: 'Perubahan Dibatalkan', message: 'Isian form dikembalikan ke data awal semula.' });
+    }, [syncDataFromEditTarget]);
 
     // DERIVED VALUES
     const needPreviousData = useMemo(() => SERVICES_NEED_PREVIOUS_DATA.includes(applicationType), [applicationType]);
@@ -390,12 +405,14 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
         statusModalTitle: statusModal.title,
         statusModalMessage: statusModal.message,
         handleCloseStatusModal: () => setStatusModal(prev => ({ ...prev, open: false })),
+        mounted,
 
         // Handlers
         handleNextStep,
         handlePrevStep,
         handleSubmit,
-        handleResetDraft: () => { },
+        handleResetDraft: handleResetChanges,
+        handleResetChanges,
         handleAddPreviousItem: useCallback(() => setPreviousData(prev => [...prev, createEmptyPreviousDataItem()]), []),
         handleRemovePreviousItem: useCallback((idx: number) => setPreviousData(prev => prev.filter((_, i) => i !== idx)), []),
         setPrimaryPreviousItem,

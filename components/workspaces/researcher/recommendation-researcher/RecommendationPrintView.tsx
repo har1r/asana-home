@@ -62,7 +62,7 @@ export const RecommendationPrintView: React.FC<RecommendationPrintViewProps> = R
           </div>
           <h3 className="text-base font-bold text-slate-800 mb-1">Pilih Bundle Terkunci</h3>
           <p className="text-xs text-slate-500 max-w-md leading-relaxed font-normal">
-            Silakan pilih bundle yang berstatus <strong>Terkunci (LOCKED)</strong> dari Tab Kelola Bundle atau dari menu dropdown di atas untuk mencetak Surat Rekomendasi Bundle.
+            Silakan pilih bundle yang berstatus <strong>Terkunci (LOCKED)</strong> dari Tab Kelola Bundle untuk mencetak Surat Rekomendasi Bundle.
           </p>
         </div>
       </div>
