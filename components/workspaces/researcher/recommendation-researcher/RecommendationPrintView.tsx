@@ -74,31 +74,33 @@ export const RecommendationPrintView: React.FC<RecommendationPrintViewProps> = R
 
   return (
     <div className="flex flex-col gap-3 font-sans select-none animate-fadeIn">
-      {/* Dedicated Recommendation Toolbar */}
-      <RecommendationToolbar
-        selectedBundle={selectedBundle}
-        bundlesList={bundlesList}
-        onSelectBundle={onSelectBundle}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onPrint={() => handlePrintBundleCover(selectedBundle.id)}
-        onLockBundle={onLockBundle}
-        isLoading={isRefreshing}
-      />
-
-      {/* Bundle Header Row Above Table (Nomor Bundle di Kiri tanpa background, Status DRAF/TERKUNCI di Kanan) */}
+      {/* Bundle Header Row: Nomor Bundle (Kiri), Status Badge & Action Buttons (Cetak Rekomendasi) (Kanan) */}
       {selectedBundle && (
-        <div className="flex items-center justify-between px-1 py-0.5 select-none font-sans">
+        <div className="flex items-center justify-between gap-3 px-1 py-1 select-none font-sans flex-wrap">
           <h2 className="text-[13px] font-bold text-slate-900 font-sans tracking-tight">
             {formatBundleNumber(selectedBundle.bundleNumber)}
           </h2>
-          <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-md shadow-3xs font-sans ${
-            selectedBundle.status === 'LOCKED'
-              ? 'bg-slate-900 text-white'
-              : 'bg-emerald-50 text-[#008f78] border border-emerald-200'
-          }`}>
-            {selectedBundle.status === 'LOCKED' ? 'TERKUNCI' : 'DRAF'}
-          </span>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-md shadow-3xs font-sans ${
+              selectedBundle.status === 'LOCKED'
+                ? 'bg-slate-900 text-white'
+                : 'bg-emerald-50 text-[#008f78] border border-emerald-200'
+            }`}>
+              {selectedBundle.status === 'LOCKED' ? 'TERKUNCI' : 'DRAF'}
+            </span>
+
+            <RecommendationToolbar
+              selectedBundle={selectedBundle}
+              bundlesList={bundlesList}
+              onSelectBundle={onSelectBundle}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onPrint={() => handlePrintBundleCover(selectedBundle.id)}
+              onLockBundle={onLockBundle}
+              isLoading={isRefreshing}
+            />
+          </div>
         </div>
       )}
 

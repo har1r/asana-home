@@ -113,6 +113,9 @@ export async function getDraftBundles(arg?: any) {
 
   try {
     const rawList = await prisma.bundle.findMany({
+      where: {
+        status: 'DRAFT'
+      },
       include: {
         applications: true,
       },
@@ -745,6 +748,9 @@ export async function getHistoryBundles() {
 
   try {
     const rawList = await prisma.bundle.findMany({
+      where: {
+        status: { not: 'DRAFT' }
+      },
       include: {
         applications: true,
       },

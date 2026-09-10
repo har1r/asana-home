@@ -12,4 +12,5 @@ export { default as TrackingTab } from './shared/TrackingTab';
 export { default as ProjectDetailsDrawer } from './shared/ProjectDetailsDrawer';
 export { default as DataEntryHistory } from './data-entry-history/DataEntryHistory';
 export { default as ResearcherHistory } from './researcher-history/ResearcherHistory';
+export { default as ArchivistHistory } from './archivist-history/ArchivistHistory';
 

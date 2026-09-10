@@ -93,7 +93,7 @@ export const QueueToolbar: React.FC<QueueToolbarProps> = React.memo(({
   return (
     <div className="flex flex-col gap-3 font-sans select-none">
       {/* TIER 1: SEARCH & CONTROLS TOOLBAR (JUSTIFY BETWEEN) */}
-      <div className="p-3 border border-slate-200/90 rounded-md bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-3xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Left Side: Search Bar */}
         <div className="relative w-full md:w-[403px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

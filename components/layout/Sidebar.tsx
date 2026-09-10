@@ -190,14 +190,15 @@ export default function Sidebar() {
   }, []);
 
   const isResearcherRole = ['RESEARCHER', 'PENELITI'].includes(userRoleRaw);
+  const isArchivistRole = ['ARCHIVIST', 'PENGARSIP'].includes(userRoleRaw);
 
   // Menu Navigasi Utama
   const mainMenuItems: MenuItem[] = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     {
-      id: isResearcherRole ? 'bundle-history' : 'submission-history',
-      label: isResearcherRole ? 'Riwayat Bundle' : 'Riwayat Pengajuan',
+      id: isResearcherRole ? 'bundle-history' : isArchivistRole ? 'archivist-history' : 'submission-history',
+      label: isResearcherRole ? 'Riwayat Bundle' : isArchivistRole ? 'Riwayat Digitalisasi' : 'Riwayat Pengajuan',
       icon: History
     },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },

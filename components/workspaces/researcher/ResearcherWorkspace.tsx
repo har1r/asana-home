@@ -164,51 +164,53 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
           <h1 className="text-lg font-bold text-slate-900 tracking-tight">Ruang Kerja Saya</h1>
         </div>
 
-        {/* Action Header: Tombol Refresh Data */}
-        <button
-          onClick={handleGlobalRefresh}
-          disabled={isGlobalRefreshing}
-          className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
-          title="Refresh Seluruh Data Workspace"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isGlobalRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
-        </button>
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* VIEW MODE SWITCHER TABS (RIGHT-ALIGNED NAV TABS) */}
+          <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md flex items-center gap-1 shadow-2xs font-sans select-none">
+            <button
+              onClick={() => handleSwitchStep('bundle')}
+              className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                viewMode === 'bundle'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <span>Kelola Bundle</span>
+            </button>
 
-      {/* 1. VIEW MODE SWITCHER TABS (NAV TABS ABOVE KPI) */}
-      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-lg grid grid-cols-3 gap-1 shadow-2xs">
-        <button
-          onClick={() => handleSwitchStep('bundle')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-            viewMode === 'bundle'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <span>Kelola Bundle</span>
-        </button>
+            <button
+              onClick={() => handleSwitchStep('list')}
+              className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <span>Antrean Permohonan</span>
+            </button>
 
-        <button
-          onClick={() => handleSwitchStep('list')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-            viewMode === 'list'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <span>Antrean Permohonan</span>
-        </button>
+            <button
+              onClick={() => handleSwitchStep('print')}
+              className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                viewMode === 'print'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <span>Cetak Rekomendasi</span>
+            </button>
+          </div>
 
-        <button
-          onClick={() => handleSwitchStep('print')}
-          className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-            viewMode === 'print'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <span>Cetak Rekomendasi</span>
-        </button>
+          {/* Action Header: Tombol Refresh Data */}
+          <button
+            onClick={handleGlobalRefresh}
+            disabled={isGlobalRefreshing}
+            className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
+            title="Refresh Seluruh Data Workspace"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGlobalRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* 2. TOP KPI STRIP */}
@@ -231,6 +233,9 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
         }}
       />
 
+      {/* THIN DIVIDER LINE BELOW KPI STRIP */}
+      <div className="w-full border-b border-slate-200/80 my-0.5" />
+
       {/* 3. TAB 1: BUNDLE MANAGEMENT VIEW */}
       {viewMode === 'bundle' && (
         <div className="flex flex-col gap-4">
@@ -250,7 +255,7 @@ export default function ResearcherWorkspace({ initialTab = 'bundle' }: Researche
 
           {/* Bundle Cards Grid (Directly on main content background) */}
           <div className="min-h-[300px] w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
               {bundleMgmt.visibleBundles.length > 0 ? (
                 bundleMgmt.visibleBundles.map((b) => (
                   <BundleCard

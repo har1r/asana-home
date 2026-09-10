@@ -141,15 +141,15 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
   return (
     <div
       onClick={() => onSelect(b)}
-      className={`p-3.5 rounded-md border flex flex-col justify-between gap-2.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
+      className={`p-3 rounded-md border flex flex-col justify-between gap-2 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
         isSelected
           ? 'bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20'
           : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
       }`}
     >
       {/* Top Row: Number & Vertical 3-Dots Dropdown (Sejajar dengan Nomor Bundle) */}
-      <div className="flex items-start justify-between gap-2 w-full">
-        <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight break-all whitespace-normal block" title={bundleNumber}>
+      <div className="flex items-start justify-between gap-1.5 w-full">
+        <span className="text-[12px] font-normal text-slate-800 font-mono tracking-tight break-all whitespace-normal block" title={bundleNumber}>
           {bundleNumber}
         </span>
 
@@ -164,7 +164,7 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
             className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Opsi Bundle"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-3.5 h-3.5" />
           </button>
 
           {menuOpen && (
@@ -202,17 +202,17 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
       </div>
 
       {/* Middle Row: Service Type Tag | Status | Count Badge Centered Horizontally */}
-      <div className="flex items-center justify-center gap-2 w-full py-0.5 flex-wrap sm:flex-nowrap">
+      <div className="flex items-center justify-center gap-1.5 w-full py-0.5 flex-wrap sm:flex-nowrap">
         {/* Service Type Tag */}
-        <span className={`inline-flex px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={displayJenisTitle}>
+        <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[11px] font-normal border leading-none select-none tracking-wide uppercase font-sans ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`} title={displayJenisTitle}>
           {displayJenis}
         </span>
 
         {/* Thin Vertical Line Separator 1 */}
-        <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
+        <div className="h-3 w-px bg-slate-200/90 shrink-0" />
 
         {/* Status Pill Badge */}
-        <span className={`px-2 py-0.5 rounded-full text-[13px] font-normal border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 font-sans ${
+        <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-normal border leading-none capitalize tracking-wider flex items-center gap-1 shadow-3xs transition-all shrink-0 font-sans ${
           status === 'LOCKED'
             ? 'bg-slate-900 text-slate-100 border-slate-800'
             : status === 'IN_MANIFEST'
@@ -226,25 +226,25 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
         </span>
 
         {/* Thin Vertical Line Separator 2 */}
-        <div className="h-3.5 w-px bg-slate-200/90 shrink-0" />
+        <div className="h-3 w-px bg-slate-200/90 shrink-0" />
 
         {/* Count Badge */}
-        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[13px] font-normal px-2 py-0.5 rounded-md leading-none shrink-0 shadow-3xs font-sans" title={`${berkasCount} Permohonan NOPEL (${pemohonCount} Pemohon)`}>
+        <span className="flex items-center justify-center bg-[#f25c54] text-white text-[11px] font-normal px-1.5 py-0.5 rounded-md leading-none shrink-0 shadow-3xs font-sans" title={`${berkasCount} Permohonan NOPEL (${pemohonCount} Pemohon)`}>
           {pemohonCount} Pemohon
         </span>
       </div>
 
       {/* Bottom Row: Peneliti Profile Initials Avatar & Creation Date */}
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/80 text-[13px] text-slate-600 font-normal select-none mt-auto font-sans">
+      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100/80 text-[11px] text-slate-500 font-normal select-none mt-auto font-sans">
         {/* Peneliti Avatar Initials */}
         <div className="flex items-center gap-1.5 min-w-0" title={`Pembuat Bundle: ${penelitiName}`}>
-          <div className="w-5 h-5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-3xs font-sans">
+          <div className="w-4.5 h-4.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
             {getInitials(penelitiName)}
           </div>
         </div>
 
         {/* Creation Date */}
-        <span className="font-mono text-[13px] text-slate-600 font-normal shrink-0">
+        <span className="font-mono text-[11px] text-slate-500 font-normal shrink-0">
           {b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
         </span>
       </div>

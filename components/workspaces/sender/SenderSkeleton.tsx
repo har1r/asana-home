@@ -3,30 +3,40 @@
 import React from "react";
 import { SkeletonBox, SkeletonText } from "@/components/skeletons/SkeletonBase";
 
-/** Skeleton dasar KPI Strip & Tabs untuk PengirimWorkspace */
+/** Skeleton dasar Header & KPI Strip untuk PengirimWorkspace */
 export function PengirimBaseHeaderSkeleton() {
   return (
     <>
-      {/* TIER 1: KPI STATS STRIP (4 Cards) */}
-      <div className="bg-white border border-slate-200/90 rounded-md p-1.5 shadow-3xs select-none">
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="p-3 px-3.5 flex items-center justify-between gap-2 rounded-md">
-              <div className="flex flex-col gap-1.5 w-full">
-                <SkeletonBox width="w-20" height="h-3" rounded="rounded-sm" />
-                <SkeletonBox width="w-12" height="h-5" rounded="rounded-sm" />
-              </div>
-              <SkeletonBox width="w-8" height="h-4" rounded="rounded-sm" />
-            </div>
-          ))}
+      {/* TIER 1: TOP BANNER & SWITCHER TABS */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none font-sans">
+        <SkeletonBox width="w-44" height="h-6" rounded="rounded-md" />
+        <div className="flex items-center gap-2">
+          <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md flex items-center gap-1 shadow-2xs">
+            <SkeletonBox width="w-36" height="h-7" rounded="rounded-md" />
+            <SkeletonBox width="w-32" height="h-7" rounded="rounded-md" />
+          </div>
+          <SkeletonBox width="w-9" height="h-9" rounded="rounded-md" />
         </div>
       </div>
 
-      {/* TIER 2: VIEW MODE SWITCHER TABS (2 Equal Tabs) */}
-      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none">
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
+      {/* TIER 2: 4 KPI CARDS GRID WITH SPARKLINE SKELETON */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-1 select-none font-sans">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between h-[110px]">
+            <div className="flex flex-col gap-1.5">
+              <SkeletonBox width="w-24" height="h-4" rounded="rounded-sm" />
+              <SkeletonBox width="w-36" height="h-3" rounded="rounded-sm" />
+            </div>
+            <div className="flex items-end justify-between gap-2 mt-2">
+              <SkeletonBox width="w-16" height="h-7" rounded="rounded-sm" />
+              <SkeletonBox width="w-20" height="h-8" rounded="rounded-sm" />
+            </div>
+          </div>
+        ))}
       </div>
+
+      {/* THIN DIVIDER LINE BELOW KPI STRIP */}
+      <div className="w-full border-b border-slate-200/80 my-0.5" />
     </>
   );
 }
@@ -90,22 +100,21 @@ export function PengirimKelolaSkeleton() {
           <SkeletonBox width="w-32" height="h-9" rounded="rounded-md" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 border border-slate-200/90 rounded-md p-4 flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="border border-slate-200/90 rounded-md p-4 flex flex-col gap-4 h-[420px]">
             <SkeletonBox width="w-36" height="h-4" rounded="rounded-sm" />
-            <SkeletonBox width="w-full" height="h-10" rounded="rounded-md" />
             <div className="flex flex-col gap-2 pt-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <SkeletonBox key={i} width="w-full" height="h-14" rounded="rounded-md" />
+                <SkeletonBox key={i} width="w-full" height="h-16" rounded="rounded-md" />
               ))}
             </div>
           </div>
 
-          <div className="lg:col-span-2 border border-slate-200/90 rounded-md p-4 flex flex-col gap-4">
-            <SkeletonBox width="w-48" height="h-4" rounded="rounded-sm" />
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <SkeletonBox key={i} width="w-full" height="h-20" rounded="rounded-md" />
+          <div className="border border-slate-200/90 rounded-md p-4 flex flex-col gap-4 h-[420px]">
+            <SkeletonBox width="w-36" height="h-4" rounded="rounded-sm" />
+            <div className="flex flex-col gap-2 pt-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonBox key={i} width="w-full" height="h-16" rounded="rounded-md" />
               ))}
             </div>
           </div>

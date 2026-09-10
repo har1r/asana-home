@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import { notifyAllUsersOfRole } from "@/lib/notifications";
 import { UserRole } from "@prisma/client";
+import { checkAllApplicationsArchived } from "@/lib/archiveHelpers";
 
 /**
  * Action: Get all bundles in LOCKED status that are fully digitalized
@@ -33,11 +34,7 @@ export async function getEligibleBundles() {
 
     const eligibleList = list.filter((b: any) => {
       const apps = b.applications || b.permohonan || [];
-      return (
-        !b.currentManifestId &&
-        apps.length > 0 &&
-        apps.every((p: any) => p.status === "ARCHIVED" || p.status === "BUNDLED" || p.status === "SUBMITTED")
-      );
+      return !b.currentManifestId && checkAllApplicationsArchived(apps);
     });
 
     return { success: true, list: eligibleList };
@@ -656,10 +653,7 @@ export async function getPengirimStats() {
 
     const eligibleBundles = list.filter((b: any) => {
       const apps = b.applications || b.permohonan || [];
-      return (
-        apps.length > 0 &&
-        apps.every((p: any) => p.status === "ARCHIVED" || p.status === "BUNDLED" || p.status === "SUBMITTED")
-      );
+      return checkAllApplicationsArchived(apps);
     }).length;
 
     return {

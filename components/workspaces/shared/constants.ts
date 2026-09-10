@@ -264,7 +264,7 @@ export const getAbbreviatedJenis = (jenis: string) => {
       return 'AKT';
     case 'MUTASI_PENGGABUNGAN':
     case 'MERGER_MUTATION':
-      return 'MPG';
+      return 'MG';
     default:
       return jenis;
   }

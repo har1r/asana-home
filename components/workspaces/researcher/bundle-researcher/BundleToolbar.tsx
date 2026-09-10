@@ -45,8 +45,8 @@ export const BundleToolbar: React.FC<BundleToolbarProps> = React.memo(({
 
   return (
     <div className="flex flex-col gap-3 font-sans select-none">
-      {/* Search Bar & Controls Card */}
-      <div className="p-3 border border-slate-200/90 rounded-md bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-3xs">
+      {/* Search Bar & Controls Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Search input for Bundles */}
         <div className="relative w-full md:w-[403px] max-w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />

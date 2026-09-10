@@ -36,12 +36,8 @@ export function PenelitiBaseHeaderSkeleton() {
         </div>
       </div>
 
-      {/* TIER 2: VIEW MODE SWITCHER TABS (3 Equal Tabs) */}
-      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-3 gap-1 shadow-3xs select-none">
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-      </div>
+      {/* THIN DIVIDER LINE BELOW KPI STRIP */}
+      <div className="w-full border-b border-slate-200/80 my-0.5" />
     </>
   );
 }

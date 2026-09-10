@@ -22,11 +22,8 @@ export function PengarsipBaseHeaderSkeleton() {
         </div>
       </div>
 
-      {/* TIER 2: VIEW MODE SWITCHER TABS (2 Equal Tabs) */}
-      <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md grid grid-cols-2 gap-1 shadow-3xs select-none">
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-        <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
-      </div>
+      {/* THIN DIVIDER LINE BELOW KPI STRIP */}
+      <div className="w-full border-b border-slate-200/80 my-0.5" />
     </>
   );
 }
@@ -55,7 +52,7 @@ export function PengarsipBundleSkeleton() {
         </div>
 
         {/* Grid of bundle cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="p-4 rounded-2xl border border-slate-200/90 bg-white flex flex-col justify-between gap-3.5 min-h-[110px]">
               <div className="flex items-center justify-between gap-3">
