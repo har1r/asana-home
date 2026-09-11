@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, CheckCircle, Plus, ArrowLeft, RotateCcw, Layers, X } from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
 import { ActionStatusModal } from '../../shared/ActionStatusModal';
+import { FormFloatingDock } from '../../shared/FormFloatingDock';
 import { useEditApplication } from './useEditApplication';
 import { StepHeader } from '../form-application/StepHeader';
 import { StepMainData } from '../form-application/StepMainData';
@@ -30,7 +30,6 @@ const getWhatsAppContainerClass = (hasError?: boolean) => {
 
 export const EditApplication: React.FC<EditApplicationProps> = React.memo(({ editTarget, onCancel, onSuccess }) => {
     const form = useEditApplication({ editTarget, onSuccess, onCancel });
-    const [speedDialOpen, setSpeedDialOpen] = useState(false);
 
     if (!editTarget) return null;
 
@@ -101,7 +100,7 @@ export const EditApplication: React.FC<EditApplicationProps> = React.memo(({ edi
                         onTargetItemChange={form.handleTargetItemChange}
                         onCopyOwnerFromPrevious={form.handleCopyOwnerFromPrevious}
                         onCopyObjectFromPrevious={form.handleCopyObjectFromPrevious}
-                        onCopyObjectToOwner={form.handleCopyObjectToOwner}
+                        onCopyOwnerToObject={form.handleCopyOwnerToObject}
                         needPreviousData={form.needPreviousData}
                         previousData={form.previousData}
                         formErrors={form.formErrors}
@@ -158,153 +157,24 @@ export const EditApplication: React.FC<EditApplicationProps> = React.memo(({ edi
                 onClose={form.handleCloseStatusModal}
             />
 
-            {/* [3] FLOATING STICKY SPEED DIAL MENU (KANAN TENGAH LAYAR) */}
-            {form.mounted && createPortal(
-                <>
-                    {/* BACKDROP CLICK OUTSIDE */}
-                    {speedDialOpen && (
-                        <div
-                            className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[1px] animate-fadeIn cursor-pointer"
-                            onClick={() => setSpeedDialOpen(false)}
-                        />
-                    )}
-
-                    <div className="fixed right-5 top-1/2 -translate-y-1/2 z-50 flex flex-col items-end gap-3 font-sans select-none pointer-events-none">
-                        {/* EXPANDED MENU ITEMS */}
-                        <div
-                            className={`flex flex-col items-end gap-2.5 transition-all duration-300 transform origin-bottom-right ${
-                                speedDialOpen
-                                    ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-                                    : 'opacity-0 scale-95 translate-y-4 pointer-events-none hidden'
-                            }`}
-                        >
-                            {/* TOMBOL KEMBALI KE HALAMAN UTAMA / BATAL */}
-                            <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); onCancel(); }}
-                                disabled={form.loading}
-                                className="group h-10 px-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 hover:border-slate-300 shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                title="Kembali ke Halaman Utama"
-                            >
-                                <ArrowLeft className="w-4 h-4 stroke-[2.5] text-slate-600 shrink-0" />
-                                <span className="text-xs font-medium text-slate-700 whitespace-nowrap pr-0.5">
-                                    Kembali
-                                </span>
-                            </button>
-
-                            {/* TOMBOL RESET PERUBAHAN */}
-                            <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handleResetChanges(); }}
-                                disabled={form.loading}
-                                className="group h-10 px-3.5 rounded-full bg-white hover:bg-amber-50 text-amber-700 border border-amber-200/80 hover:border-amber-300 shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                title="Kembalikan data ke awal semula"
-                            >
-                                <RotateCcw className="w-3.5 h-3.5 stroke-[2.5] text-amber-600 shrink-0" />
-                                <span className="text-xs font-medium text-amber-700 whitespace-nowrap pr-0.5">
-                                    Reset Perubahan
-                                </span>
-                            </button>
-
-                            {/* TOMBOL LANGKAH SEBELUMNYA */}
-                            {form.currentStep > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handlePrevStep(e); }}
-                                    disabled={form.loading}
-                                    className="group h-10 px-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 hover:border-slate-300 shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                    title="Kembali ke langkah sebelumnya"
-                                >
-                                    <ChevronLeft className="w-4 h-4 stroke-[2.5] text-slate-600 shrink-0" />
-                                    <span className="text-xs font-medium text-slate-700 whitespace-nowrap pr-0.5">
-                                        Sebelumnya
-                                    </span>
-                                </button>
-                            )}
-
-                            {/* TOMBOL TAMBAH SPPT LAMA (STEP 2 & MERGER_MUTATION) */}
-                            {(form.currentStep === 2 || form.currentStepLabel === 'Data SPPT Lama' || form.currentStepLabel === 'Data Lama (Asal)') && form.applicationType === 'MERGER_MUTATION' && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handleAddPreviousItem(); }}
-                                    disabled={form.loading}
-                                    className="group h-10 px-3.5 rounded-full bg-[#00a389] hover:bg-[#008f78] text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                    title="Tambah SPPT Lama"
-                                >
-                                    <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
-                                    <span className="text-xs font-semibold text-white whitespace-nowrap pr-0.5">
-                                        Tambah SPPT Lama
-                                    </span>
-                                </button>
-                            )}
-
-                            {/* TOMBOL TAMBAH PEMILIK BARU (STEP 3 & PARTIAL_MUTATION) */}
-                            {(form.currentStep === 3 || form.currentStepLabel === 'Data SPPT Baru' || form.currentStepLabel === 'Data Baru') && form.applicationType === 'PARTIAL_MUTATION' && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handleAddTargetItem(); }}
-                                    disabled={form.loading}
-                                    className="group h-10 px-3.5 rounded-full bg-[#00a389] hover:bg-[#008f78] text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                    title="Tambah Pemilik Baru"
-                                >
-                                    <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
-                                    <span className="text-xs font-semibold text-white whitespace-nowrap pr-0.5">
-                                        Tambah Pemilik Baru
-                                    </span>
-                                </button>
-                            )}
-
-                            {/* TOMBOL SELANJUTNYA / SIMPAN PERUBAHAN */}
-                            {form.currentStep < form.steps.length ? (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handleNextStep(e); }}
-                                    disabled={form.loading}
-                                    className="group h-10 px-3.5 rounded-full bg-[#00a389] hover:bg-[#008f78] text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                    title="Lanjut ke langkah berikutnya"
-                                >
-                                    <ChevronRight className="w-4 h-4 stroke-[2.5] shrink-0" />
-                                    <span className="text-xs font-semibold text-white whitespace-nowrap pr-0.5">
-                                        Selanjutnya
-                                    </span>
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); setSpeedDialOpen(false); form.handleSubmit(e as any); }}
-                                    disabled={form.loading}
-                                    className="group h-10 px-3.5 rounded-full bg-[#00a389] hover:bg-[#008f78] text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
-                                    title="Simpan Perubahan"
-                                >
-                                    <CheckCircle className="w-4 h-4 stroke-[2.2] shrink-0" />
-                                    <span className="text-xs font-semibold text-white whitespace-nowrap pr-0.5">
-                                        Simpan Perubahan
-                                    </span>
-                                </button>
-                            )}
-                        </div>
-
-                        {/* MASTER TRIGGER FAB BUTTON */}
-                        <button
-                            type="button"
-                            onClick={() => setSpeedDialOpen(prev => !prev)}
-                            className={`pointer-events-auto h-12 w-12 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center cursor-pointer active:scale-95 ${
-                                speedDialOpen
-                                    ? 'bg-slate-800 hover:bg-slate-900 text-white rotate-90 scale-105'
-                                    : 'bg-[#00a389] hover:bg-[#008f78] text-white hover:scale-105'
-                            }`}
-                            title={speedDialOpen ? 'Tutup Menu' : 'Menu Aksi Cepat'}
-                        >
-                            {speedDialOpen ? (
-                                <X className="w-6 h-6 stroke-[2.5]" />
-                            ) : (
-                                <Layers className="w-6 h-6 stroke-[2.2]" />
-                            )}
-                        </button>
-                    </div>
-                </>,
-                document.body
-            )}
+            {/* FLOATING STICKY SPEED DIAL MENU (SHARED COMPONENT) */}
+            <FormFloatingDock
+                mounted={form.mounted}
+                loading={form.loading}
+                currentStep={form.currentStep}
+                totalSteps={form.steps.length}
+                currentStepLabel={form.currentStepLabel}
+                applicationType={form.applicationType}
+                onCancel={onCancel}
+                onReset={form.handleResetChanges}
+                resetLabel="Reset Perubahan"
+                onPrevStep={form.handlePrevStep}
+                onNextStep={form.handleNextStep}
+                onSubmit={(e) => form.handleSubmit(e as any)}
+                submitLabel="Simpan Perubahan"
+                onAddPreviousItem={form.handleAddPreviousItem}
+                onAddTargetItem={form.handleAddTargetItem}
+            />
         </div>
     );
 });

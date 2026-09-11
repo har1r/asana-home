@@ -12,14 +12,14 @@ interface StepTargetDataProps {
     onTargetItemChange: (idx: number, field: string, val: any) => void;
     onCopyOwnerFromPrevious: (targetIdx: number) => void;
     onCopyObjectFromPrevious: (targetIdx: number) => void;
-    onCopyObjectToOwner: (targetIdx: number) => void;
+    onCopyOwnerToObject: (targetIdx: number) => void;
     needPreviousData: boolean;
     previousData: any[];
     formErrors: Record<string, string>;
     loading: boolean;
     getInputClass: (hasError?: boolean, extraClass?: string) => string;
     getWhatsAppContainerClass: (hasError?: boolean) => string;
-    getPrimaryNopDisplay: (previousData: any[]) => string;
+    getPrimaryNopDisplay: (previousData: any[], applicationType?: string) => string;
 }
 
 export const StepTargetData: React.FC<StepTargetDataProps> = ({
@@ -30,7 +30,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
     onTargetItemChange,
     onCopyOwnerFromPrevious,
     onCopyObjectFromPrevious,
-    onCopyObjectToOwner,
+    onCopyOwnerToObject,
     needPreviousData,
     previousData,
     formErrors,
@@ -71,37 +71,42 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
 
                             {/* ROW 1: NOP SEMENTARA & WA PEMOHON */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[13px] font-normal text-slate-700 font-sans flex items-center justify-between">
-                                        <span>
-                                            Nomor Objek Pajak {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs">(Opsional)</span>}
-                                        </span>
-                                        <span className={`text-xs font-mono pr-1 ${(item.nopTemporary || '').replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
-                                            {(item.nopTemporary || '').replace(/[^\d]/g, '').length}/18
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id={`targetData.${idx}.nopTemporary`}
-                                        autoComplete="off"
-                                        maxLength={24}
-                                        placeholder={getPrimaryNopDisplay(previousData)}
-                                        value={item.nopTemporary || ''}
-                                        onChange={(e) => {
-                                            const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
-                                            let fmt = raw;
-                                            if (raw.length > 2) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
-                                            if (raw.length > 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
-                                            if (raw.length > 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
-                                            if (raw.length > 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
-                                            if (raw.length > 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
-                                            if (raw.length > 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
-                                            onTargetItemChange(idx, 'nopTemporary', fmt);
-                                        }}
-                                        disabled={loading}
-                                        className={getInputClass(!!formErrors[`targetData.${idx}.nopTemporary`], 'font-mono tracking-wide')}
-                                    />
-                                </div>
+                                {(() => {
+                                    const isAutoPrefilled = applicationType !== 'NEW_TAX_OBJECT';
+                                    return (
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-[13px] font-normal text-slate-700 font-sans flex items-center justify-between">
+                                                <span>
+                                                    Nomor Objek Pajak {applicationType === 'NEW_TAX_OBJECT' ? <span className="text-red-500">*</span> : <span className="text-slate-400 text-xs font-sans">(Otomatis)</span>}
+                                                </span>
+                                                <span className={`text-xs font-mono pr-1 ${(item.nopTemporary || '').replace(/[^\d]/g, '').length === 18 ? 'text-[#00a389]' : 'text-slate-400'}`}>
+                                                    {(item.nopTemporary || '').replace(/[^\d]/g, '').length}/18
+                                                </span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id={`targetData.${idx}.nopTemporary`}
+                                                autoComplete="off"
+                                                maxLength={24}
+                                                placeholder={getPrimaryNopDisplay(previousData, applicationType)}
+                                                value={item.nopTemporary || ''}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value.replace(/[^\d]/g, '').slice(0, 18);
+                                                    let fmt = raw;
+                                                    if (raw.length > 2) fmt = raw.slice(0, 2) + '.' + raw.slice(2);
+                                                    if (raw.length > 4) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4);
+                                                    if (raw.length > 7) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7);
+                                                    if (raw.length > 10) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10);
+                                                    if (raw.length > 13) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13);
+                                                    if (raw.length > 17) fmt = raw.slice(0, 2) + '.' + raw.slice(2, 4) + '.' + raw.slice(4, 7) + '.' + raw.slice(7, 10) + '.' + raw.slice(10, 13) + '-' + raw.slice(13, 17) + '.' + raw.slice(17);
+                                                    onTargetItemChange(idx, 'nopTemporary', fmt);
+                                                }}
+                                                disabled={loading || isAutoPrefilled}
+                                                className={getInputClass(!!formErrors[`targetData.${idx}.nopTemporary`], `font-mono tracking-wide ${isAutoPrefilled ? 'bg-slate-100/90 text-slate-600 cursor-not-allowed select-none border-slate-200/80' : ''}`)}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">No. WhatsApp Pemohon <span className="text-red-500">*</span></label>
@@ -158,28 +163,17 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
                                             <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Pemohon <span className="text-red-500">*</span></label>
-                                            <div className="flex items-center gap-1.5 flex-wrap select-none">
-                                                {needPreviousData && previousData.length > 0 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onCopyOwnerFromPrevious(idx)}
-                                                        className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans"
-                                                        title="Salin alamat pemilik dari Data Lama"
-                                                    >
-                                                        <Copy className="w-3 h-3" />
-                                                        <span>Salin data wajib pajak lama</span>
-                                                    </button>
-                                                )}
+                                            {needPreviousData && previousData.length > 0 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => onCopyObjectToOwner(idx)}
+                                                    onClick={() => onCopyOwnerFromPrevious(idx)}
                                                     className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans"
-                                                    title="Samakan alamat pemilik dengan alamat objek baru"
+                                                    title="Salin alamat pemilik dari Data Lama"
                                                 >
                                                     <Copy className="w-3 h-3" />
-                                                    <span>Samakan data objek pajak lama</span>
+                                                    <span>Salin data wajib pajak lama</span>
                                                 </button>
-                                            </div>
+                                            )}
                                         </div>
                                         <input
                                             type="text"
@@ -257,7 +251,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                                 type="number"
                                                 id={`targetData.${idx}.landArea`}
                                                 placeholder="200"
-                                                value={item.landArea}
+                                                value={item.landArea !== undefined && item.landArea !== null && item.landArea !== '' ? item.landArea : 0}
                                                 onChange={(e) => onTargetItemChange(idx, 'landArea', e.target.value)}
                                                 disabled={loading}
                                                 className={getInputClass(!!formErrors[`targetData.${idx}.landArea`], 'pl-3.5 pr-10')}
@@ -275,17 +269,28 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
                                             <label className="text-[13px] font-normal text-slate-700 font-sans">Alamat Objek Pajak<span className="text-red-500">*</span></label>
-                                            {needPreviousData && previousData.length > 0 && (
+                                            <div className="flex items-center gap-1.5 flex-wrap select-none">
+                                                {needPreviousData && previousData.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onCopyObjectFromPrevious(idx)}
+                                                        className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans"
+                                                        title="Salin alamat objek dari Data Lama"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                        <span>Salin data objek pajak lama</span>
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
-                                                    onClick={() => onCopyObjectFromPrevious(idx)}
+                                                    onClick={() => onCopyOwnerToObject(idx)}
                                                     className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans"
-                                                    title="Salin alamat objek dari Data Lama"
+                                                    title="Salin alamat pemohon yang sudah diisi ke alamat objek pajak ini"
                                                 >
                                                     <Copy className="w-3 h-3" />
-                                                    <span>Salin data objek pajak lama</span>
+                                                    <span>Salin data alamat pemohon</span>
                                                 </button>
-                                            )}
+                                            </div>
                                         </div>
                                         <input
                                             type="text"
@@ -351,7 +356,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Bangunan <span className="text-slate-400 text-xs">(Opsional)</span></label>
                                         <div className="relative">
-                                            <input type="number" placeholder="120 (0 jika tanah kosong)" value={item.buildingArea} onChange={(e) => onTargetItemChange(idx, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
+                                            <input type="number" placeholder="120 (0 jika tanah kosong)" value={item.buildingArea !== undefined && item.buildingArea !== null && item.buildingArea !== '' ? item.buildingArea : 0} onChange={(e) => onTargetItemChange(idx, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
                                             <span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                                         </div>
                                     </div>

@@ -9,14 +9,17 @@ export interface DataEntryKpiStripProps {
   displayMode?: 'permohonan' | 'pemohon';
 }
 
+const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
+
 // ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const width = 84;
   const height = 40;
   const maxVal = Math.max(...data, 1);
-  const barWidth = 7;
-  const gap = 5;
+  const isFourPoints = data.length === 4;
+  const barWidth = isFourPoints ? 13 : 7;
+  const gap = isFourPoints ? 8 : 5;
 
   return (
     <div className="relative group/chart">
@@ -47,7 +50,7 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
@@ -116,9 +119,42 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
+    </div>
+  );
+};
+
+// Helper badge component for dynamic Week-over-Week growth rendering
+const GrowthBadge: React.FC<{
+  growthPct: number;
+  subtext: string;
+  positiveColorClass?: string;
+  inverted?: boolean;
+}> = ({ growthPct, subtext, positiveColorClass = 'text-emerald-600', inverted = false }) => {
+  const isPositive = growthPct > 0;
+  const isNegative = growthPct < 0;
+
+  let colorClass = 'text-slate-500';
+  let Icon = TrendingUp;
+
+  if (isPositive) {
+    colorClass = inverted ? 'text-rose-600' : positiveColorClass;
+    Icon = TrendingUp;
+  } else if (isNegative) {
+    colorClass = inverted ? 'text-emerald-600' : 'text-rose-600';
+    Icon = TrendingDown;
+  }
+
+  const formattedVal = isPositive ? `+${growthPct}%` : `${growthPct}%`;
+
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-medium ${colorClass}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>
+        {formattedVal} <span className="text-slate-400 font-normal">{subtext}</span>
+      </span>
     </div>
   );
 };
@@ -147,10 +183,11 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {metrics.totalActive.toLocaleString('id-ID')}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>+{Math.max(1, Math.abs(metrics.totalGrowthPct))}% <span className="text-slate-400 font-normal">periode</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={metrics.totalGrowthPct}
+              subtext="vs M lalu"
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -164,7 +201,7 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
         {/* Top Section: Title & Subtitle */}
         <div className="flex flex-col min-w-0 mb-3">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Diproses</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Sedang dalam proses verifikasi</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah permohonan/pemohon yang sedang dalam proses</p>
         </div>
 
         {/* Bottom Section: Big Metric Number + Growth + Dynamic Sparkline */}
@@ -173,10 +210,11 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {metrics.processing.toLocaleString('id-ID')}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
-              <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
-              <span>{metrics.processingPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={metrics.processingGrowthPct}
+              subtext={`vs M lalu (${metrics.processingPct})`}
+              positiveColorClass="text-amber-700"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -190,7 +228,7 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
         {/* Top Section: Title & Subtitle */}
         <div className="flex flex-col min-w-0 mb-3">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Selesai</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Telah diproses dan disetujui</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah permohonan/pemohon yang telah selesai diproses</p>
         </div>
 
         {/* Bottom Section: Big Metric Number + Growth + Dynamic Sparkline */}
@@ -199,10 +237,11 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {metrics.completed.toLocaleString('id-ID')}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{metrics.completedPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={metrics.completedGrowthPct}
+              subtext={`vs M lalu (${metrics.completedPct})`}
+              positiveColorClass="text-emerald-700"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -216,7 +255,7 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
         {/* Top Section: Title & Subtitle */}
         <div className="flex flex-col min-w-0 mb-3">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Revisi</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Perlu perbaikan data</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah permohonan/pemohon yang perlu perbaikan data</p>
         </div>
 
         {/* Bottom Section: Big Metric Number + Growth + Dynamic Sparkline */}
@@ -225,10 +264,12 @@ export const DataEntryKpiStrip: React.FC<DataEntryKpiStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {metrics.revision.toLocaleString('id-ID')}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-rose-700">
-              <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
-              <span>{metrics.revisionPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={metrics.revisionGrowthPct}
+              subtext={`vs M lalu (${metrics.revisionPct})`}
+              positiveColorClass="text-rose-700"
+              inverted
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">

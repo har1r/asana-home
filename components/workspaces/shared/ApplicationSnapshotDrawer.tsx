@@ -149,13 +149,13 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
           {/* Header Minimalist */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 select-none shrink-0 bg-white">
             <div className="flex flex-col">
-              <h3 className="text-sm font-semibold text-slate-900 font-sans tracking-tight">
-                Riwayat Versi
+              <h3 className="text-sm font-normal text-slate-900 font-sans tracking-tight">
+                Riwayat Versi Permohonan
               </h3>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="h-7 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+              <div className="h-7 px-2.5 rounded-md border border-slate-200 bg-slate-50/50 flex items-center gap-1.5 text-[11px] text-slate-500 font-normal">
                 <span>{snapshots.length} Versi</span>
               </div>
 
@@ -183,7 +183,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
 
             {/* Error Message */}
             {!loading && error && (
-              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-[12px] font-medium p-4 rounded-md">
+              <div className="m-6 bg-rose-50 border border-rose-100 text-rose-600 text-[12px] font-normal p-4 rounded-md">
                 {error}
               </div>
             )}
@@ -192,7 +192,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
             {!loading && !error && snapshots.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400">
                 <FileText className="w-9 h-9 stroke-[1.5] mb-2 text-slate-300" />
-                <span className="text-[12px] font-medium text-slate-500">Belum ada riwayat versi.</span>
+                <span className="text-[12px] font-normal text-slate-500">Belum ada riwayat versi.</span>
               </div>
             )}
 
@@ -205,11 +205,11 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                     {/* Header Row above latest card: Nomor Permohonan (Left) & Jenis Permohonan (Right) */}
                     <div className="flex items-center justify-between gap-2 select-none font-sans">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[12px] font-semibold text-slate-800 font-mono tracking-tight truncate">{appNumber}</span>
+                        <span className="text-[12px] font-normal text-slate-800 font-mono tracking-tight truncate">{appNumber}</span>
                       </div>
 
                       <div className="shrink-0">
-                        <span className="text-[11px] font-semibold text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2.5 py-0.5 rounded-md font-sans">
+                        <span className="text-[11px] font-normal text-[#008f78] bg-[#00a389]/12 border border-[#00a389]/20 px-2.5 py-0.5 rounded-md font-sans">
                           {displayType}
                         </span>
                       </div>
@@ -232,12 +232,12 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                             </div>
 
                             <div className="flex flex-col min-w-0">
-                              <span className="text-[12px] font-semibold text-slate-900 tracking-tight font-sans">
+                              <span className="text-[12px] font-normal text-slate-900 tracking-tight font-sans">
                                 Versi Terbaru
                               </span>
 
                               {/* Snapshot Action / Version Title (Replaces Note Position) */}
-                              <span className="text-[11px] font-semibold text-[#008f78] font-sans truncate mt-0.5">
+                              <span className="text-[11px] font-normal text-[#008f78] font-sans truncate mt-0.5">
                                 {snapshotTypeLabelMap[latestSnapshot.snapshotType] || 'Pendaftaran Awal'}
                               </span>
 
@@ -286,12 +286,12 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                                 </div>
 
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-[12px] font-semibold text-slate-900 font-sans tracking-tight">
+                                  <span className="text-[12px] font-normal text-slate-900 font-sans tracking-tight">
                                     Versi {versionNum}
                                   </span>
 
                                   {/* Snapshot Action / Version Title (Replaces Note Position) */}
-                                  <span className="text-[11px] font-semibold text-slate-700 font-sans truncate mt-0.5">
+                                  <span className="text-[11px] font-normal text-slate-700 font-sans truncate mt-0.5">
                                     {snapshotTypeLabelMap[snap.snapshotType] || 'Snapshot Data'}
                                   </span>
 
@@ -318,7 +318,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
                     <button
                       type="button"
                       onClick={() => setShowMore(true)}
-                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-[12px] font-medium text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
+                      className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-[12px] font-normal text-slate-600 transition-colors cursor-pointer shadow-3xs font-sans"
                     >
                       Tampilkan Lebih Banyak ({historicalSnapshots.length - 4} Versi Lagi)
                     </button>
@@ -339,7 +339,7 @@ export const ApplicationSnapshotDrawer: React.FC<ApplicationSnapshotDrawerProps>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[12px] font-semibold transition-colors cursor-pointer font-sans"
+              className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[12px] font-normal transition-colors cursor-pointer font-sans"
             >
               Tutup
             </button>
@@ -459,11 +459,11 @@ const PortalFloatingPopover: React.FC<{
         {/* Sticky Floating Card Header */}
         <div className="sticky top-0 bg-white/95 backdrop-blur-xs z-30 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between font-sans shrink-0 shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 font-sans tracking-tight">
+            <span className="text-sm font-normal text-slate-900 font-sans tracking-tight">
               Detail {versionLabel}
             </span>
             {snapshotTypeLabelMap[snap.snapshotType] && (
-              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15 border border-[#00a389]/20' : 'text-slate-600 bg-slate-100 border border-slate-200'
+              <span className={`text-[11px] font-normal px-2.5 py-0.5 rounded-md font-sans ${isLatest ? 'text-[#008f78] bg-[#00a389]/15 border border-[#00a389]/20' : 'text-slate-600 bg-slate-100 border border-slate-200'
                 }`}>
                 {snapshotTypeLabelMap[snap.snapshotType]}
               </span>
@@ -483,260 +483,260 @@ const PortalFloatingPopover: React.FC<{
         {/* Scrollable Content Body */}
         <div className="p-5 flex flex-col gap-4">
 
-      {/* Note Block (Exclusive to Portal Popover) */}
-      {snap.note && (
-        <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-[12px] font-semibold text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">Catatan Versi:</span>
-          <p className="italic font-semibold text-slate-600 font-sans">"{snap.note}"</p>
-        </div>
-      )}
+          {/* Note Block (Exclusive to Portal Popover) */}
+          {snap.note && (
+            <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200/90 text-[12px] font-normal text-slate-700 leading-relaxed font-sans flex flex-col gap-1">
+              <span className="text-[11px] font-normal text-slate-500 uppercase tracking-wider block">Catatan Versi:</span>
+              <p className="italic font-normal text-slate-700 font-sans">"{snap.note}"</p>
+            </div>
+          )}
 
-      {/* Summary Header Rows */}
-      <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-150 grid grid-cols-2 gap-2.5 text-[12px] font-sans">
-        <div>
-          <span className="text-slate-500 block text-[11px] font-semibold font-sans">No. Permohonan</span>
-          <span className="font-mono font-semibold text-slate-800">{appNumber}</span>
-        </div>
-        <div>
-          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Jenis Layanan</span>
-          <span className="font-semibold text-slate-800 font-sans">{typeLabelMap[appType] || appType || '-'}</span>
-        </div>
-        <div>
-          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Tanggal Permohonan</span>
-          <span className="font-semibold text-slate-700 font-sans">{serviceDate ? new Date(serviceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
-        </div>
-        <div>
-          <span className="text-slate-500 block text-[11px] font-semibold font-sans">Estimasi Selesai (SLA)</span>
-          <span className="font-semibold text-slate-700 font-sans">{compDate ? new Date(compDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
-        </div>
-      </div>
+          {/* Summary Header Rows */}
+          <div className="bg-slate-50/80 p-3.5 rounded-md border border-slate-200/90 grid grid-cols-2 gap-2.5 text-[12px] font-sans">
+            <div>
+              <span className="text-slate-500 block text-[11px] font-normal font-sans">No. Permohonan</span>
+              <span className="font-mono font-normal text-slate-800">{appNumber}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 block text-[11px] font-normal font-sans">Jenis Layanan</span>
+              <span className="font-normal text-slate-800 font-sans">{typeLabelMap[appType] || appType || '-'}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 block text-[11px] font-normal font-sans">Tanggal Permohonan</span>
+              <span className="font-normal text-slate-800 font-sans">{serviceDate ? new Date(serviceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 block text-[11px] font-normal font-sans">Estimasi Selesai (SLA)</span>
+              <span className="font-normal text-slate-800 font-sans">{compDate ? new Date(compDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
+            </div>
+          </div>
 
-      {/* Data SPPT Lama */}
-      {prevList.length > 0 && (
-        <div className="flex flex-col gap-2.5 font-sans">
-          <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
-            <Layers className="w-3.5 h-3.5 text-amber-600" />
-            <span>Data SPPT Lama ({prevList.length})</span>
-          </span>
-          {prevList.map((item: any, pIdx: number) => {
-            const nopVal = item.nop || item.nopAsal || item.nop_asal || '';
-            const ownerVal = item.ownerName || item.namaPemilikLama || item.namaPemilik || item.nama_wp || item.nama || '-';
-            const waVal = item.whatsappNumber || item.noWhatsapp || '';
+          {/* Data SPPT Lama */}
+          {prevList.length > 0 && (
+            <div className="flex flex-col gap-2.5 font-sans">
+              <span className="text-[11px] font-normal text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                <Layers className="w-3.5 h-3.5 text-amber-600" />
+                <span>Data SPPT Lama ({prevList.length})</span>
+              </span>
+              {prevList.map((item: any, pIdx: number) => {
+                const nopVal = item.nop || item.nopAsal || item.nop_asal || '';
+                const ownerVal = item.ownerName || item.namaPemilikLama || item.namaPemilik || item.nama_wp || item.nama || '-';
+                const waVal = item.whatsappNumber || item.noWhatsapp || '';
 
-            const ownerAddrVal = item.ownerAddress || item.alamatPemilikLama;
-            const ownerKecVal = item.ownerKecamatan || item.kecamatanPemilikLama;
-            const ownerDesaVal = item.ownerDesa || item.desaPemilikLama;
-            const ownerAddrStr = [ownerAddrVal, ownerDesaVal, ownerKecVal].filter(Boolean).join(', ');
+                const ownerAddrVal = item.ownerAddress || item.alamatPemilikLama;
+                const ownerKecVal = item.ownerKecamatan || item.kecamatanPemilikLama;
+                const ownerDesaVal = item.ownerDesa || item.desaPemilikLama;
+                const ownerAddrStr = [ownerAddrVal, ownerDesaVal, ownerKecVal].filter(Boolean).join(', ');
 
-            const objAddrVal = item.objectAddress || item.alamatObjekLama;
-            const objKecVal = item.objectKecamatan || item.kecamatanObjekLama;
-            const objDesaVal = item.objectDesa || item.desaObjekLama;
-            const objAddrStr = [objAddrVal, objDesaVal, objKecVal].filter(Boolean).join(', ');
+                const objAddrVal = item.objectAddress || item.alamatObjekLama;
+                const objKecVal = item.objectKecamatan || item.kecamatanObjekLama;
+                const objDesaVal = item.objectDesa || item.desaObjekLama;
+                const objAddrStr = [objAddrVal, objDesaVal, objKecVal].filter(Boolean).join(', ');
 
-            const landAreaVal = item.landArea ?? item.luasTanahLama ?? item.luasBumi;
-            const buildingAreaVal = item.buildingArea ?? item.luasBangunanLama ?? item.luasBangunan;
-            const certVal = item.certificate || item.sertifikatLama || item.sertifikat;
-            const notesVal = item.notes || item.catatan;
-            const isPrimary = Boolean(item.isPrimary);
+                const landAreaVal = item.landArea ?? item.luasTanahLama ?? item.luasBumi;
+                const buildingAreaVal = item.buildingArea ?? item.luasBangunanLama ?? item.luasBangunan;
+                const certVal = item.certificate || item.sertifikatLama || item.sertifikat;
+                const notesVal = item.notes || item.catatan;
+                const isPrimary = Boolean(item.isPrimary);
 
-            return (
-              <div key={pIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
-                {/* Header NOP & Copy/WA */}
-                <div className="flex items-center justify-between font-mono font-semibold text-slate-800 pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-slate-800 truncate font-semibold">NOP: {nopVal ? formatNop(nopVal) : '-'}</span>
-                    {isPrimary && (
-                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded font-sans shrink-0">
-                        Induk
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 font-sans shrink-0">
-                    {nopVal && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopy(e, nopVal)}
-                        className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors"
-                        title="Salin NOP"
-                      >
-                        {copiedText === nopVal ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    {waVal && (
-                      <a
-                        href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
-                        title="Chat WhatsApp WP"
-                      >
-                        WA: {waVal}
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Grid Details (2 Balanced Columns) */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
-                  {/* Row 1: Pemilik (Left) vs No/Jenis Sertifikat (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Pemilik:</span>
-                    <span className="font-semibold text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">No/Jenis Sertifikat:</span>
-                    <span className="font-semibold text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
-                  </div>
-
-                  {/* Row 2: Alamat Pemilik (Left) vs Alamat Objek Pajak (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Pemilik:</span>
-                    <span className="font-semibold text-slate-700 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Objek Pajak:</span>
-                    <span className="font-semibold text-slate-700 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
-                  </div>
-
-                  {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Tanah:</span>
-                    <span className="font-semibold text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Bangunan:</span>
-                    <span className="font-semibold text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
-                  </div>
-
-                  {/* Row 4: Catatan SPPT (Full Width if exists) */}
-                  {notesVal && (
-                    <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-semibold text-slate-600 italic mt-0.5">
-                      <span className="font-semibold not-italic text-slate-600">Catatan SPPT: </span>
-                      "{notesVal}"
+                return (
+                  <div key={pIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
+                    {/* Header NOP & Copy/WA */}
+                    <div className="flex items-center justify-between font-mono font-normal text-slate-800 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-slate-800 truncate font-normal font-mono">NOP: {nopVal ? formatNop(nopVal) : '-'}</span>
+                        {isPrimary && (
+                          <span className="text-[10px] font-normal text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded font-sans shrink-0">
+                            Induk
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 font-sans shrink-0">
+                        {nopVal && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopy(e, nopVal)}
+                            className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors"
+                            title="Salin NOP"
+                          >
+                            {copiedText === nopVal ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                        {waVal && (
+                          <a
+                            href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-0.5 text-[11px] font-normal text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
+                            title="Chat WhatsApp WP"
+                          >
+                            WA: {waVal}
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Data SPPT Baru */}
-      {targetList.length > 0 && (
-        <div className="flex flex-col gap-2.5 font-sans">
-          <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
-            <Layers className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Data SPPT Baru ({targetList.length})</span>
-          </span>
-          {targetList.map((item: any, tIdx: number) => {
-            const nopVal = item.nopTemporary || item.nop || item.nopBaru || item.nop_baru || '';
-            const ownerVal = item.ownerName || item.namaPemilikBaru || item.namaPemilik || item.nama_wp || item.nama || '-';
-            const waVal = item.whatsappNumber || item.noWhatsapp || '';
+                    {/* Grid Details (2 Balanced Columns) */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
+                      {/* Row 1: Pemilik (Left) vs No/Jenis Sertifikat (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Pemilik:</span>
+                        <span className="font-normal text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
+                      </div>
 
-            const ownerAddrVal = item.ownerAddress || item.alamatPemilikBaru;
-            const ownerKecVal = item.ownerKecamatan || item.kecamatanPemilikBaru;
-            const ownerDesaVal = item.ownerDesa || item.desaPemilikBaru;
-            const ownerAddrStr = [ownerAddrVal, ownerDesaVal, ownerKecVal].filter(Boolean).join(', ');
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">No/Jenis Sertifikat:</span>
+                        <span className="font-normal text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
+                      </div>
 
-            const objAddrVal = item.objectAddress || item.alamatObjekBaru;
-            const objKecVal = item.objectKecamatan || item.kecamatanObjekBaru;
-            const objDesaVal = item.objectDesa || item.desaObjekBaru;
-            const objAddrStr = [objAddrVal, objDesaVal, objKecVal].filter(Boolean).join(', ');
+                      {/* Row 2: Alamat Pemilik (Left) vs Alamat Objek Pajak (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Alamat Pemilik:</span>
+                        <span className="font-normal text-slate-800 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
+                      </div>
 
-            const landAreaVal = item.landArea ?? item.luasTanahBaru ?? item.luasBumi;
-            const buildingAreaVal = item.buildingArea ?? item.luasBangunanBaru ?? item.luasBangunan;
-            const certVal = item.certificate || item.sertifikatBaru || item.sertifikat;
-            const notesVal = item.notes || item.catatan;
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Alamat Objek Pajak:</span>
+                        <span className="font-normal text-slate-800 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
+                      </div>
 
-            return (
-              <div key={tIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
-                {/* Header NOP Temp & Copy/WA */}
-                <div className="flex items-center justify-between font-mono font-semibold text-slate-800 pb-2 border-b border-slate-100">
-                  <span className="text-slate-800 truncate font-semibold">NOP Temp: {nopVal ? formatNop(nopVal) : '-'}</span>
-                  <div className="flex items-center gap-1.5 font-sans shrink-0">
-                    {nopVal && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopy(e, nopVal)}
-                        className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-100 transition-colors"
-                        title="Salin NOP Temporary"
-                      >
-                        {copiedText === nopVal ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    {waVal && (
-                      <a
-                        href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
-                        title="Chat WhatsApp WP"
-                      >
-                        WA: {waVal}
-                      </a>
-                    )}
-                  </div>
-                </div>
+                      {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Luas Tanah:</span>
+                        <span className="font-normal text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                      </div>
 
-                {/* Grid Details (2 Balanced Columns) */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
-                  {/* Row 1: Pemilik Baru (Left) vs No/Jenis Sertifikat (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Pemilik Baru:</span>
-                    <span className="font-semibold text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
-                  </div>
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Luas Bangunan:</span>
+                        <span className="font-normal text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                      </div>
 
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">No/Jenis Sertifikat:</span>
-                    <span className="font-semibold text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
-                  </div>
-
-                  {/* Row 2: Alamat Pemilik Baru (Left) vs Alamat Objek Pajak Baru (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Pemilik Baru:</span>
-                    <span className="font-semibold text-slate-700 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Alamat Objek Pajak Baru:</span>
-                    <span className="font-semibold text-slate-700 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
-                  </div>
-
-                  {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Tanah:</span>
-                    <span className="font-semibold text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-semibold">Luas Bangunan:</span>
-                    <span className="font-semibold text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
-                  </div>
-
-                  {/* Row 4: Catatan SPPT (Full Width if exists) */}
-                  {notesVal && (
-                    <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-semibold text-slate-600 italic mt-0.5">
-                      <span className="font-semibold not-italic text-slate-600">Catatan SPPT: </span>
-                      "{notesVal}"
+                      {/* Row 4: Catatan SPPT (Full Width if exists) */}
+                      {notesVal && (
+                        <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-normal text-slate-600 italic mt-0.5">
+                          <span className="font-normal not-italic text-slate-700">Catatan SPPT: </span>
+                          "{notesVal}"
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-      {/* Fallback if both lists are empty */}
-      {prevList.length === 0 && targetList.length === 0 && (
-        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-md text-center text-slate-500 text-[12px] font-semibold font-sans">
-          Tidak ada rincian data SPPT pada versi ini.
-        </div>
-      )}
+          {/* Data SPPT Baru */}
+          {targetList.length > 0 && (
+            <div className="flex flex-col gap-2.5 font-sans">
+              <span className="text-[11px] font-normal text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Data SPPT Baru ({targetList.length})</span>
+              </span>
+              {targetList.map((item: any, tIdx: number) => {
+                const nopVal = item.nopTemporary || item.nop || item.nopBaru || item.nop_baru || '';
+                const ownerVal = item.ownerName || item.namaPemilikBaru || item.namaPemilik || item.nama_wp || item.nama || '-';
+                const waVal = item.whatsappNumber || item.noWhatsapp || '';
+
+                const ownerAddrVal = item.ownerAddress || item.alamatPemilikBaru;
+                const ownerKecVal = item.ownerKecamatan || item.kecamatanPemilikBaru;
+                const ownerDesaVal = item.ownerDesa || item.desaPemilikBaru;
+                const ownerAddrStr = [ownerAddrVal, ownerDesaVal, ownerKecVal].filter(Boolean).join(', ');
+
+                const objAddrVal = item.objectAddress || item.alamatObjekBaru;
+                const objKecVal = item.objectKecamatan || item.kecamatanObjekBaru;
+                const objDesaVal = item.objectDesa || item.desaObjekBaru;
+                const objAddrStr = [objAddrVal, objDesaVal, objKecVal].filter(Boolean).join(', ');
+
+                const landAreaVal = item.landArea ?? item.luasTanahBaru ?? item.luasBumi;
+                const buildingAreaVal = item.buildingArea ?? item.luasBangunanBaru ?? item.luasBangunan;
+                const certVal = item.certificate || item.sertifikatBaru || item.sertifikat;
+                const notesVal = item.notes || item.catatan;
+
+                return (
+                  <div key={tIdx} className="bg-white p-3.5 rounded-md border border-slate-200/90 flex flex-col gap-2.5 text-[12px] shadow-3xs font-sans">
+                    {/* Header NOP Temp & Copy/WA */}
+                    <div className="flex items-center justify-between font-mono font-normal text-slate-800 pb-2 border-b border-slate-100">
+                      <span className="text-slate-800 truncate font-normal font-mono">NOP Temp: {nopVal ? formatNop(nopVal) : '-'}</span>
+                      <div className="flex items-center gap-1.5 font-sans shrink-0">
+                        {nopVal && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopy(e, nopVal)}
+                            className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-100 transition-colors"
+                            title="Salin NOP Temporary"
+                          >
+                            {copiedText === nopVal ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                        {waVal && (
+                          <a
+                            href={`https://wa.me/${waVal.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-0.5 text-[11px] font-normal text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200/80 transition-colors"
+                            title="Chat WhatsApp WP"
+                          >
+                            WA: {waVal}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Grid Details (2 Balanced Columns) */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] font-sans pt-0.5">
+                      {/* Row 1: Pemilik Baru (Left) vs No/Jenis Sertifikat (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Pemilik Baru:</span>
+                        <span className="font-normal text-slate-800 capitalize">{toTitleCase(ownerVal)}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">No/Jenis Sertifikat:</span>
+                        <span className="font-normal text-slate-800 capitalize">{certVal ? toTitleCase(certVal) : '-'}</span>
+                      </div>
+
+                      {/* Row 2: Alamat Pemilik Baru (Left) vs Alamat Objek Pajak Baru (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Alamat Pemilik Baru:</span>
+                        <span className="font-normal text-slate-800 capitalize">{ownerAddrStr ? toTitleCase(ownerAddrStr) : '-'}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Alamat Objek Pajak Baru:</span>
+                        <span className="font-normal text-slate-800 capitalize">{objAddrStr ? toTitleCase(objAddrStr) : '-'}</span>
+                      </div>
+
+                      {/* Row 3: Luas Tanah (Left) vs Luas Bangunan (Right) */}
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Luas Tanah:</span>
+                        <span className="font-normal text-slate-800">{landAreaVal != null ? `${landAreaVal} m²` : '-'}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block text-[11px] font-normal">Luas Bangunan:</span>
+                        <span className="font-normal text-slate-800">{buildingAreaVal != null ? `${buildingAreaVal} m²` : '-'}</span>
+                      </div>
+
+                      {/* Row 4: Catatan SPPT (Full Width if exists) */}
+                      {notesVal && (
+                        <div className="col-span-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80 text-[11px] font-normal text-slate-600 italic mt-0.5">
+                          <span className="font-normal not-italic text-slate-700">Catatan SPPT: </span>
+                          "{notesVal}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Fallback if both lists are empty */}
+          {prevList.length === 0 && targetList.length === 0 && (
+            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-md text-center text-slate-500 text-[12px] font-normal font-sans">
+              Tidak ada rincian data SPPT pada versi ini.
+            </div>
+          )}
         </div>
       </div>
     </>,

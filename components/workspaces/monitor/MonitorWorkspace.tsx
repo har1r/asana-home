@@ -22,7 +22,7 @@ import { MonitorPermohonanListPanel } from "./queue-monitor/MonitorPermohonanLis
 import { MonitorPermohonanDetailPanel } from "./queue-monitor/MonitorPermohonanDetailPanel";
 
 import { MonitorRollbackModal } from "./modal-monitor/MonitorRollbackModal";
-import { PemantauBundleSkeleton, PemantauPantauSkeleton } from "./MonitorSkeleton";
+import { PemantauBundleSkeleton, PemantauPantauSkeleton } from "@/components/skeletons/MonitorSkeleton";
 
 type WorkspaceTab = "daftar-bundle" | "daftar-pantau";
 

@@ -239,13 +239,13 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       <td className="py-3 px-4 text-center font-sans">
         <div className="flex items-center justify-center font-sans">
           {isFrozen ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-normal bg-amber-100 text-amber-800 border border-amber-200 select-none capitalize font-sans">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[12px] font-normal bg-amber-100 text-amber-800 border border-amber-200 select-none capitalize font-sans">
               <Clock className="w-2.5 h-2.5 text-amber-600 animate-spin" />
               Frozen
             </span>
           ) : (
             <span
-              className={`inline-flex text-[12px] font-normal px-2.5 py-0.5 rounded-full border capitalize font-sans ${
+              className={`inline-flex text-[12px] font-normal px-2.5 py-0.5 rounded-md border capitalize font-sans ${
                 p.status === "ARCHIVED"
                   ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                   : "bg-sky-100 text-sky-800 border-sky-200"

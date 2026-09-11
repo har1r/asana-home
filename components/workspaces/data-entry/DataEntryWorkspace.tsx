@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Plus, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useSession } from "next-auth/react";
@@ -8,6 +8,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import {
   resubmitApplication,
   getActiveApplications,
+  getAllApplicationsForKpi,
   toggleFavoriteApplication
 } from '@/app/actions/data-entry';
 import { DetailsModal } from '@/components/workspaces/shared/DetailsModal';
@@ -30,6 +31,7 @@ export default function PenginputWorkspace() {
   const { data: session } = useSession();
   const { showConfirm, refreshFavorites } = useDashboard();
   const [list, setList] = useState<any[]>([]);
+  const [globalKpiList, setGlobalKpiList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,9 +53,15 @@ export default function PenginputWorkspace() {
 
   // Sync viewMode when URL query params change (e.g. Browser Back/Forward buttons)
   useEffect(() => {
-    if (viewParam === 'edit' && editTarget) setViewMode('edit');
-    else if (viewParam === 'create' || viewParam === 'form') setViewMode('create');
-    else setViewMode('list');
+    if (viewParam === 'edit') {
+      if (editTarget) setViewMode('edit');
+    } else if (viewParam === 'create' || viewParam === 'form') {
+      setViewMode('create');
+    } else if (!viewParam) {
+      // Prevent premature fallback to list view while async router.push is pending for edit
+      if (editTarget) return;
+      setViewMode('list');
+    }
   }, [viewParam, editTarget]);
 
   // Fallback protection: If viewMode is 'edit' but editTarget is null, revert to 'list' view and clean URL query
@@ -92,13 +100,15 @@ export default function PenginputWorkspace() {
 
   const handleCloseEdit = useCallback(() => {
     setEditTarget(null);
-    switchViewMode('list');
-  }, [switchViewMode]);
+    setViewMode('list');
+    router.replace('/?tab=my-tasks', { scroll: false });
+  }, [router]);
 
   const handleCancelCreate = useCallback(() => {
     setDuplicateTarget(null);
-    switchViewMode('list');
-  }, [switchViewMode]);
+    setViewMode('list');
+    router.replace('/?tab=my-tasks', { scroll: false });
+  }, [router]);
 
   // Status Modal State
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -131,8 +141,31 @@ export default function PenginputWorkspace() {
     totalPages,
   } = useListApplication({ list });
 
-  // Application Statistics Calculation Hook
-  const appMetrics = useApplicationStatistics(modeBaseList);
+  // Transform global KPI list based on displayMode ('permohonan' vs 'pemohon')
+  const kpiBaseList = useMemo(() => {
+    const rawKpiList = globalKpiList.length > 0 ? globalKpiList : list;
+    if (displayMode === 'permohonan') return rawKpiList;
+
+    return rawKpiList.flatMap((item) => {
+      const isPartial = item.applicationType === 'PARTIAL_MUTATION' || item.applicationType === 'MUTASI_SEBAGIAN' || item.jenisPermohonan === 'MUTASI_SEBAGIAN';
+      const targets = (item.targetData && item.targetData.length > 0) ? item.targetData : (item.dataBaru || []);
+
+      if (isPartial && targets.length > 0) {
+        return targets.map((td: any, idx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}-pecahan-${idx}`,
+          displayOwnerName: td.ownerName || td.namaPemilikBaru || item.ownerName,
+          isPecahanRow: true,
+          pecahanIndex: idx + 1,
+          totalPecahan: targets.length,
+        }));
+      }
+      return [{ ...item, uniqueRowKey: item.id }];
+    });
+  }, [globalKpiList, list, displayMode]);
+
+  // Application Statistics Calculation Hook (using global database applications & active displayMode for complete KPI)
+  const appMetrics = useApplicationStatistics(kpiBaseList);
 
   // Load permohonan data
   const fetchData = useCallback(async (isManualRefresh = false) => {
@@ -142,9 +175,17 @@ export default function PenginputWorkspace() {
       setListLoading(true);
     }
     try {
-      const res = await getActiveApplications();
-      if (res.success) {
-        const rawList = res.list || [];
+      const [resActive, resKpi] = await Promise.all([
+        getActiveApplications(),
+        getAllApplicationsForKpi()
+      ]);
+
+      if (resKpi.success) {
+        setGlobalKpiList(resKpi.list || []);
+      }
+
+      if (resActive.success) {
+        const rawList = resActive.list || [];
         const normalized = rawList.map((item: any) => {
           const previousData = Array.isArray(item.previousData) ? item.previousData : (Array.isArray(item.dataLama) ? item.dataLama : []);
           const targetData = Array.isArray(item.targetData) ? item.targetData : (Array.isArray(item.dataBaru) ? item.dataBaru : []);
@@ -199,7 +240,7 @@ export default function PenginputWorkspace() {
         });
         setList(normalized);
       } else {
-        console.error(res.error);
+        console.error(resActive.error);
       }
     } catch (err) {
       console.error('Failed to fetch permohonan', err);
@@ -298,15 +339,27 @@ export default function PenginputWorkspace() {
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight">Ruang Kerja Saya</h1>
               </div>
 
-              {/* Action Header: Tombol Refresh Data */}
-              <button
-                onClick={() => fetchData(true)}
-                disabled={isRefreshing}
-                className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
-                title="Refresh Seluruh Data Workspace"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Action Header: Tombol Ajukan Permohonan */}
+                <button
+                  onClick={() => switchViewMode('create')}
+                  className="h-9 px-3.5 bg-[#00a389] hover:bg-[#008f78] active:bg-[#007a67] text-white rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-3xs font-sans shrink-0"
+                  title="Tambah Permohonan / Entri Baru"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span>Ajukan Permohonan</span>
+                </button>
+
+                {/* Action Header: Tombol Refresh Data */}
+                <button
+                  onClick={() => fetchData(true)}
+                  disabled={isRefreshing}
+                  className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
+                  title="Refresh Seluruh Data Workspace"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#00a389]' : ''}`} />
+                </button>
+              </div>
             </div>
 
             {/* TIER 1: STATS KPI STRIP */}
@@ -314,6 +367,9 @@ export default function PenginputWorkspace() {
               metrics={appMetrics}
               displayMode={displayMode}
             />
+
+            {/* THIN DIVIDER LINE BELOW KPI STRIP */}
+            <div className="w-full border-b border-slate-200/80 my-0.5" />
 
             {/* TIER 2: SEARCH, FILTERS & TOOLBAR CONTROLS */}
             <DataEntryToolbar

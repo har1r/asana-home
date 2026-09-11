@@ -15,11 +15,25 @@ export const generateReactivationNumber = (dateStr: string): string => {
     return `${yyyymmdd}901`;
 };
 
-export const getPrimaryNopDisplay = (previousData: any[]): string => {
+export const getPrimaryNopDisplay = (previousData: any[], applicationType?: string): string => {
     const primaryItem = (previousData || []).find(item => item && item.isPrimary) || (previousData || [])[0] || {};
     const rawNop = (primaryItem.nop || '').replace(/[^\d]/g, '');
 
     if (!rawNop) return '36.19.XXX.XXX.XXX-XXXX.X';
+
+    // Format raw NOP dynamically with dots and hyphen
+    let fullFmtNop = rawNop;
+    if (rawNop.length > 2) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2);
+    if (rawNop.length > 4) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4);
+    if (rawNop.length > 7) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7);
+    if (rawNop.length > 10) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10);
+    if (rawNop.length > 13) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10, 13) + '-' + rawNop.slice(13);
+    if (rawNop.length > 17) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10, 13) + '-' + rawNop.slice(13, 17) + '.' + rawNop.slice(17, 18);
+
+    // JIKA PEMBETULAN (CORRECTION) ATAU MUTASI HABIS: PREFILL MURNI 100% NOP LAMA
+    if (applicationType === 'CORRECTION' || applicationType === 'EXPIRED_UPDATE' || applicationType === 'EXPIRED_REGULAR') {
+        return fullFmtNop;
+    }
 
     const p1 = rawNop.slice(0, 2).padEnd(2, 'X');
     const p2 = rawNop.slice(2, 4).padEnd(2, 'X');
@@ -66,11 +80,18 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
     const needTargetData = useMemo(() => SERVICES_NEED_TARGET_DATA.includes(applicationType), [applicationType]);
 
     const steps = useMemo(() => {
+        if (!applicationType) {
+            return [
+                { id: 1, label: 'Data Utama' },
+                { id: 2, label: 'Data SPPT Lama' },
+                { id: 3, label: 'Data SPPT Baru' }
+            ]
+        }
         const list = [{ id: 1, label: 'Data Utama' }];
         if (needPreviousData) list.push({ id: list.length + 1, label: 'Data SPPT Lama' });
         if (needTargetData) list.push({ id: list.length + 1, label: 'Data SPPT Baru' });
         return list;
-    }, [needPreviousData, needTargetData]);
+    }, [applicationType, needPreviousData, needTargetData]);
 
     const currentStepLabel = steps[currentStep - 1]?.label;
 
@@ -163,16 +184,14 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
     useEffect(() => {
         if (!draftLoaded || applicationType === 'NEW_TAX_OBJECT' || !needPreviousData || !needTargetData) return;
 
-        const defaultNopTemp = getPrimaryNopDisplay(previousData);
+        const defaultNopTemp = getPrimaryNopDisplay(previousData, applicationType);
 
         setTargetData(prevTargets => {
             let hasChange = false;
             const updated = prevTargets.map(item => {
-                if (!item.nopTemporary || item.nopTemporary.includes('X') || item.nopTemporary.endsWith('-XXXX.X')) {
-                    if (item.nopTemporary !== defaultNopTemp) {
-                        hasChange = true;
-                        return { ...item, nopTemporary: defaultNopTemp };
-                    }
+                if (item.nopTemporary !== defaultNopTemp) {
+                    hasChange = true;
+                    return { ...item, nopTemporary: defaultNopTemp };
                 }
                 return item;
             });
@@ -490,19 +509,19 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
         clearFieldError(`targetData.${targetIdx}.objectDesa`);
     }, [previousData, clearFieldError]);
 
-    const handleCopyObjectToOwner = useCallback((targetIdx: number) => {
+    const handleCopyOwnerToObject = useCallback((targetIdx: number) => {
         setTargetData(prevTargets => prevTargets.map((item, i) => i === targetIdx ? {
             ...item,
-            ownerAddress: item.objectAddress || '',
-            ownerBlock: item.objectBlock || '',
-            ownerRt: item.objectRt || '',
-            ownerRw: item.objectRw || '',
-            ownerKecamatan: item.objectKecamatan || '',
-            ownerDesa: item.objectDesa || '',
+            objectAddress: item.ownerAddress || '',
+            objectBlock: item.ownerBlock || '',
+            objectRt: item.ownerRt || '',
+            objectRw: item.ownerRw || '',
+            objectKecamatan: item.ownerKecamatan || '',
+            objectDesa: item.ownerDesa || '',
         } : item));
-        clearFieldError(`targetData.${targetIdx}.ownerAddress`);
-        clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
-        clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+        clearFieldError(`targetData.${targetIdx}.objectAddress`);
+        clearFieldError(`targetData.${targetIdx}.objectKecamatan`);
+        clearFieldError(`targetData.${targetIdx}.objectDesa`);
     }, [clearFieldError]);
 
     const handleAddPreviousItem = useCallback(() => {
@@ -529,7 +548,7 @@ export const useCreateApplication = (options: UseCreateApplicationOptions = {}) 
         // Copy Helpers
         handleCopyOwnerFromPrevious,
         handleCopyObjectFromPrevious,
-        handleCopyObjectToOwner,
+        handleCopyOwnerToObject,
 
         // UI Stepper & State
         currentStep, setCurrentStep, currentStepLabel, steps,

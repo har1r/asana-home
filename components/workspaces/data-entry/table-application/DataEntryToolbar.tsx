@@ -64,8 +64,8 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* TIER 2: SEARCH & CONTROLS TOOLBAR */}
-      <div className="p-3 border border-slate-200/90 rounded-md bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-3xs">
+      {/* TIER 2: SEARCH TOOLBAR */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Left Side: Search Bar */}
         <div className="relative w-full md:w-[403px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -82,21 +82,6 @@ export const DataEntryToolbar: React.FC<DataEntryToolbarProps> = React.memo(({
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Right Side: Refresh & Add Button */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Tombol Tambah Entri Baru */}
-          {onAddNew && (
-            <button
-              onClick={onAddNew}
-              className="h-10 px-4 bg-[#00a389] hover:bg-[#008f78] active:bg-[#007a67] text-white rounded-md text-[13px] font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-3xs font-sans shrink-0"
-              title="Tambah Permohonan / Entri Baru"
-            >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span>Ajukan Permohonan</span>
             </button>
           )}
         </div>

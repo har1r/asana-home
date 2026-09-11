@@ -22,6 +22,7 @@ import { useDataEntryHistory, FormattedHistoryItem } from "./useDataEntryHistory
 import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
 import { ApplicationSnapshotDrawer } from "@/components/workspaces/shared/ApplicationSnapshotDrawer";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { DataEntryHistorySkeleton } from "@/components/skeletons/DataEntryHistorySkeleton";
 
 // Helper for Status Badge Styling
 const getStatusBadge = (status: string) => {
@@ -174,6 +175,10 @@ export default function DataEntryHistory() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  if (loading) {
+    return <DataEntryHistorySkeleton />;
+  }
+
   return (
     <div className="w-full flex flex-col gap-3 animate-fadeIn font-sans select-none">
       {/* 1. HEADER SECTION (Clean Title & Refresh Button without Card background) */}
@@ -289,12 +294,7 @@ export default function DataEntryHistory() {
       )}
 
       {/* 3. MAIN CONTENT: GOOGLE DRIVE STYLE TABLE (FLAT, NO CARD WRAPPER BORDER) */}
-      {loading ? (
-        <div className="py-16 flex flex-col items-center justify-center gap-3">
-          <div className="w-7 h-7 rounded-full border-2 border-slate-200 border-t-[#00a389] animate-spin" />
-          <span className="text-xs text-slate-500 font-medium">Memuat data riwayat...</span>
-        </div>
-      ) : visibleApplications.length === 0 ? (
+      {visibleApplications.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center">
           <EmptyDataAnimation
             title={searchQuery ? "Tidak ada riwayat permohonan yang sesuai" : "Belum ada riwayat permohonan"}
@@ -306,12 +306,13 @@ export default function DataEntryHistory() {
         <div className="w-full overflow-x-auto select-none mt-1">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-slate-200 text-[13px] font-semibold text-slate-600 select-none">
-                <th className="py-2.5 px-3 min-w-[240px] font-semibold text-slate-700">No. Permohonan</th>
-                <th className="py-2.5 px-3 min-w-[150px] font-semibold text-slate-700">Tgl. Permohonan</th>
-                <th className="py-2.5 px-3 min-w-[180px] font-semibold text-slate-700">Nama Pemohon</th>
-                <th className="py-2.5 px-3 min-w-[140px] font-semibold text-slate-700">Status</th>
-                <th className="py-2.5 px-3 w-12 text-center font-semibold text-slate-700"></th>
+              <tr className="border-b border-slate-200 text-[13px] font-normal text-slate-600 select-none">
+                <th className="py-2.5 px-3 min-w-[200px] font-normal text-slate-600">No. Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600">Tgl. Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600">Tgl. Selesai</th>
+                <th className="py-2.5 px-3 min-w-[180px] font-normal text-slate-600">Nama Pemohon</th>
+                <th className="py-2.5 px-3 min-w-[130px] font-normal text-slate-600">Status</th>
+                <th className="py-2.5 px-3 w-12 text-center font-normal text-slate-600"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 text-[13px] font-normal text-slate-700">
@@ -327,21 +328,26 @@ export default function DataEntryHistory() {
                       <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                         <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.2]" />
                       </div>
-                      <span className="font-bold text-slate-900 font-mono tracking-tight text-[13px]">
+                      <span className="font-normal text-slate-700 font-mono tracking-tight text-[13px]">
                         {item.applicationNumber}
                       </span>
                     </div>
                   </td>
 
                   {/* Tgl. Permohonan Column */}
-                  <td className="py-3 px-3 text-slate-600 text-[13px]">
+                  <td className="py-3 px-3 text-slate-700 text-[13px] font-normal">
                     <span>{formatDateDisplay(item.serviceNumberDate)}</span>
+                  </td>
+
+                  {/* Tgl. Selesai Column */}
+                  <td className="py-3 px-3 text-slate-700 text-[13px] font-normal">
+                    <span>{formatDateDisplay(item.completionDate)}</span>
                   </td>
 
                   {/* Nama Pemohon Column */}
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-800 font-medium text-[13px] truncate max-w-[220px]">
+                      <span className="text-slate-700 font-normal text-[13px] truncate max-w-[220px]">
                         {item.ownerName}
                       </span>
                       {item.isPecahanRow && (
@@ -390,7 +396,7 @@ export default function DataEntryHistory() {
             >
               {/* Tile Header: Top Left = No. Permohonan, Top Right = Three Dots Menu */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-bold font-mono text-slate-900 truncate tracking-tight" title={item.applicationNumber}>
+                <span className="text-[13px] font-normal font-mono text-slate-700 truncate tracking-tight" title={item.applicationNumber}>
                   {item.applicationNumber}
                 </span>
                 <button

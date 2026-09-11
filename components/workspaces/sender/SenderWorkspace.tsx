@@ -37,7 +37,7 @@ import { SenderPermohonanTable } from "./queue-sender/SenderPermohonanTable";
 import { SenderQueueActionBar } from "./queue-sender/SenderQueueActionBar";
 
 import { SenderCorrectionModal } from "./modal-sender/SenderCorrectionModal";
-import { PengirimManifestSkeleton, PengirimKelolaSkeleton } from "./SenderSkeleton";
+import { PengirimManifestSkeleton, PengirimKelolaSkeleton } from "@/components/skeletons/SenderSkeleton";
 
 type WorkspaceTab = "daftar-manifest" | "kelola-pengiriman";
 

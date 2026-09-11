@@ -429,10 +429,7 @@ export async function getHistoryApplications() {
   try {
     const list = await prisma.application.findMany({
       where: {
-        OR: [
-          { status: { in: ['BUNDLED', 'ARCHIVED', 'MANIFESTED', 'DELIVERED', 'COMPLETED'] } },
-          { currentBundleId: { not: null } }
-        ]
+        status: { in: ['BUNDLED', 'ARCHIVED', 'MANIFESTED', 'DELIVERED', 'COMPLETED'] }
       },
       include: {
         currentBundle: true
@@ -444,6 +441,34 @@ export async function getHistoryApplications() {
   } catch (error: any) {
     console.error('[ACTION-GET-HISTORY-ERR]', error);
     return { success: false, list: [], error: 'Gagal mengambil data riwayat permohonan.' };
+  }
+}
+
+export async function getAllApplicationsForKpi() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return { success: false, list: [], error: 'Unauthorized: Sesi tidak ditemukan.' };
+  }
+
+  try {
+    const list = await prisma.application.findMany({
+      select: {
+        id: true,
+        status: true,
+        applicationType: true,
+        targetData: true,
+        createdAt: true,
+        serviceNumberDate: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-ALL-KPI-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil data permohonan global untuk KPI.' };
   }
 }
 

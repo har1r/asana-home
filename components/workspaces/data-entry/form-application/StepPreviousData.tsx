@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Trash2, Phone } from 'lucide-react';
+import { Trash2, Phone, Copy } from 'lucide-react';
 import { KECAMATAN_DATA } from '../../shared/constants';
 
 interface StepPreviousDataProps {
@@ -29,6 +29,26 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
     getInputClass,
     getWhatsAppContainerClass
 }) => {
+    const handleCopyFromFirstPreviousItem = (targetIdx: number) => {
+        const firstItem = previousData[0];
+        if (!firstItem || targetIdx === 0) return;
+        onPreviousItemChange(targetIdx, 'objectAddress', firstItem.objectAddress || '');
+        onPreviousItemChange(targetIdx, 'objectBlock', firstItem.objectBlock || '');
+        onPreviousItemChange(targetIdx, 'objectRt', firstItem.objectRt || '');
+        onPreviousItemChange(targetIdx, 'objectRw', firstItem.objectRw || '');
+        onPreviousItemChange(targetIdx, 'objectKecamatan', firstItem.objectKecamatan || '');
+        onPreviousItemChange(targetIdx, 'objectDesa', firstItem.objectDesa || '');
+
+        if (firstItem.ownerAddress) onPreviousItemChange(targetIdx, 'ownerAddress', firstItem.ownerAddress);
+        if (firstItem.ownerBlock) onPreviousItemChange(targetIdx, 'ownerBlock', firstItem.ownerBlock);
+        if (firstItem.ownerRt) onPreviousItemChange(targetIdx, 'ownerRt', firstItem.ownerRt);
+        if (firstItem.ownerRw) onPreviousItemChange(targetIdx, 'ownerRw', firstItem.ownerRw);
+        if (firstItem.ownerKecamatan) onPreviousItemChange(targetIdx, 'ownerKecamatan', firstItem.ownerKecamatan);
+        if (firstItem.ownerDesa) onPreviousItemChange(targetIdx, 'ownerDesa', firstItem.ownerDesa);
+        if (firstItem.ownerName && (!previousData[targetIdx]?.ownerName || previousData[targetIdx]?.ownerName.trim() === '')) {
+            onPreviousItemChange(targetIdx, 'ownerName', firstItem.ownerName);
+        }
+    };
     return (
         <div className="flex flex-col gap-6 bg-transparent animate-fadeIn font-sans">
 
@@ -49,11 +69,10 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                 <div className="flex items-center justify-between select-none border-b border-slate-100/80 pb-2.5 mb-1">
                                     {/* KAPSUL TERINTEGRASI (TEKS NOP ASAL + SAKLAR SWITCH DI KIRI) */}
                                     <label
-                                        className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-md border transition-all cursor-pointer select-none font-sans ${
-                                            item.isPrimary
-                                                ? 'bg-[#e6f6f4] border-[#00a389]/40 text-[#008f78] font-semibold shadow-2xs'
-                                                : 'bg-slate-50 border-slate-200/90 text-slate-600 font-medium hover:bg-slate-100/80'
-                                        }`}
+                                        className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-md border transition-all cursor-pointer select-none font-sans ${item.isPrimary
+                                            ? 'bg-[#e6f6f4] border-[#00a389]/40 text-[#008f78] font-semibold shadow-2xs'
+                                            : 'bg-slate-50 border-slate-200/90 text-slate-600 font-medium hover:bg-slate-100/80'
+                                            }`}
                                     >
                                         <span className="text-xs font-sans">
                                             NOP Asal #{idx + 1}
@@ -62,31 +81,43 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                             type="button"
                                             onClick={() => onSetPrimaryPreviousItem && onSetPrimaryPreviousItem(idx)}
                                             disabled={loading}
-                                            className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                                                item.isPrimary ? 'bg-[#00a389]' : 'bg-slate-300'
-                                            }`}
+                                            className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${item.isPrimary ? 'bg-[#00a389]' : 'bg-slate-300'
+                                                }`}
                                         >
                                             <span
-                                                className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${
-                                                    item.isPrimary ? 'translate-x-3.5' : 'translate-x-0'
-                                                }`}
+                                                className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${item.isPrimary ? 'translate-x-3.5' : 'translate-x-0'
+                                                    }`}
                                             />
                                         </button>
                                     </label>
 
-                                    {/* AREA KANAN: HANYA TOMBOL HAPUS BILA NOP > 2 */}
-                                    {previousData.length > 2 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => onRemovePreviousItem(idx)}
-                                            disabled={loading}
-                                            className="h-7 px-2.5 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 border border-red-200/60 rounded-md transition-all cursor-pointer flex items-center gap-1 font-sans"
-                                            title="Hapus NOP Asal Ini"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                            <span>Hapus</span>
-                                        </button>
-                                    )}
+                                    {/* AREA KANAN: TOMBOL SALIN DARI NOP #1 & HAPUS */}
+                                    <div className="flex items-center gap-2 select-none">
+                                        {idx > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopyFromFirstPreviousItem(idx)}
+                                                disabled={loading}
+                                                className="h-7 px-2.5 text-xs text-[#008f78] bg-[#e6f6f4] hover:bg-[#00a389]/20 border border-[#00a389]/30 rounded-md transition-all cursor-pointer flex items-center gap-1 font-sans"
+                                                title="Salin data alamat dari NOP #1"
+                                            >
+                                                <Copy className="w-3.5 h-3.5" />
+                                                <span>Salin dari NOP #1</span>
+                                            </button>
+                                        )}
+                                        {previousData.length > 2 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onRemovePreviousItem(idx)}
+                                                disabled={loading}
+                                                className="h-7 px-2.5 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 border border-red-200/60 rounded-md transition-all cursor-pointer flex items-center gap-1 font-sans"
+                                                title="Hapus NOP Asal Ini"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <span>Hapus</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
@@ -169,7 +200,20 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
 
                                     <div className="flex flex-col gap-5">
                                         <div className="flex flex-col gap-1.5">
-                                            <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Pajak <span className="text-red-500">*</span></label>
+                                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                <label className="text-[13px] font-normal text-slate-700 tracking-wide font-sans">Alamat Objek Pajak <span className="text-red-500">*</span></label>
+                                                {idx > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleCopyFromFirstPreviousItem(idx)}
+                                                        className="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-[#e6f6f4] text-slate-600 hover:text-[#008f78] border border-slate-200 hover:border-[#00a389]/40 transition-all flex items-center gap-1 cursor-pointer font-sans"
+                                                        title="Salin data alamat dari NOP #1"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                        <span>Salin dari NOP #1</span>
+                                                    </button>
+                                                )}
+                                            </div>
                                             <input type="text" id={`previousData.${idx}.objectAddress`} autoComplete="off" placeholder="JL. RAYA PAKUHAJI NO. 12" value={item.objectAddress} onChange={(e) => onPreviousItemChange(idx, 'objectAddress', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(!!formErrors[`previousData.${idx}.objectAddress`])} />
                                             {formErrors[`previousData.${idx}.objectAddress`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5 font-sans">{formErrors[`previousData.${idx}.objectAddress`]}</span>}
                                         </div>
@@ -209,16 +253,16 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Tanah <span className="text-red-500">*</span></label>
                                         <div className="relative">
-                                            <input type="number" id={`previousData.${idx}.landArea`} value={item.landArea} onChange={(e) => onPreviousItemChange(idx, 'landArea', e.target.value)} disabled={loading} className={getInputClass(!!formErrors[`previousData.${idx}.landArea`], 'pl-3.5 pr-10')} />
+                                            <input type="number" id={`previousData.${idx}.landArea`} placeholder="200" value={item.landArea !== undefined && item.landArea !== null && item.landArea !== '' ? item.landArea : 0} onChange={(e) => onPreviousItemChange(idx, 'landArea', e.target.value)} disabled={loading} className={getInputClass(!!formErrors[`previousData.${idx}.landArea`], 'pl-3.5 pr-10')} />
                                             <span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                                         </div>
                                         {formErrors[`previousData.${idx}.landArea`] && <span className="text-xs text-red-600 font-normal pl-1 mt-0.5">{formErrors[`previousData.${idx}.landArea`]}</span>}
                                     </div>
 
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Bangunan</label>
+                                        <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Bangunan <span className="text-slate-400 text-xs">(Opsional)</span></label>
                                         <div className="relative">
-                                            <input type="number" id={`previousData.${idx}.buildingArea`} value={item.buildingArea} onChange={(e) => onPreviousItemChange(idx, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
+                                            <input type="number" id={`previousData.${idx}.buildingArea`} placeholder="120 (0 jika tanah kosong)" value={item.buildingArea !== undefined && item.buildingArea !== null && item.buildingArea !== '' ? item.buildingArea : 0} onChange={(e) => onPreviousItemChange(idx, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
                                             <span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                                         </div>
                                     </div>
@@ -334,7 +378,7 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Tanah <span className="text-red-500">*</span></label>
                                         <div className="relative">
-                                            <input type="number" id="previousData.0.landArea" placeholder="150" value={item0.landArea || ''} onChange={(e) => onPreviousItemChange(0, 'landArea', e.target.value)} disabled={loading} className={getInputClass(!!formErrors['previousData.0.landArea'], 'pl-3.5 pr-10')} />
+                                            <input type="number" id="previousData.0.landArea" placeholder="200" value={item0.landArea !== undefined && item0.landArea !== null && item0.landArea !== '' ? item0.landArea : 0} onChange={(e) => onPreviousItemChange(0, 'landArea', e.target.value)} disabled={loading} className={getInputClass(!!formErrors['previousData.0.landArea'], 'pl-3.5 pr-10')} />
                                             <span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                                         </div>
                                         {formErrors['previousData.0.landArea'] && <span className="text-xs text-red-600 pl-1 mt-0.5">{formErrors['previousData.0.landArea']}</span>}
@@ -381,7 +425,7 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[13px] font-normal text-slate-700 font-sans">Luas Bangunan <span className="text-slate-400 text-xs">(Opsional)</span></label>
                                         <div className="relative">
-                                            <input type="number" placeholder="90 (0 jika tanah kosong)" value={item0.buildingArea || ''} onChange={(e) => onPreviousItemChange(0, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
+                                            <input type="number" placeholder="120 (0 jika tanah kosong)" value={item0.buildingArea !== undefined && item0.buildingArea !== null && item0.buildingArea !== '' ? item0.buildingArea : 0} onChange={(e) => onPreviousItemChange(0, 'buildingArea', e.target.value)} disabled={loading} className={getInputClass(false, 'pl-3.5 pr-10')} />
                                             <span className="text-slate-500 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 select-none font-sans">m²</span>
                                         </div>
                                     </div>
@@ -396,7 +440,7 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
 
                                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                                     <label className="text-[13px] font-normal text-slate-700 font-sans">Catatan <span className="text-slate-400">(Opsional)</span></label>
-                                    <textarea rows={2} placeholder="Catatan tambahan data lama..." value={item0.notes || ''} onChange={(e) => onPreviousItemChange(0, 'notes', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(false, 'resize-y')} />
+                                    <textarea rows={2} placeholder="Silhkan tinggalkan catatan kalau perlu" value={item0.notes || ''} onChange={(e) => onPreviousItemChange(0, 'notes', e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} disabled={loading} className={getInputClass(false, 'resize-y')} />
                                 </div>
                             </div>
                         </div>

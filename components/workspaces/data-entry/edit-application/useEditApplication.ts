@@ -9,11 +9,25 @@ import {
     formatNop
 } from '@/components/workspaces/shared/constants';
 
-export const getPrimaryNopDisplay = (previousData: any[]): string => {
+export const getPrimaryNopDisplay = (previousData: any[], applicationType?: string): string => {
     const primaryItem = (previousData || []).find(item => item && item.isPrimary) || (previousData || [])[0] || {};
     const rawNop = (primaryItem.nop || '').replace(/[^\d]/g, '');
 
     if (!rawNop) return '36.19.XXX.XXX.XXX-XXXX.X';
+
+    // Format raw NOP dynamically with dots and hyphen
+    let fullFmtNop = rawNop;
+    if (rawNop.length > 2) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2);
+    if (rawNop.length > 4) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4);
+    if (rawNop.length > 7) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7);
+    if (rawNop.length > 10) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10);
+    if (rawNop.length > 13) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10, 13) + '-' + rawNop.slice(13);
+    if (rawNop.length > 17) fullFmtNop = rawNop.slice(0, 2) + '.' + rawNop.slice(2, 4) + '.' + rawNop.slice(4, 7) + '.' + rawNop.slice(7, 10) + '.' + rawNop.slice(10, 13) + '-' + rawNop.slice(13, 17) + '.' + rawNop.slice(17, 18);
+
+    // JIKA PEMBETULAN (CORRECTION) ATAU MUTASI HABIS: PREFILL MURNI 100% NOP LAMA
+    if (applicationType === 'CORRECTION' || applicationType === 'EXPIRED_UPDATE' || applicationType === 'EXPIRED_REGULAR') {
+        return fullFmtNop;
+    }
 
     const p1 = rawNop.slice(0, 2).padEnd(2, 'X');
     const p2 = rawNop.slice(2, 4).padEnd(2, 'X');
@@ -30,13 +44,122 @@ interface UseEditApplicationOptions {
     onCancel?: () => void;
 }
 
+export const parseEditTargetData = (editTarget: any) => {
+    if (!editTarget) return {
+        applicationType: '',
+        applicationNumber: '',
+        serviceNumberDate: '',
+        completionDate: '',
+        previousData: [],
+        targetData: []
+    };
+
+    const appType = editTarget.applicationType || editTarget.jenisPermohonan || '';
+    const appNumber = (editTarget.applicationNumber || editTarget.nomorPelayanan || '').toUpperCase();
+
+    const rawDate = editTarget.serviceNumberDate || editTarget.tanggalNoPelayanan;
+    const dateObj = rawDate ? new Date(rawDate) : null;
+    const srvDate = dateObj && !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
+
+    const rawSelesaiDate = editTarget.completionDate || editTarget.tanggalPenyelesaian;
+    const selesaiObj = rawSelesaiDate ? new Date(rawSelesaiDate) : null;
+    const compDate = selesaiObj && !isNaN(selesaiObj.getTime()) ? selesaiObj.toISOString().split('T')[0] : '';
+
+    const needsPrev = SERVICES_NEED_PREVIOUS_DATA.includes(appType);
+    const needsTgt = SERVICES_NEED_TARGET_DATA.includes(appType);
+
+    let parsedPrev: any[] = [];
+    if (!needsPrev) {
+        parsedPrev = [];
+    } else if (editTarget.previousData && Array.isArray(editTarget.previousData) && editTarget.previousData.length > 0) {
+        parsedPrev = editTarget.previousData.map((item: any, i: number) => ({
+            ...createEmptyPreviousDataItem(),
+            isPrimary: i === 0,
+            ...(item || {}),
+            nop: item.nop ? formatNop(item.nop) : ''
+        }));
+    } else if (editTarget.nop || editTarget.namaPemilikLama) {
+        parsedPrev = [{
+            ...createEmptyPreviousDataItem(),
+            isPrimary: true,
+            nop: formatNop(editTarget.nop || ''),
+            whatsappNumber: editTarget.noWhatsapp || '',
+            ownerName: editTarget.namaPemilikLama || '',
+            ownerAddress: editTarget.alamatPemilikLama || '',
+            ownerBlock: editTarget.blokPemilikLama || '',
+            ownerRt: editTarget.rtPemilikLama || '',
+            ownerRw: editTarget.rwPemilikLama || '',
+            ownerKecamatan: editTarget.kecamatanPemilikLama || '',
+            ownerDesa: editTarget.desaPemilikLama || '',
+            objectAddress: editTarget.alamatObjekLama || '',
+            objectBlock: editTarget.blokObjekLama || '',
+            objectRt: editTarget.rtObjekLama || '',
+            objectRw: editTarget.rwObjekLama || '',
+            objectKecamatan: editTarget.kecamatanObjekLama || '',
+            objectDesa: editTarget.desaObjekLama || '',
+            landArea: editTarget.luasTanahLama ?? 0,
+            buildingArea: editTarget.luasBangunanLama ?? 0,
+            certificate: editTarget.sertifikatLama || ''
+        }];
+    } else {
+        parsedPrev = [createEmptyPreviousDataItem()];
+    }
+
+    let parsedTgt: any[] = [];
+    if (!needsTgt) {
+        parsedTgt = [];
+    } else if (editTarget.targetData && Array.isArray(editTarget.targetData) && editTarget.targetData.length > 0) {
+        parsedTgt = editTarget.targetData.map((item: any) => ({
+            ...createEmptyTargetDataItem(),
+            ...(item || {}),
+            nopTemporary: item.nopTemporary ? formatNop(item.nopTemporary) : ''
+        }));
+    } else if (editTarget.dataBaru && Array.isArray(editTarget.dataBaru)) {
+        parsedTgt = editTarget.dataBaru.map((item: any) => ({
+            ...createEmptyTargetDataItem(),
+            ...(item || {}),
+            nopTemporary: item.nopSementara ? formatNop(item.nopSementara) : '',
+            whatsappNumber: item.noWhatsapp || '',
+            ownerName: item.namaPemilikBaru || '',
+            ownerAddress: item.alamatPemilikBaru || '',
+            ownerBlock: item.blokPemilikBaru || '',
+            ownerRt: item.rtPemilikBaru || '',
+            ownerRw: item.rwPemilikBaru || '',
+            ownerKecamatan: item.kecamatanPemilikBaru || '',
+            ownerDesa: item.desaPemilikBaru || '',
+            objectAddress: item.objectAddress || '',
+            objectBlock: item.objectBlock || '',
+            objectRt: item.objectRt || '',
+            objectRw: item.objectRw || '',
+            objectKecamatan: item.objectKecamatan || '',
+            objectDesa: item.desaObjekBaru || '',
+            landArea: item.luasTanahBaru ?? 0,
+            buildingArea: item.luasBangunanBaru ?? 0,
+            certificate: item.sertifikatBaru || ''
+        }));
+    } else {
+        parsedTgt = [createEmptyTargetDataItem()];
+    }
+
+    return {
+        applicationType: appType,
+        applicationNumber: appNumber,
+        serviceNumberDate: srvDate,
+        completionDate: compDate,
+        previousData: parsedPrev,
+        targetData: parsedTgt
+    };
+};
+
 export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditApplicationOptions) => {
-    const [applicationType, setApplicationType] = useState<string>('');
-    const [applicationNumber, setApplicationNumber] = useState('');
-    const [serviceNumberDate, setServiceNumberDate] = useState('');
-    const [completionDate, setCompletionDate] = useState('');
-    const [previousData, setPreviousData] = useState<any[]>([]);
-    const [targetData, setTargetData] = useState<any[]>([]);
+    const initialParsed = useMemo(() => parseEditTargetData(editTarget), [editTarget]);
+
+    const [applicationType, setApplicationType] = useState<string>(() => initialParsed.applicationType);
+    const [applicationNumber, setApplicationNumber] = useState(() => initialParsed.applicationNumber);
+    const [serviceNumberDate, setServiceNumberDate] = useState(() => initialParsed.serviceNumberDate);
+    const [completionDate, setCompletionDate] = useState(() => initialParsed.completionDate);
+    const [previousData, setPreviousData] = useState<any[]>(() => initialParsed.previousData);
+    const [targetData, setTargetData] = useState<any[]>(() => initialParsed.targetData);
 
     const [currentStep, setCurrentStep] = useState(1);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -47,89 +170,15 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
 
     useEffect(() => { setMounted(true); }, []);
 
-    // SINKRONISASI DATA EDIT TARGET KE STATE FORM
+    // SINKRONISASI DATA EDIT TARGET KE STATE FORM SAAT EDIT TARGET BERUBAH
     const syncDataFromEditTarget = useCallback(() => {
-        if (!editTarget) return;
-
-        setApplicationType(editTarget.applicationType || editTarget.jenisPermohonan || '');
-        setApplicationNumber((editTarget.applicationNumber || editTarget.nomorPelayanan || '').toUpperCase());
-
-        const rawDate = editTarget.serviceNumberDate || editTarget.tanggalNoPelayanan;
-        const dateObj = rawDate ? new Date(rawDate) : null;
-        setServiceNumberDate(dateObj && !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '');
-
-        const rawSelesaiDate = editTarget.completionDate || editTarget.tanggalPenyelesaian;
-        const selesaiObj = rawSelesaiDate ? new Date(rawSelesaiDate) : null;
-        setCompletionDate(selesaiObj && !isNaN(selesaiObj.getTime()) ? selesaiObj.toISOString().split('T')[0] : '');
-
-        // Parse Data Lama / Previous Data
-        if (editTarget.previousData && Array.isArray(editTarget.previousData) && editTarget.previousData.length > 0) {
-            setPreviousData(editTarget.previousData.map((item: any, i: number) => ({
-                ...createEmptyPreviousDataItem(),
-                isPrimary: i === 0,
-                ...(item || {}),
-                nop: item.nop ? formatNop(item.nop) : ''
-            })));
-        } else if (editTarget.nop || editTarget.namaPemilikLama) {
-            setPreviousData([{
-                ...createEmptyPreviousDataItem(),
-                isPrimary: true,
-                nop: formatNop(editTarget.nop || ''),
-                whatsappNumber: editTarget.noWhatsapp || '',
-                ownerName: editTarget.namaPemilikLama || '',
-                ownerAddress: editTarget.alamatPemilikLama || '',
-                ownerBlock: editTarget.blokPemilikLama || '',
-                ownerRt: editTarget.rtPemilikLama || '',
-                ownerRw: editTarget.rwPemilikLama || '',
-                ownerKecamatan: editTarget.kecamatanPemilikLama || '',
-                ownerDesa: editTarget.desaPemilikLama || '',
-                objectAddress: editTarget.alamatObjekLama || '',
-                objectBlock: editTarget.blokObjekLama || '',
-                objectRt: editTarget.rtObjekLama || '',
-                objectRw: editTarget.rwObjekLama || '',
-                objectKecamatan: editTarget.kecamatanObjekLama || '',
-                objectDesa: editTarget.desaObjekLama || '',
-                landArea: editTarget.luasTanahLama || '',
-                buildingArea: editTarget.luasBangunanLama || '',
-                certificate: editTarget.sertifikatLama || ''
-            }]);
-        } else {
-            setPreviousData([createEmptyPreviousDataItem()]);
-        }
-
-        // Parse Data Baru / Target Data
-        if (editTarget.targetData && Array.isArray(editTarget.targetData) && editTarget.targetData.length > 0) {
-            setTargetData(editTarget.targetData.map((item: any) => ({
-                ...createEmptyTargetDataItem(),
-                ...(item || {}),
-                nopTemporary: item.nopTemporary ? formatNop(item.nopTemporary) : ''
-            })));
-        } else if (editTarget.dataBaru && Array.isArray(editTarget.dataBaru)) {
-            setTargetData(editTarget.dataBaru.map((item: any) => ({
-                ...createEmptyTargetDataItem(),
-                ...(item || {}),
-                nopTemporary: item.nopSementara ? formatNop(item.nopSementara) : '',
-                whatsappNumber: item.noWhatsapp || '',
-                ownerName: item.namaPemilikBaru || '',
-                ownerAddress: item.alamatPemilikBaru || '',
-                ownerBlock: item.blokPemilikBaru || '',
-                ownerRt: item.rtPemilikBaru || '',
-                ownerRw: item.rwPemilikBaru || '',
-                ownerKecamatan: item.kecamatanPemilikBaru || '',
-                ownerDesa: item.desaPemilikBaru || '',
-                objectAddress: item.objectAddress || '',
-                objectBlock: item.objectBlock || '',
-                objectRt: item.objectRt || '',
-                objectRw: item.objectRw || '',
-                objectKecamatan: item.objectKecamatan || '',
-                objectDesa: item.desaObjekBaru || '',
-                landArea: item.luasTanahBaru || '',
-                buildingArea: item.luasBangunanBaru || '',
-                certificate: item.sertifikatBaru || ''
-            })));
-        } else {
-            setTargetData([createEmptyTargetDataItem()]);
-        }
+        const parsed = parseEditTargetData(editTarget);
+        setApplicationType(parsed.applicationType);
+        setApplicationNumber(parsed.applicationNumber);
+        setServiceNumberDate(parsed.serviceNumberDate);
+        setCompletionDate(parsed.completionDate);
+        setPreviousData(parsed.previousData);
+        setTargetData(parsed.targetData);
     }, [editTarget]);
 
     useEffect(() => {
@@ -156,6 +205,41 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
     }, [needPreviousData, needTargetData]);
 
     const currentStepLabel = steps[currentStep - 1]?.label;
+
+    // Auto-clean data fields when service type changes (e.g. REACTIVATION has no targetData, NEW_TAX_OBJECT has no previousData)
+    useEffect(() => {
+        if (!applicationType) return;
+
+        if (!needPreviousData) {
+            setPreviousData([]);
+        } else if (previousData.length === 0) {
+            setPreviousData([createEmptyPreviousDataItem()]);
+        }
+
+        if (!needTargetData) {
+            setTargetData([]);
+        } else if (needTargetData && targetData.length === 0) {
+            setTargetData([createEmptyTargetDataItem()]);
+        }
+    }, [applicationType, needPreviousData, needTargetData]);
+
+    useEffect(() => {
+        if (applicationType === 'NEW_TAX_OBJECT' || !needPreviousData || !needTargetData) return;
+
+        const defaultNopTemp = getPrimaryNopDisplay(previousData, applicationType);
+
+        setTargetData(prevTargets => {
+            let hasChange = false;
+            const updated = prevTargets.map(item => {
+                if (item.nopTemporary !== defaultNopTemp) {
+                    hasChange = true;
+                    return { ...item, nopTemporary: defaultNopTemp };
+                }
+                return item;
+            });
+            return hasChange ? updated : prevTargets;
+        });
+    }, [previousData, applicationType, needPreviousData, needTargetData]);
 
     // HANDLERS INPUT
     const clearFieldError = useCallback((fieldKey: string) => {
@@ -260,9 +344,17 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
             setError('Formulir belum lengkap. Harap periksa bagian berpembatas merah.');
 
             const firstKey = Object.keys(errors)[0];
-            if (firstKey.includes('previousData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Lama') + 1 || 1);
-            else if (firstKey.includes('targetData')) setCurrentStep(steps.findIndex(s => s.label === 'Data SPPT Baru') + 1 || 1);
-            else setCurrentStep(1);
+            let targetStepIndex = 1;
+            if (firstKey.includes('previousData')) {
+                const idx = steps.findIndex(s => s.label === 'Data SPPT Lama');
+                if (idx !== -1) targetStepIndex = idx + 1;
+            } else if (firstKey.includes('targetData')) {
+                const idx = steps.findIndex(s => s.label === 'Data SPPT Baru');
+                if (idx !== -1) targetStepIndex = idx + 1;
+            } else {
+                targetStepIndex = 1;
+            }
+            setCurrentStep(targetStepIndex);
 
             setTimeout(() => {
                 const el = document.getElementById(firstKey);
@@ -381,19 +473,19 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
             clearFieldError(`targetData.${targetIdx}.objectDesa`);
         }, [previousData, clearFieldError]),
 
-        handleCopyObjectToOwner: useCallback((targetIdx: number) => {
+        handleCopyOwnerToObject: useCallback((targetIdx: number) => {
             setTargetData(prevTargets => prevTargets.map((item, i) => i === targetIdx ? {
                 ...item,
-                ownerAddress: item.objectAddress || '',
-                ownerBlock: item.objectBlock || '',
-                ownerRt: item.objectRt || '',
-                ownerRw: item.objectRw || '',
-                ownerKecamatan: item.objectKecamatan || '',
-                ownerDesa: item.objectDesa || '',
+                objectAddress: item.ownerAddress || '',
+                objectBlock: item.ownerBlock || '',
+                objectRt: item.ownerRt || '',
+                objectRw: item.ownerRw || '',
+                objectKecamatan: item.ownerKecamatan || '',
+                objectDesa: item.ownerDesa || '',
             } : item));
-            clearFieldError(`targetData.${targetIdx}.ownerAddress`);
-            clearFieldError(`targetData.${targetIdx}.ownerKecamatan`);
-            clearFieldError(`targetData.${targetIdx}.ownerDesa`);
+            clearFieldError(`targetData.${targetIdx}.objectAddress`);
+            clearFieldError(`targetData.${targetIdx}.objectKecamatan`);
+            clearFieldError(`targetData.${targetIdx}.objectDesa`);
         }, [clearFieldError]),
 
         // Stepper & UI

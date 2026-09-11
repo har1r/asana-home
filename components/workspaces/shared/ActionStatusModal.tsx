@@ -39,7 +39,7 @@ export const ActionStatusModal: React.FC<ActionStatusModalProps> = ({
         }}
       />
 
-      <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100/80 flex flex-col items-center text-center gap-4 z-10 transform transition-all animate-scaleUp">
+      <div className="relative w-full max-w-sm bg-white rounded-md p-6 shadow-2xl border border-slate-100/80 flex flex-col items-center text-center gap-4 z-10 transform transition-all animate-scaleUp">
         {/* Status Graphic/Icon */}
         <div className="relative flex items-center justify-center w-16 h-16 rounded-full">
           {status === 'loading' && (
@@ -119,7 +119,7 @@ export const ActionStatusModal: React.FC<ActionStatusModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="mt-2 w-full py-2.5 bg-gradient-to-r from-[#7dd4fc] via-[#9cb4fe] to-[#cab3fe] hover:brightness-[1.03] active:scale-95 text-[#2c333f] font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            className="mt-2 w-full py-2.5 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-bold text-xs rounded-md shadow-xs transition-all cursor-pointer font-sans"
           >
             {confirmText}
           </button>

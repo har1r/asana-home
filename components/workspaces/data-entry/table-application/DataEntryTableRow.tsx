@@ -320,7 +320,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
       </td>
       <td className="py-2.5 px-4 text-center font-sans">
         <div className="flex items-center justify-center gap-1">
-          <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-full border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
+          <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-md border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
             {getStatusLabel(item.status)}
           </span>
         </div>
@@ -359,7 +359,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
                   }}
                   className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
                 >
-                  <Edit className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors" />
+                  <Edit className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
                   <span>Edit Berkas</span>
                 </button>
 
@@ -372,7 +372,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
                   }}
                   className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
                 >
-                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
                   <span>Duplikasi Berkas</span>
                 </button>
 
@@ -386,7 +386,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
                     }}
                     className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
                   >
-                    <BookCopy className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00a389] transition-colors" />
+                    <BookCopy className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
                     <span>Riwayat Versi</span>
                   </button>
                 )}

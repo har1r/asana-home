@@ -1,8 +1,5 @@
 "use client";
 
-// ==========================================
-// 1. IMPORT MODULE & IKON (LUCIDE REACT)
-// ==========================================
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import NotificationBell from './NotificationBell';
@@ -15,37 +12,32 @@ import {
   Gift,
   Globe,
   Star,
-  Zap,
   Home,
   CheckSquare,
   Inbox,
   Search,
   HelpCircle,
   Calendar,
-  UserPlus,
   LucideIcon,
   Folder,
   Layers,
   Clock,
-  History,
-  X
+  X,
+  FileClock
 } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
 import { getGlobalBerandaStats } from '@/app/actions/dashboard';
 import { getApplicationStats } from '@/app/actions/data-entry';
 import { SkeletonBox, SkeletonText, SkeletonBadge, SkeletonCircle } from '@/components/skeletons/SkeletonBase';
 
-// ==========================================
-// 2. TYPE DEFINITIONS & INTERFACES
-// ==========================================
-interface DataBaruItem {
+interface TargetDataItem {
   id: string;
-  namaPemilikBaru: string;
-  nopel: string;
-  permohonanId: string;
+  ownerName: string;
+  applicationNumber: string;
+  applicationId: string;
 }
 
-interface PermohonanStatsState {
+interface ApplicationStatsState {
   total: number;
   scanned: number;
 }
@@ -56,11 +48,8 @@ interface MenuItem {
   icon: LucideIcon;
 }
 
-// ==========================================
-// 3. KOMPONEN UTAMA SIDEBAR (99% PRESISI LOTTIEFILES - PURE TAILWIND)
-// ==========================================
 export default function Sidebar() {
-  // --- Context Dashboard ---
+  /** Context Dashboard (Digunakan pada JSX baris: 227 [mobile menu], 382 & 436 & 502 [tab aktif], 435 & 491 [pencarian], 555 & 575 [drawer profil]) */
   const {
     activeTab,
     setActiveTab,
@@ -71,17 +60,19 @@ export default function Sidebar() {
     setIsMobileMenuOpen
   } = useDashboard();
 
-  // --- User Session & Role ---
+  /** User Session (Digunakan pada JSX baris: 253 & 565 [skeleton loading], 583 [nama user profile]) */
   const { data: session, status: sessionStatus } = useSession();
   const isSessionLoading = sessionStatus === 'loading';
   const userName = session?.user?.name || '';
   const userRoleRaw = (session?.user as any)?.role || '';
 
+  /** Nama depan user (Digunakan pada JSX baris: 272 [sapaan header "Hi, [firstName]"]) */
   const firstName = useMemo(() => {
     if (!userName || !userName.trim()) return '';
     return userName.trim().split(/\s+/)[0];
   }, [userName]);
 
+  /** Inisial nama user (Digunakan pada JSX baris: 265 & 579 [avatar icon di header & footer]) */
   const userInitials = useMemo(() => {
     if (!userName || !userName.trim()) return 'MU';
     const parts = userName.trim().split(/\s+/);
@@ -91,18 +82,25 @@ export default function Sidebar() {
     return parts[0].substring(0, 2).toUpperCase();
   }, [userName]);
 
+  /** Format role user (Digunakan pada JSX baris: 279 [label role di header workspace]) */
   const userRoleFormatted = useMemo(() => {
     if (!userRoleRaw) return 'Starter Plan';
     return userRoleRaw.charAt(0).toUpperCase() + userRoleRaw.slice(1).toLowerCase();
   }, [userRoleRaw]);
 
-  // --- Local UI State (Toggle Menu Dropdown) ---
+  /** Toggle accordion Projects (Digunakan pada JSX baris: 405, 410, 413, 421 [ekspansi menu "Projects"]) */
   const [showProjects, setShowProjects] = useState(false);
+
+  /** Toggle accordion Favorit (Digunakan pada JSX baris: 458, 463, 466, 476 [ekspansi menu "Favorit"]) */
   const [showCollections, setShowCollections] = useState(false);
+
+  /** Toggle pembatasan favorit (Digunakan pada JSX baris: 485, 506, 509 [lihat lebih banyak/sedikit NOPEL favorit]) */
   const [showAllFavorites, setShowAllFavorites] = useState(false);
+
+  /** Waktu digital jam (Digunakan pada JSX baris: 357 [badge Jam Digital real-time]) */
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // --- Live Digital Clock Timer ---
+  /** Timer Jam Digital */
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -115,16 +113,18 @@ export default function Sidebar() {
     return () => clearInterval(timer);
   }, []);
 
-  // --- State Data Permohonan & Statistik ---
-  const [permohonanList, setPermohonanList] = useState<any[]>([]);
-  const [stats, setStats] = useState<PermohonanStatsState>({ total: 0, scanned: 0 });
+  /** List data permohonan mentah (Diolah dalam targetDataItems memo baris 156-186) */
+  const [applicationList, setApplicationList] = useState<any[]>([]);
+
+  /** Statistik total & scan (Digunakan pada JSX baris: 340 & 346 [tracker progress bar]) */
+  const [stats, setStats] = useState<ApplicationStatsState>({ total: 0, scanned: 0 });
+
+  /** Loading state data (Digunakan pada JSX baris: 300, 423, 468, 478 [render Skeleton pada tracker & list]) */
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
 
-  // ==========================================
-  // 4. DATA FETCHING & LOGIKA DIHUBUNGKAN
-  // ==========================================
+  /** Fetching data awal permohonan & statistik dari Server Actions */
   useEffect(() => {
-    async function loadPermohonanData() {
+    async function loadApplicationData() {
       setIsDataLoading(true);
       try {
         const [globalRes, statsRes] = await Promise.all([
@@ -132,7 +132,7 @@ export default function Sidebar() {
           getApplicationStats()
         ]);
         if (globalRes.success && globalRes.recentList) {
-          setPermohonanList(globalRes.recentList);
+          setApplicationList(globalRes.recentList);
         }
         if (statsRes.success || globalRes.success) {
           setStats({
@@ -146,40 +146,46 @@ export default function Sidebar() {
         setIsDataLoading(false);
       }
     }
-    loadPermohonanData();
+    loadApplicationData();
   }, []);
 
-  // Memecah list permohonan menjadi item permohonan individu (Pemohon Baru / Data Baru)
-  const dataBaruItems = useMemo<DataBaruItem[]>(() => {
-    const items: DataBaruItem[] = [];
-    permohonanList.forEach((perm) => {
-      if (perm.dataBaru && perm.dataBaru.length > 0) {
-        perm.dataBaru.forEach((db: any, idx: number) => {
-          if (db.namaPemilikBaru) {
+  /** List item TargetData/Pemohon (Digunakan pada JSX baris: 429 & 430 [daftar item di bawah accordion Projects]) */
+  const targetDataItems = useMemo<TargetDataItem[]>(() => {
+    const items: TargetDataItem[] = [];
+    applicationList.forEach((app) => {
+      const targetDataList = app.targetData || app.dataBaru;
+      if (targetDataList && targetDataList.length > 0) {
+        targetDataList.forEach((td: any, idx: number) => {
+          const owner = td.ownerName || td.namaPemilikBaru;
+          if (owner) {
             items.push({
-              id: `${perm.id}-db-${idx}`,
-              namaPemilikBaru: db.namaPemilikBaru,
-              nopel: perm.nomorPelayanan || perm.nomorPermohonan,
-              permohonanId: perm.id
+              id: `${app.id}-td-${idx}`,
+              ownerName: owner,
+              applicationNumber: app.applicationNumber || app.nomorPelayanan || app.nomorPermohonan || '',
+              applicationId: app.id
             });
           }
         });
-      } else if (perm.namaPemilikLama) {
-        items.push({
-          id: perm.id,
-          namaPemilikBaru: perm.namaPemilikLama,
-          nopel: perm.nomorPelayanan || perm.nomorPermohonan,
-          permohonanId: perm.id
-        });
+      } else {
+        const previousDataList = app.previousData;
+        const owner = (previousDataList && previousDataList[0]?.ownerName) || app.namaPemilikLama;
+        if (owner) {
+          items.push({
+            id: app.id,
+            ownerName: owner,
+            applicationNumber: app.applicationNumber || app.nomorPelayanan || app.nomorPermohonan || '',
+            applicationId: app.id
+          });
+        }
       }
     });
     return items;
-  }, [permohonanList]);
+  }, [applicationList]);
 
-  // Hitung total pemohon aktif (62 Pemohon)
-  const totalApplicantsCount = stats.total > 0 ? stats.total : dataBaruItems.length;
+  /** Total permohonan aktif (Digunakan pada JSX baris: 326, 340, 346, 415, 417 [counter angka & hitungan % progress bar]) */
+  const totalApplicationsCount = stats.total > 0 ? stats.total : targetDataItems.length;
 
-  // Format Tanggal Hari Ini (Indonesia)
+  /** Format tanggal lokal Indonesia (Digunakan pada JSX baris: 363 [badge Tanggal Hari Ini]) */
   const todayFormatted = useMemo(() => {
     return new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
@@ -189,61 +195,56 @@ export default function Sidebar() {
     });
   }, []);
 
+  /** Pengecekan role peneliti & pengarsip (Digunakan pada mainMenuItems memo baris 206-217) */
   const isResearcherRole = ['RESEARCHER', 'PENELITI'].includes(userRoleRaw);
   const isArchivistRole = ['ARCHIVIST', 'PENGARSIP'].includes(userRoleRaw);
 
-  // Menu Navigasi Utama
+  /** Menu navigasi utama (Digunakan pada JSX baris: 375-396 [render daftar button navigasi utama]) */
   const mainMenuItems: MenuItem[] = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     {
       id: isResearcherRole ? 'bundle-history' : isArchivistRole ? 'archivist-history' : 'submission-history',
       label: isResearcherRole ? 'Riwayat Bundle' : isArchivistRole ? 'Riwayat Digitalisasi' : 'Riwayat Pengajuan',
-      icon: History
+      icon: FileClock
     },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },
     { id: 'tracking', label: 'Lacak Permohonan', icon: Search },
     { id: 'help', label: 'Bantuan', icon: HelpCircle },
   ];
 
-  // ==========================================
-  // 5. RENDERING VISUAL SIDEBAR (99% IDENTIK LOTTIEFILES - PURE TAILWIND CSS)
-  // ==========================================
   return (
     <aside
       id="sidebar-nav"
       style={{ fontFamily: "'Karla', var(--font-karla), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}
       className="max-w-[289px] w-[289px] p-4 h-screen sticky top-0 border-r border-gray-200/80 flex flex-col justify-between shrink-0 select-none relative bg-white text-gray-900 z-30"
     >
-      {/* MOBILE CLOSE BUTTON */}
+      {/* Tombol Tutup Mobile Sidebar */}
       <button
         onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
-        className="md:hidden absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer z-50"
+        className="md:hidden absolute top-3 right-3 p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer z-50"
         title="Tutup Menu"
       >
         <X className="w-5 h-5" />
       </button>
 
-      {/* INNER WRAPPER CONTAINER (PURE TAILWIND FLEX COL) */}
       <div className="flex flex-col justify-between h-full w-full">
         <div className="flex flex-col justify-between h-full">
 
-          {/* ========================================== */}
-          {/* SECTION 1: HEADER & PROGRESS TRACKER (ATAS) */}
-          {/* ========================================== */}
+          {/* Bagian Top: User Header & Progress Tracker */}
           <div className="flex flex-col gap-3 shrink-0">
 
-            {/* 1. WORKSPACE SELECTOR & NOTIFICATION BELL */}
+            {/* Header Profil & Workspace Selector */}
             <div className="flex items-center justify-between h-[47px] pb-1">
               <div>
-                <div className="bg-white rounded-lg">
+                <div className="bg-white rounded-md">
                   <button
                     type="button"
                     id="workspace-menu"
                     aria-haspopup="menu"
                     aria-expanded="false"
                     data-state="closed"
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-100 group transition-colors text-left"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 group transition-colors text-left"
                   >
                     <div className="flex gap-x-2 items-center">
                       {isSessionLoading ? (
@@ -257,7 +258,7 @@ export default function Sidebar() {
                       ) : (
                         <>
                           <div className="relative flex items-center gap-2 text-gray-600">
-                            <div className="w-7.5 h-7.5 rounded-lg bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
+                            <div className="w-7.5 h-7.5 rounded-md bg-[#E0E6EB] box-border flex justify-center items-center select-none shrink-0 shadow-3xs">
                               <p className="m-0 p-0 text-center box-border font-sans text-[11px] text-[#2D3A46] leading-[0] uppercase font-semibold">{userInitials}</p>
                             </div>
                           </div>
@@ -285,18 +286,16 @@ export default function Sidebar() {
                 </div>
               </div>
 
-              {/* Notification Bell */}
               <div className="flex items-center">
                 <NotificationBell />
               </div>
             </div>
 
-            {/* 2. USAGE TRACKER / PROGRESS & ACTION BUTTONS */}
+            {/* Tracker Progress Permohonan & Badge Informasi Waktu/Tanggal */}
             <div className="flex flex-col gap-2.5 px-1 py-1">
               <div className="flex flex-col gap-2">
                 {isDataLoading ? (
                   <>
-                    {/* Tracker 1 Skeleton */}
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-slate-600 font-sans">Permohonan Masuk</span>
@@ -305,7 +304,6 @@ export default function Sidebar() {
                       <SkeletonBox width="w-full" height="h-1.5" rounded="rounded-full" />
                     </div>
 
-                    {/* Tracker 2 Skeleton */}
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-slate-600 font-sans">Scan permohonan diupload</span>
@@ -316,14 +314,13 @@ export default function Sidebar() {
                   </>
                 ) : (
                   <>
-                    {/* Tracker 1: Permohonan Masuk */}
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-slate-600 font-sans">
                           Permohonan Masuk
                         </span>
                         <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
-                          {totalApplicantsCount}
+                          {totalApplicationsCount}
                         </span>
                       </div>
                       <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
@@ -331,20 +328,19 @@ export default function Sidebar() {
                       </div>
                     </div>
 
-                    {/* Tracker 2: Scan permohonan diupload */}
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-slate-600 font-sans">
                           Scan permohonan diupload
                         </span>
                         <span className="text-[11px] text-slate-700 tabular-nums font-medium font-sans">
-                          {stats.scanned}/{totalApplicantsCount}
+                          {stats.scanned}/{totalApplicationsCount}
                         </span>
                       </div>
                       <div className="rounded-full bg-slate-200/80 w-full h-1.5 overflow-hidden">
                         <div
                           className="h-full bg-[#00a389] rounded-full transition-all duration-500 motion-safe:animate-progress-ok"
-                          style={{ width: `${totalApplicantsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicantsCount) * 100)) : 0}%` }}
+                          style={{ width: `${totalApplicationsCount > 0 ? Math.min(100, Math.round((stats.scanned / totalApplicationsCount) * 100)) : 0}%` }}
                         />
                       </div>
                     </div>
@@ -352,14 +348,14 @@ export default function Sidebar() {
                 )}
               </div>
 
-              {/* Digital Clock Badge */}
-              <div className="relative flex items-center justify-center rounded-lg px-3 py-2 text-[13px] text-white bg-[#00a389] shadow-xs select-none gap-2 font-sans font-normal">
+              {/* Badge Jam Digital */}
+              <div className="relative flex items-center justify-center rounded-md px-3 py-2 text-[13px] text-white bg-[#00a389] shadow-xs select-none gap-2 font-sans font-normal">
                 <Clock className="w-4 h-4 shrink-0 text-white stroke-[2]" />
                 <span className="font-mono text-[13px] font-normal tracking-wider text-white">{currentTime || '00:00:00'}</span>
               </div>
 
-              {/* Today Date Badge */}
-              <div className="relative flex items-center justify-center rounded-lg px-3 py-1.5 border font-normal text-[13px] border-slate-200/90 bg-white text-slate-700 shadow-3xs select-none mt-0.5 gap-2 font-sans">
+              {/* Badge Tanggal Hari Ini */}
+              <div className="relative flex items-center justify-center rounded-md px-3 py-1.5 border font-normal text-[13px] border-slate-200/90 bg-white text-slate-700 shadow-3xs select-none mt-0.5 gap-2 font-sans">
                 <Calendar className="w-4 h-4 shrink-0 text-slate-400" />
                 <span className="truncate text-[13px] font-normal text-slate-700 font-sans">{todayFormatted}</span>
               </div>
@@ -367,13 +363,11 @@ export default function Sidebar() {
 
           </div>
 
-          {/* ========================================== */}
-          {/* SECTION 2: SCROLLABLE NAVIGATION AREA (TENGAH) */}
-          {/* ========================================== */}
+          {/* Bagian Tengah: Menu Navigasi Scrollable & Accordion */}
           <div className="px-1 border-t border-b border-transparent my-3 overflow-y-auto scrollbar-none flex-1">
             <div className="flex flex-col gap-4 my-2">
 
-              {/* 2.1 Navigasi Utama */}
+              {/* Navigasi Utama */}
               <nav className="flex flex-col gap-0.5">
                 {mainMenuItems.map((item) => {
                   const Icon = item.icon;
@@ -385,7 +379,7 @@ export default function Sidebar() {
                         setActiveTab(item.id);
                         setSelectedProject(null);
                       }}
-                      className={`w-full flex group items-center gap-2 px-2.5 py-2 text-left rounded-lg text-[13px] font-normal font-sans transition-all ${isActive
+                      className={`w-full flex group items-center gap-2 px-2.5 py-2 text-left rounded-md text-[13px] font-normal font-sans transition-all ${isActive
                         ? 'bg-slate-100 text-slate-900 font-normal'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-normal'
                         }`}
@@ -399,14 +393,14 @@ export default function Sidebar() {
                 })}
               </nav>
 
-              {/* 2.2 Accordions (Permohonan Masuk & Favorit NOPEL) */}
+              {/* Accordion Projects & Favorit */}
               <div className="flex flex-col gap-0.5 pt-1">
 
-                {/* Permohonan Masuk Accordion */}
+                {/* Accordion Projects (Permohonan Masuk) */}
                 <div>
                   <button
                     onClick={() => setShowProjects(!showProjects)}
-                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-lg text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer font-sans"
+                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-md text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer font-sans"
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
@@ -415,9 +409,9 @@ export default function Sidebar() {
                       <Folder className={`w-4 h-4 shrink-0 transition-all ${showProjects ? 'text-slate-900 fill-slate-900/15' : 'text-slate-400 fill-none group-hover:text-slate-900'}`} />
                       <span className={showProjects ? 'text-slate-900' : ''}>Projects</span>
                     </div>
-                    {totalApplicantsCount > 0 && (
+                    {totalApplicationsCount > 0 && (
                       <span className="text-[11px] font-normal text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-sans">
-                        {totalApplicantsCount}
+                        {totalApplicationsCount}
                       </span>
                     )}
                   </button>
@@ -429,20 +423,20 @@ export default function Sidebar() {
                           <SkeletonText width="w-2/3" height="h-3" />
                           <SkeletonText width="w-4/5" height="h-3" />
                         </div>
-                      ) : dataBaruItems.length > 0 ? (
-                        dataBaruItems.map((item) => (
+                      ) : targetDataItems.length > 0 ? (
+                        targetDataItems.map((item) => (
                           <button
                             key={item.id}
                             onClick={() => {
-                              setSearchQuery(item.namaPemilikBaru);
+                              setSearchQuery(item.ownerName);
                               setActiveTab('my-tasks');
                             }}
                             className="w-full text-left py-1.5 px-2 text-[13px] font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors truncate cursor-pointer flex items-center justify-between gap-1.5 font-sans"
-                            title={`Pemohon: ${item.namaPemilikBaru} (NOPEL: ${item.nopel})`}
+                            title={`Pemohon: ${item.ownerName} (NOPEL: ${item.applicationNumber})`}
                           >
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                              <span className="truncate capitalize text-[13px] font-normal text-slate-600 font-sans">{item.namaPemilikBaru}</span>
+                              <span className="truncate capitalize text-[13px] font-normal text-slate-600 font-sans">{item.ownerName}</span>
                             </div>
                           </button>
                         ))
@@ -455,11 +449,11 @@ export default function Sidebar() {
                   )}
                 </div>
 
-                {/* Favorit NOPEL Accordion */}
+                {/* Accordion Favorit NOPEL */}
                 <div>
                   <button
                     onClick={() => setShowCollections(!showCollections)}
-                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-lg text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer font-sans"
+                    className="w-full flex items-center justify-between group px-2.5 py-2 rounded-md text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer font-sans"
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
@@ -485,26 +479,29 @@ export default function Sidebar() {
                         </div>
                       ) : favoritePermohonans && favoritePermohonans.length > 0 ? (
                         <>
-                          {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => (
-                            <button
-                              key={fav.id}
-                              onClick={() => {
-                                setSearchQuery(fav.nomorPelayanan || fav.nomorPermohonan);
-                                setActiveTab('my-tasks');
-                              }}
-                              className="w-full flex items-center gap-2 text-left py-1.5 px-2 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors group/fav truncate cursor-pointer"
-                              title={`Lihat Permohonan: ${fav.nomorPelayanan || fav.nomorPermohonan}`}
-                            >
-                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                              <span className="truncate font-mono text-xs font-semibold text-slate-700">
-                                {fav.nomorPelayanan || fav.nomorPermohonan}
-                              </span>
-                            </button>
-                          ))}
+                          {(showAllFavorites ? favoritePermohonans : favoritePermohonans.slice(0, 5)).map((fav) => {
+                            const appNumber = fav.applicationNumber || fav.nomorPelayanan || fav.nomorPermohonan;
+                            return (
+                              <button
+                                key={fav.id}
+                                onClick={() => {
+                                  setSearchQuery(appNumber);
+                                  setActiveTab('my-tasks');
+                                }}
+                                className="w-full flex items-center gap-2 text-left py-1.5 px-2 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors group/fav truncate cursor-pointer"
+                                title={`Lihat Permohonan: ${appNumber}`}
+                              >
+                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                                <span className="truncate font-mono text-xs font-semibold text-slate-700">
+                                  {appNumber}
+                                </span>
+                              </button>
+                            );
+                          })}
                           {favoritePermohonans.length > 5 && (
                             <button
                               onClick={() => setShowAllFavorites(!showAllFavorites)}
-                              className="w-full text-left py-1 px-2 text-[11px] font-semibold text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
+                              className="w-full text-left py-1.5 px-2 text-[11px] font-semibold text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
                             >
                               {showAllFavorites ? 'Tampilkan lebih sedikit' : 'Tampilkan lebih banyak'}
                             </button>
@@ -521,14 +518,14 @@ export default function Sidebar() {
 
               </div>
 
-              {/* 2.3 Secondary Links */}
+              {/* Link Sekunder */}
               <div className="flex flex-col gap-0.5 pt-1">
-                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors cursor-pointer font-sans">
+                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors cursor-pointer font-sans">
                   <div className="w-3.5 h-3.5 shrink-0" />
                   <Share2 className="w-4 h-4 text-slate-400 group-hover:text-slate-900 shrink-0 transition-colors" />
                   <span>Shared with Me</span>
                 </button>
-                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors cursor-pointer font-sans">
+                <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors cursor-pointer font-sans">
                   <div className="w-3.5 h-3.5 shrink-0" />
                   <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-slate-900 shrink-0 transition-colors" />
                   <span>Recently Deleted</span>
@@ -538,24 +535,22 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* ========================================== */}
-          {/* SECTION 3: FOOTER & USER PROFILE (BAWAH)   */}
-          {/* ========================================== */}
+          {/* Bagian Bottom: Profile Badge User */}
           <div className="mt-auto pt-3 px-1 pb-2 border-t border-slate-200/80 flex flex-col gap-1.5">
             <div className="flex flex-col gap-0.5">
-              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors cursor-pointer font-sans">
+              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors cursor-pointer font-sans">
                 <div className="w-3.5 h-3.5 shrink-0" />
                 <GraduationCap className="w-4 h-4 text-slate-400 group-hover:text-slate-900 shrink-0 transition-colors" />
                 <span>Learn</span>
               </button>
-              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors cursor-pointer font-sans">
+              <button className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors cursor-pointer font-sans">
                 <div className="w-3.5 h-3.5 shrink-0" />
                 <Gift className="w-4 h-4 text-slate-400 group-hover:text-slate-900 shrink-0 transition-colors" />
                 <span>Refer & earn</span>
               </button>
               <button
                 onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-                className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors cursor-pointer font-sans"
+                className="w-full flex items-center gap-2 group px-2.5 py-2 text-[13px] font-normal text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors cursor-pointer font-sans"
               >
                 <div className="w-3.5 h-3.5 shrink-0" />
                 <Globe className="w-4 h-4 text-slate-400 group-hover:text-slate-900 shrink-0 transition-colors" />
@@ -563,9 +558,9 @@ export default function Sidebar() {
               </button>
             </div>
 
-            {/* User Profile Badge */}
+            {/* Profile Badge User di bagian bawah */}
             {isSessionLoading ? (
-              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg mt-1 select-none">
+              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md mt-1 select-none">
                 <SkeletonCircle size="w-7 h-7" />
                 <div className="flex flex-col gap-1 truncate max-w-[180px]">
                   <SkeletonText width="w-24" height="h-3" />
@@ -575,7 +570,7 @@ export default function Sidebar() {
             ) : (
               <div
                 onClick={() => setIsPersonalProfileDrawerOpen && setIsPersonalProfileDrawerOpen(true)}
-                className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors group mt-1"
+                className="flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer hover:bg-slate-100 transition-colors group mt-1"
               >
                 <div className="w-7 h-7 rounded-full bg-[#ffedd5] text-[#9a3412] font-normal text-[13px] flex items-center justify-center shrink-0 border border-[#fed7aa] font-sans">
                   {userInitials.slice(0, 1)}

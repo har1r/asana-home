@@ -31,58 +31,83 @@ export function useApplicationStatistics(items: any[]): ApplicationStatisticMetr
     let processing = 0;
     let completed = 0;
 
-    // Sparkline buckets (7 points for weekly/timeline representation)
-    const BUCKET_COUNT = 7;
+    // Sparkline buckets (4 points representing 4 weeks in a month timeline)
+    const BUCKET_COUNT = 4;
     const totalBuckets = new Array(BUCKET_COUNT).fill(0);
     const processingBuckets = new Array(BUCKET_COUNT).fill(0);
     const completedBuckets = new Array(BUCKET_COUNT).fill(0);
     const revisionBuckets = new Array(BUCKET_COUNT).fill(0);
 
-    // Group items into 7 time buckets if timestamps exist
+    // Week-over-Week (WoW) counts:
+    // This Week = last 7 days (daysAgo 0 to 6)
+    // Last Week = previous 7 days (daysAgo 7 to 13)
+    let thisWeekTotal = 0;
+    let lastWeekTotal = 0;
+    let thisWeekProcessing = 0;
+    let lastWeekProcessing = 0;
+    let thisWeekCompleted = 0;
+    let lastWeekCompleted = 0;
+    let thisWeekRevision = 0;
+    let lastWeekRevision = 0;
+
     const now = Date.now();
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
     for (let i = 0; i < totalActive; i++) {
       const item = items[i];
       const status = item?.status;
 
       // Status categorization
-      if (status === 'REVISION') {
+      const isRevision = status === 'REVISION';
+      const isCompleted = status === 'COMPLETED';
+
+      if (isRevision) {
         revision++;
-      } else if (status === 'COMPLETED' || status === 'ARCHIVED') {
+      } else if (isCompleted) {
         completed++;
       } else {
         processing++;
       }
 
-      // Determine date for sparkline timeline bucket
-      const dateStr = item?.createdAt || item?.serviceNumberDate || item?.updatedAt;
-      let bucketIdx = BUCKET_COUNT - 1;
+      // Determine date for sparkline timeline bucket & WoW comparison (prioritize Tanggal Permohonan)
+      const dateStr = item?.serviceNumberDate || item?.createdAt || item?.updatedAt;
 
       if (dateStr) {
         const itemTime = new Date(dateStr).getTime();
         if (!isNaN(itemTime)) {
-          const diffMs = now - itemTime;
-          // Map to index 0..6 (0 is oldest within 7 days, 6 is today)
-          const daysAgo = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-          if (daysAgo >= 0 && daysAgo < BUCKET_COUNT) {
-            bucketIdx = (BUCKET_COUNT - 1) - daysAgo;
-          } else if (daysAgo >= BUCKET_COUNT) {
-            bucketIdx = 0;
+          const diffMs = Math.max(0, now - itemTime);
+          const daysAgo = Math.floor(diffMs / ONE_DAY_MS);
+
+          // 1. Sparkline timeline (4 weeks in a month: 0..27 days ago)
+          if (daysAgo >= 0 && daysAgo < 28) {
+            const weekOffset = Math.floor(daysAgo / 7);
+            const bucketIdx = (BUCKET_COUNT - 1) - weekOffset; // 3: Minggu Ini (0-6 days), 2: Minggu Lalu (7-13 days), 1: 14-20 days, 0: 21-27 days
+            totalBuckets[bucketIdx]++;
+            if (isRevision) revisionBuckets[bucketIdx]++;
+            else if (isCompleted) completedBuckets[bucketIdx]++;
+            else processingBuckets[bucketIdx]++;
+          }
+
+          // 2. Week-over-Week comparison (This Week vs Last Week)
+          if (daysAgo >= 0 && daysAgo < 7) {
+            thisWeekTotal++;
+            if (isRevision) thisWeekRevision++;
+            else if (isCompleted) thisWeekCompleted++;
+            else thisWeekProcessing++;
+          } else if (daysAgo >= 7 && daysAgo < 14) {
+            lastWeekTotal++;
+            if (isRevision) lastWeekRevision++;
+            else if (isCompleted) lastWeekCompleted++;
+            else lastWeekProcessing++;
           }
         }
       } else {
         // Fallback: distribute evenly by index if no timestamps
-        bucketIdx = Math.floor((i / Math.max(1, totalActive)) * BUCKET_COUNT);
-      }
-
-      totalBuckets[bucketIdx]++;
-      if (status === 'REVISION') {
-        revisionBuckets[bucketIdx]++;
-      } else if (status === 'COMPLETED' || status === 'ARCHIVED') {
-        completedBuckets[bucketIdx]++;
-      } else {
-        processingBuckets[bucketIdx]++;
+        const bucketIdx = Math.floor((i / Math.max(1, totalActive)) * BUCKET_COUNT);
+        totalBuckets[bucketIdx]++;
+        if (isRevision) revisionBuckets[bucketIdx]++;
+        else if (isCompleted) completedBuckets[bucketIdx]++;
+        else processingBuckets[bucketIdx]++;
       }
     }
 
@@ -90,8 +115,8 @@ export function useApplicationStatistics(items: any[]): ApplicationStatisticMetr
     const cumulateIfNeeded = (buckets: number[], totalCount: number) => {
       const sum = buckets.reduce((a, b) => a + b, 0);
       if (sum === 0 && totalCount > 0) {
-        // Fallback smooth curve
-        return [1, 2, 4, 3, 5, 7, totalCount];
+        // Fallback smooth curve for 4 points
+        return [1, 2, 4, totalCount];
       }
       return buckets;
     };
@@ -101,12 +126,12 @@ export function useApplicationStatistics(items: any[]): ApplicationStatisticMetr
     const finalCompletedTrend = cumulateIfNeeded(completedBuckets, completed);
     const finalRevisionTrend = cumulateIfNeeded(revisionBuckets, revision);
 
-    // Period-over-period growth calculation (compare second half vs first half of timeline buckets)
-    const calcGrowth = (buckets: number[]) => {
-      const firstHalf = buckets.slice(0, 3).reduce((a, b) => a + b, 0);
-      const secondHalf = buckets.slice(4).reduce((a, b) => a + b, 0);
-      if (firstHalf === 0) return secondHalf > 0 ? 100 : 0;
-      return Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+    // Week-over-Week growth percentage: ((thisWeek - lastWeek) / lastWeek) * 100
+    const calcWoWGrowth = (thisWeek: number, lastWeek: number) => {
+      if (lastWeek === 0) {
+        return thisWeek > 0 ? 100 : 0;
+      }
+      return Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
     };
 
     const calcPct = (count: number) =>
@@ -124,10 +149,10 @@ export function useApplicationStatistics(items: any[]): ApplicationStatisticMetr
       processingTrend: finalProcessingTrend,
       completedTrend: finalCompletedTrend,
       revisionTrend: finalRevisionTrend,
-      totalGrowthPct: calcGrowth(finalTotalTrend),
-      processingGrowthPct: calcGrowth(finalProcessingTrend),
-      completedGrowthPct: calcGrowth(finalCompletedTrend),
-      revisionGrowthPct: calcGrowth(finalRevisionTrend),
+      totalGrowthPct: calcWoWGrowth(thisWeekTotal, lastWeekTotal),
+      processingGrowthPct: calcWoWGrowth(thisWeekProcessing, lastWeekProcessing),
+      completedGrowthPct: calcWoWGrowth(thisWeekCompleted, lastWeekCompleted),
+      revisionGrowthPct: calcWoWGrowth(thisWeekRevision, lastWeekRevision),
     };
   }, [items]);
 }
