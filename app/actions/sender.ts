@@ -120,7 +120,7 @@ export async function getManifests(params?: {
     throw new Error("Unauthorized");
   }
 
-  const { status = "DRAFT", page = 1, limit = 12 } = params || {};
+  const { status = "DRAFT", page = 1, limit = 48 } = params || {};
 
   try {
     const whereClause: any = {};
@@ -148,7 +148,6 @@ export async function getManifests(params?: {
           createdAt: true,
           bundles: {
             select: {
-              id: true,
               applications: {
                 select: {
                   targetData: true
@@ -181,7 +180,7 @@ export async function getManifests(params?: {
 
 /**
  * Action: Get all bundles in LOCKED status that are fully digitalized
- * and have not been assigned to a manifest yet.
+ * Application: ARCHIVED | Bundle: LOCKED | Manifest: null
  */
 export async function getEligibleBundles() {
   const session = await getServerSession(authOptions);
@@ -191,27 +190,44 @@ export async function getEligibleBundles() {
   }
 
   try {
-    const list = await prisma.bundle.findMany({
+    const eligibleList = await prisma.bundle.findMany({
       where: {
-        status: "LOCKED"
+        status: "LOCKED",
+        OR: [
+          { currentManifestId: null },
+          { currentManifestId: { isSet: false } }
+        ],
+        applications: {
+          some: {},
+          none: {
+            status: { not: "ARCHIVED" },
+          }
+        }
       },
-      include: {
-        applications: true
+      select: {
+        id: true,
+        bundleNumber: true,
+        applicationType: true,
+        status: true,
+        createdAt: true,
+        applications: {
+          select: {
+            id: true,
+            targetData: true
+          }
+        }
       },
       orderBy: { createdAt: "desc" }
-    });
-
-    const eligibleList = list.filter((b: any) => {
-      const apps = b.applications || b.permohonan || [];
-      return !b.currentManifestId && (checkAllApplicationsArchived(apps) || apps.length > 0);
     });
 
     return { success: true, list: eligibleList };
   } catch (error: any) {
     console.error("[ACTION-GET-ELIGIBLE-BUNDLES-ERR]", error);
+
     return { success: false, list: [], error: "Gagal mengambil antrean bundle logistik." };
   }
 }
+
 
 /**
  * Action: Retrieve details of a specific manifest, including its bundles and applications.

@@ -47,14 +47,10 @@ export const SenderInstalledBundles: React.FC<SenderInstalledBundlesProps> = Rea
           installedBundles.map((b: any) => {
             const isSelectedBundle = selectedBundleInManifest?.id === b.id;
             const appsList = b.applications || b.permohonan || [];
-            const bTotalPecahan = appsList.reduce((acc: number, p: any) => {
-              const type = p.applicationType || p.jenisPermohonan;
-              if (type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") {
-                const targetList = p.targetData || p.dataBaru || [];
-                return acc + (targetList.length > 0 ? targetList.length : 1);
-              }
-              return acc + 1;
-            }, 0);
+            const bTotalPecahan = appsList.reduce(
+              (acc: number, p: any) => acc + (p.targetData?.length || p.dataBaru?.length || 1),
+              0
+            );
 
             const displayBundleNo = b.bundleNumber || b.nomorBundle || "—";
             const displayJenis = b.applicationType || b.jenisPermohonan;

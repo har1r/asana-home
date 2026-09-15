@@ -214,7 +214,6 @@ model Bundle {
   applicationHistory ApplicationBundleHistory[]
   manifestHistory   ManifestBundleHistory[]
   snapshots         BundleSnapshot[]
-  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
 }
 
 model Manifest {

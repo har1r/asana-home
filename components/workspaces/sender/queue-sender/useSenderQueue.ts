@@ -66,7 +66,7 @@ export function useSenderQueue(selectedManifest: any | null) {
 
     if (bundleDisplayMode === "pemohon") {
       const result: any[] = [];
-      permohonanList.forEach((p: any) => {
+      permohonanList.forEach((p: any, pIndex: number) => {
         const type = p.applicationType || p.jenisPermohonan;
         const targetList = p.targetData || p.dataBaru || [];
         if ((type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") && targetList.length > 0) {
@@ -78,7 +78,7 @@ export function useSenderQueue(selectedManifest: any | null) {
               totalPecahan: targetList.length,
               displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || db.ownerName || p.namaWajibPajak || p.applicantName),
               targetDataBaruId: db.id,
-              uniqueRowKey: `${p.id}-db-${idx}`,
+              uniqueRowKey: `${p.id || pIndex}-db-${idx}`,
             });
           });
         } else {
@@ -86,18 +86,18 @@ export function useSenderQueue(selectedManifest: any | null) {
             ...p,
             isPecahanRow: false,
             displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak || p.applicantName),
-            uniqueRowKey: p.id,
+            uniqueRowKey: p.id || `app-row-${pIndex}`,
           });
         }
       });
       return result;
     }
 
-    return permohonanList.map((p: any) => ({
+    return permohonanList.map((p: any, idx: number) => ({
       ...p,
       isPecahanRow: false,
       displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak || p.applicantName),
-      uniqueRowKey: p.id,
+      uniqueRowKey: p.id || `app-row-${idx}`,
     }));
   }, [selectedBundleInManifest, bundleDisplayMode]);
 

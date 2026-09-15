@@ -92,14 +92,10 @@ export const SenderManifestCard: React.FC<SenderManifestCardProps> = React.memo(
 
   const totalPecahanCount = bundlesList.reduce((bAcc: number, b: any) => {
     const appsList = b.applications || b.permohonan || [];
-    const bPecahan = appsList.reduce((pAcc: number, p: any) => {
-      const type = p.applicationType || p.jenisPermohonan;
-      if (type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") {
-        const targetList = p.targetData || p.dataBaru || [];
-        return pAcc + (targetList.length > 0 ? targetList.length : 1);
-      }
-      return pAcc + 1;
-    }, 0);
+    const bPecahan = appsList.reduce(
+      (pAcc: number, p: any) => pAcc + (p.targetData?.length || p.dataBaru?.length || 1),
+      0
+    );
     return bAcc + bPecahan;
   }, 0);
 

@@ -77,13 +77,7 @@ export function useSenderHistory() {
           : [];
         berkasCount += apps.length;
         apps.forEach((app: any) => {
-          const type = app.applicationType || app.jenisPermohonan;
-          if (type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") {
-            const targetList = app.targetData || app.dataBaru || [];
-            pemohonCount += targetList.length > 0 ? targetList.length : 1;
-          } else {
-            pemohonCount += 1;
-          }
+          pemohonCount += app.targetData?.length || app.dataBaru?.length || 1;
         });
       });
 

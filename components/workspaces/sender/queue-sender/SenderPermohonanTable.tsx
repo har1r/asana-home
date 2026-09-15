@@ -131,7 +131,7 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
                 const itemNumber = (activePage - 1) * itemsPerPage + index + 1;
                 return (
                   <SenderPermohonanTableRow
-                    key={p.uniqueRowKey || p.id}
+                    key={p.uniqueRowKey || p.id || `permohonan-row-${index}`}
                     permohonan={p}
                     itemNumber={itemNumber}
                     selectedBundleInManifest={selectedBundleInManifest}

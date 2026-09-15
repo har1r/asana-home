@@ -132,7 +132,7 @@ export default function PengirimWorkspace() {
       setError("");
 
       try {
-        const manifestsRes = await getManifests({ status: "ALL", limit: 100 });
+        const manifestsRes = await getManifests({ status: "ALL", limit: 48 });
         const bundlesRes = await getEligibleBundles();
 
         if (manifestsRes.success && "list" in manifestsRes) {
@@ -225,7 +225,14 @@ export default function PengirimWorkspace() {
 
   // Add Bundle to Manifest
   const handleAddBundle = async (bundleId: string) => {
-    if (!selectedManifest) return;
+    if (!selectedManifest) {
+      showActionStatus(
+        "error",
+        "Pilih Manifest Terlebih Dahulu",
+        "Silakan pilih atau buat draf manifest di tab Daftar Manifest terlebih dahulu sebelum memasukkan bundle ini."
+      );
+      return;
+    }
     setError("");
     setSuccess("");
 
@@ -477,20 +484,16 @@ export default function PengirimWorkspace() {
 
   return (
     <div id="pengirim-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-4">
-      {/* Show precision skeleton during initial data load */}
       {listLoading && workspaceTab === "daftar-manifest" && <PengirimManifestSkeleton />}
       {listLoading && workspaceTab === "kelola-pengiriman" && <PengirimKelolaSkeleton />}
 
-      {/* Hide real content while skeleton is visible */}
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
-        {/* HEADER RUANG KERJA (TOP BANNER) - Persis Peneliti */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none font-sans">
           <div>
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">Ruang Kerja Saya</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* VIEW MODE SWITCHER TABS (RIGHT-ALIGNED NAV TABS) */}
             <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md flex items-center gap-1 shadow-2xs font-sans select-none">
               <button
                 type="button"
@@ -527,7 +530,6 @@ export default function PengirimWorkspace() {
           </div>
         </div>
 
-        {/* Alert Banner jika terdapat manifest draf / belum dikirim */}
         <RevisionAlertBanner
           count={manifestsList.filter((m) => m.status === "DRAFT").length}
           titlePrefix="Perhatian, "
@@ -540,13 +542,10 @@ export default function PengirimWorkspace() {
           }}
         />
 
-        {/* TIER 1: UNIFIED KPI STATS STRIP (PERSIS PENELITI/RESEARCHER) */}
         <SenderKPIStrip metrics={senderMetrics} />
 
-        {/* THIN DIVIDER LINE BELOW KPI STRIP (PERSIS PENELITI & PENGARSIP) */}
         <div className="w-full border-b border-slate-200/80 my-0.5" />
 
-        {/* Error & Success Banners */}
         {error && (
           <div className="bg-rose-50/90 border border-rose-200 text-rose-800 text-[13px] font-normal font-sans rounded-md px-4 py-3 flex items-start gap-2 animate-fadeIn shrink-0 shadow-3xs">
             <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
@@ -619,103 +618,103 @@ export default function PengirimWorkspace() {
 
         {/* ==================== TAB 2: KELOLA PENGIRIMAN ==================== */}
         {workspaceTab === "kelola-pengiriman" && (
-          <div className="w-full">
-            {!selectedManifest ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-16 px-8 select-none bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[400px] font-sans">
-                <div className="mb-2 relative flex items-center justify-center">
-                  <Image
-                    src="/assets/Select-Bro.svg"
-                    alt="Pilih Manifest"
-                    width={224}
-                    height={224}
-                    className="w-56 h-56 object-contain pointer-events-none drop-shadow-sm select-none"
-                    priority
-                  />
-                </div>
-                <h3 className="text-[13px] font-normal text-slate-800 mb-1 capitalize font-sans">
-                  Pilih Manifest Terlebih Dahulu
-                </h3>
-                <p className="text-[12px] text-slate-500 font-normal max-w-sm leading-relaxed mb-4 font-sans">
-                  Silakan pilih salah satu manifest di tab{" "}
-                  <strong className="font-normal text-slate-700">Daftar Manifest</strong> terlebih dahulu untuk
-                  mengelola pengiriman map bundle.
-                </p>
-                <button
-                  onClick={() => handleSwitchTab("daftar-manifest")}
-                  className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 capitalize"
-                >
-                  <Boxes className="w-4 h-4 stroke-[2]" />
-                  <span>Ke Daftar Manifest</span>
-                </button>
-              </div>
-            ) : (
-              /* Master-Detail Split Panel Layout */
-              <div className="flex flex-col gap-4 w-full min-h-[500px] font-sans">
-                {/* Header Bar dengan Tombol Aksi Sisi Kanan (Sejajar Judul) */}
-                <SenderQueueHeader
-                  selectedManifest={selectedManifest}
-                  loading={loading}
-                  fileInputRef={fileInputRef}
-                  onLockManifest={handleLockManifest}
-                  onRevisiManifest={handleRevisiManifest}
-                  onUploadReceipt={handleUploadReceipt}
-                />
+          <div className="flex flex-col gap-4 w-full min-h-[500px] font-sans">
+            {/* Header Bar dengan Tombol Aksi (Jika Manifest Terpilih) */}
+            {selectedManifest && (
+              <SenderQueueHeader
+                selectedManifest={selectedManifest}
+                loading={loading}
+                fileInputRef={fileInputRef}
+                onLockManifest={handleLockManifest}
+                onRevisiManifest={handleRevisiManifest}
+                onUploadReceipt={handleUploadReceipt}
+              />
+            )}
 
-                {/* Grid 2 Columns: Antrean Bundle & Bundle Terpasang */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch font-sans">
-                  <SenderEligibleQueue
-                    eligibleBundlesList={eligibleBundlesList}
-                    manifestStatus={selectedManifest.status}
-                    loading={loading}
-                    onAddBundle={handleAddBundle}
-                    onOpenVersionDrawer={setVersionDrawerBundle}
-                  />
+            {/* Grid 2 Columns: Antrean Bundle (Selalu Tampil) & Bundle Terpasang (Atau Placeholder) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch font-sans">
+              <SenderEligibleQueue
+                eligibleBundlesList={eligibleBundlesList}
+                manifestStatus={selectedManifest?.status || "DRAFT"}
+                loading={loading}
+                onAddBundle={handleAddBundle}
+                onOpenVersionDrawer={setVersionDrawerBundle}
+              />
 
-                  <SenderInstalledBundles
-                    installedBundles={selectedManifest.bundles || selectedManifest.bundle || []}
-                    selectedBundleInManifest={queueState.selectedBundleInManifest}
-                    manifestStatus={selectedManifest.status}
-                    loading={loading}
-                    onSelectBundle={queueState.setSelectedBundleInManifest}
-                    onOpenVersionDrawer={setVersionDrawerBundle}
-                    onRemoveBundle={handleRemoveBundle}
-                  />
-                </div>
-
-                {/* Card Detail Permohonan */}
-                <div className="w-full">
-                  <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
-                    <SenderPermohonanToolbar
-                      selectedBundleInManifest={queueState.selectedBundleInManifest}
-                      selectedManifest={selectedManifest}
-                      manifestStatus={selectedManifest.status}
-                      bundleDisplayMode={queueState.bundleDisplayMode}
-                      onDisplayModeChange={queueState.setBundleDisplayMode}
-                      onRemoveBundle={handleRemoveBundle}
-                      loading={loading}
-                    />
-
-                    <SenderPermohonanTable
-                      selectedBundleInManifest={queueState.selectedBundleInManifest}
-                      selectedManifestStatus={selectedManifest.status}
-                      bundleDisplayMode={queueState.bundleDisplayMode}
-                      searchQuery={queueState.searchBundlePermohonanQuery}
-                      filteredBundlePermohonanList={queueState.filteredBundlePermohonanList}
-                      paginatedBundlePermohonanList={queueState.paginatedBundlePermohonanList}
-                      copiedText={queueState.copiedText}
-                      loading={loading}
-                      activePage={queueState.currentBundlePermohonanPage}
-                      itemsPerPage={queueState.itemsPerBundlePermohonanPage}
-                      totalPages={queueState.totalBundlePermohonanPages}
-                      onPageChange={queueState.setCurrentBundlePermohonanPage}
-                      onItemsPerPageChange={queueState.setItemsPerBundlePermohonanPage}
-                      onCopy={queueState.handleCopy}
-                      onToggleFavorite={queueState.handleToggleFavorite}
-                      onSelectDetails={setSelectedPermohonanForDetails}
-                      onOpenCorrectionModal={openCorrectionModal}
-                      onReportBundleLost={handleReportBundleLost}
+              {!selectedManifest ? (
+                <div className="bg-white border border-slate-200/90 rounded-md p-6 shadow-3xs flex flex-col items-center justify-center text-center h-[420px] font-sans">
+                  <div className="mb-2 relative flex items-center justify-center">
+                    <Image
+                      src="/assets/Select-Bro.svg"
+                      alt="Pilih Manifest"
+                      width={160}
+                      height={160}
+                      className="w-40 h-40 object-contain pointer-events-none drop-shadow-sm select-none"
+                      priority
                     />
                   </div>
+                  <h3 className="text-[13px] font-normal text-slate-800 mb-1 capitalize font-sans">
+                    Belum Ada Manifest Terpilih
+                  </h3>
+                  <p className="text-[12px] text-slate-500 font-normal max-w-xs leading-relaxed mb-4 font-sans">
+                    Silakan pilih salah satu manifest di tab{" "}
+                    <strong className="font-normal text-slate-700">Daftar Manifest</strong> untuk mulai memasukkan map bundle dari antrean.
+                  </p>
+                  <button
+                    onClick={() => handleSwitchTab("daftar-manifest")}
+                    className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 capitalize"
+                  >
+                    <Boxes className="w-4 h-4 stroke-[2]" />
+                    <span>Ke Daftar Manifest</span>
+                  </button>
+                </div>
+              ) : (
+                <SenderInstalledBundles
+                  installedBundles={selectedManifest.bundles || selectedManifest.bundle || []}
+                  selectedBundleInManifest={queueState.selectedBundleInManifest}
+                  manifestStatus={selectedManifest.status}
+                  loading={loading}
+                  onSelectBundle={queueState.setSelectedBundleInManifest}
+                  onOpenVersionDrawer={setVersionDrawerBundle}
+                  onRemoveBundle={handleRemoveBundle}
+                />
+              )}
+            </div>
+
+            {/* Card Detail Permohonan (Jika Manifest Terpilih) */}
+            {selectedManifest && (
+              <div className="w-full">
+                <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
+                  <SenderPermohonanToolbar
+                    selectedBundleInManifest={queueState.selectedBundleInManifest}
+                    selectedManifest={selectedManifest}
+                    manifestStatus={selectedManifest.status}
+                    bundleDisplayMode={queueState.bundleDisplayMode}
+                    onDisplayModeChange={queueState.setBundleDisplayMode}
+                    onRemoveBundle={handleRemoveBundle}
+                    loading={loading}
+                  />
+
+                  <SenderPermohonanTable
+                    selectedBundleInManifest={queueState.selectedBundleInManifest}
+                    selectedManifestStatus={selectedManifest.status}
+                    bundleDisplayMode={queueState.bundleDisplayMode}
+                    searchQuery={queueState.searchBundlePermohonanQuery}
+                    filteredBundlePermohonanList={queueState.filteredBundlePermohonanList}
+                    paginatedBundlePermohonanList={queueState.paginatedBundlePermohonanList}
+                    copiedText={queueState.copiedText}
+                    loading={loading}
+                    activePage={queueState.currentBundlePermohonanPage}
+                    itemsPerPage={queueState.itemsPerBundlePermohonanPage}
+                    totalPages={queueState.totalBundlePermohonanPages}
+                    onPageChange={queueState.setCurrentBundlePermohonanPage}
+                    onItemsPerPageChange={queueState.setItemsPerBundlePermohonanPage}
+                    onCopy={queueState.handleCopy}
+                    onToggleFavorite={queueState.handleToggleFavorite}
+                    onSelectDetails={setSelectedPermohonanForDetails}
+                    onOpenCorrectionModal={openCorrectionModal}
+                    onReportBundleLost={handleReportBundleLost}
+                  />
                 </div>
               </div>
             )}
