@@ -1,27 +1,9 @@
 "use client";
 
 import React from "react";
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, Loader2 } from "lucide-react";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
-
-const getAbbreviatedJenis = (jenis: string) => {
-  switch (jenis) {
-    case "OBJEK_PAJAK_BARU":
-      return "OPB";
-    case "MUTASI_SEBAGIAN":
-      return "MS";
-    case "MUTASI_HABIS_REGULER":
-      return "MHR";
-    case "MUTASI_HABIS_UPDATE":
-      return "MHU";
-    case "PEMBETULAN":
-      return "PBT";
-    case "PENGAKTIFAN":
-      return "AKT";
-    default:
-      return jenis?.replace(/_/g, " ") || "Umum";
-  }
-};
+import { getAbbreviatedJenis, formatJenisLayananLabel } from "@/components/workspaces/shared/constants";
 
 interface SenderEligibleQueueProps {
   eligibleBundlesList: any[];
@@ -59,12 +41,18 @@ export const SenderEligibleQueue: React.FC<SenderEligibleQueueProps> = React.mem
           </div>
         ) : (
           eligibleBundlesList.map((b) => {
-            const bTotalPecahan = (b.permohonan || []).reduce((acc: number, p: any) => {
-              if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
-                return acc + (p.dataBaru?.length || 1);
+            const appsList = b.applications || b.permohonan || [];
+            const bTotalPecahan = appsList.reduce((acc: number, p: any) => {
+              const type = p.applicationType || p.jenisPermohonan;
+              if (type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") {
+                const targetList = p.targetData || p.dataBaru || [];
+                return acc + (targetList.length > 0 ? targetList.length : 1);
               }
               return acc + 1;
             }, 0);
+
+            const displayBundleNo = b.bundleNumber || b.nomorBundle || "—";
+            const displayJenis = b.applicationType || b.jenisPermohonan;
 
             return (
               <div
@@ -73,7 +61,7 @@ export const SenderEligibleQueue: React.FC<SenderEligibleQueueProps> = React.mem
               >
                 <div className="flex items-center justify-between gap-3 w-full font-sans">
                   <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate font-sans">
-                    {b.nomorBundle}
+                    {displayBundleNo}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <span
@@ -97,8 +85,11 @@ export const SenderEligibleQueue: React.FC<SenderEligibleQueueProps> = React.mem
                 </div>
 
                 <div className="flex items-center justify-between gap-3 w-full font-sans">
-                  <span className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans">
-                    {getAbbreviatedJenis(b.jenisPermohonan)}
+                  <span
+                    className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans cursor-help"
+                    title={formatJenisLayananLabel(displayJenis)}
+                  >
+                    {getAbbreviatedJenis(displayJenis)}
                   </span>
 
                   {manifestStatus === "DRAFT" && (
@@ -106,9 +97,13 @@ export const SenderEligibleQueue: React.FC<SenderEligibleQueueProps> = React.mem
                       type="button"
                       onClick={() => onAddBundle(b.id)}
                       disabled={loading}
-                      className="py-1 px-2.5 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[12px] font-sans rounded-md transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-3xs shrink-0 capitalize"
+                      className="py-1 px-2.5 bg-[#00a389] hover:bg-[#008f78] text-white font-normal text-[12px] font-sans rounded-md transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-3xs shrink-0 capitalize disabled:opacity-50"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      {loading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   )}
                 </div>

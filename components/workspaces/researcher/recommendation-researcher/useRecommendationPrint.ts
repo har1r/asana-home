@@ -10,6 +10,22 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
+  // Display Mode Switcher State ('permohonan' | 'pemohon')
+  const [displayMode, setDisplayMode] = useState<'permohonan' | 'pemohon'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('architax_recommendation_display_mode');
+      if (saved === 'permohonan' || saved === 'pemohon') return saved;
+    }
+    return 'permohonan';
+  });
+
+  const handleSwitchDisplayMode = useCallback((mode: 'permohonan' | 'pemohon') => {
+    setDisplayMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('architax_recommendation_display_mode', mode);
+    }
+  }, []);
+
   const rawApplications = useMemo(() => {
     const list = selectedBundle?.applications || selectedBundle?.permohonan || [];
     return list.map((item: any) => {
@@ -66,6 +82,28 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
     });
   }, [selectedBundle]);
 
+  // Transform list according to displayMode ('permohonan' vs 'pemohon')
+  const modeBaseApplications = useMemo(() => {
+    if (displayMode === 'permohonan') return rawApplications;
+
+    return rawApplications.flatMap((item: any) => {
+      const isPartial = item.applicationType === 'PARTIAL_MUTATION' || item.applicationType === 'MUTASI_SEBAGIAN';
+      const targets = (item.targetData && item.targetData.length > 0) ? item.targetData : (item.dataBaru || []);
+
+      if (isPartial && targets.length > 0) {
+        return targets.map((td: any, idx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}-pecahan-${idx}`,
+          displayOwnerName: td.ownerName || td.namaPemilikBaru || item.ownerName,
+          isPecahanRow: true,
+          pecahanIndex: idx + 1,
+          totalPecahan: targets.length,
+        }));
+      }
+      return [{ ...item, uniqueRowKey: item.id }];
+    });
+  }, [rawApplications, displayMode]);
+
   const handleToggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
       const next = new Set(prev);
@@ -79,7 +117,7 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
   }, []);
 
   const filteredApplications = useMemo(() => {
-    let list = rawApplications.map((item: any) => ({
+    let list = modeBaseApplications.map((item: any) => ({
       ...item,
       isFavorite: item.isFavorite ?? favorites.has(item.id),
     }));
@@ -104,7 +142,7 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
     }
 
     return list;
-  }, [rawApplications, searchQuery, favorites]);
+  }, [modeBaseApplications, searchQuery, favorites]);
 
   const totalPages = Math.ceil(filteredApplications.length / itemsPerPage) || 1;
 
@@ -130,6 +168,8 @@ export function useRecommendationPrint({ selectedBundle }: UseRecommendationPrin
     totalPages,
     searchQuery,
     setSearchQuery,
+    displayMode,
+    setDisplayMode: handleSwitchDisplayMode,
     handleToggleFavorite,
     handlePrintBundleCover,
   };

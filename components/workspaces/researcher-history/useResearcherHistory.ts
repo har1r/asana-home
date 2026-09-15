@@ -52,15 +52,26 @@ export function useResearcherHistory() {
 
   const formattedItems = useMemo<FormattedBundleItem[]>(() => {
     return rawBundles.map((item: any) => {
-      const apps = Array.isArray(item.applications) ? item.applications : [];
+      const apps = Array.isArray(item.applications)
+        ? item.applications
+        : Array.isArray(item.permohonan)
+        ? item.permohonan
+        : [];
       const creator = item.createdBy?.name || item.creatorName || "Peneliti";
+      const appType =
+        item.applicationType ||
+        item.jenisPermohonan ||
+        apps[0]?.applicationType ||
+        apps[0]?.jenisPermohonan ||
+        "";
+
       return {
         id: item.id,
         bundleNumber: item.bundleNumber || item.nomorBundle || "-",
         createdAt: item.createdAt,
         creatorName: creator,
         status: item.status || "DRAFT",
-        applicationType: item.applicationType || "",
+        applicationType: appType,
         totalApplications: apps.length,
         original: item,
       };
@@ -75,7 +86,8 @@ export function useResearcherHistory() {
         const bNo = item.bundleNumber.toLowerCase();
         const creator = item.creatorName.toLowerCase();
         const status = item.status.toLowerCase();
-        return bNo.includes(q) || creator.includes(q) || status.includes(q);
+        const appTypeStr = (item.applicationType || "").toLowerCase();
+        return bNo.includes(q) || creator.includes(q) || status.includes(q) || appTypeStr.includes(q);
       });
     }
     return list;

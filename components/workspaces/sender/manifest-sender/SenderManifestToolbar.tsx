@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, RefreshCw, X } from "lucide-react";
+import { Search, Plus, RefreshCw, X, Loader2 } from "lucide-react";
 
 interface SenderManifestToolbarProps {
   searchQuery: string;
@@ -68,8 +68,12 @@ export const SenderManifestToolbar: React.FC<SenderManifestToolbarProps> = React
             disabled={loading}
             className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Buat Manifest</span>
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            )}
+            <span>{loading ? "Membuat Manifest..." : "Buat Manifest"}</span>
           </button>
         </div>
       </div>

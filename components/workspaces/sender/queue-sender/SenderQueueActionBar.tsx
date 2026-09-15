@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Lock, Unlock, Printer, Upload, FileCheck } from "lucide-react";
+import { Lock, Unlock, Printer, Upload, FileCheck, Loader2 } from "lucide-react";
 
 interface SenderQueueActionBarProps {
   selectedManifest: any;
@@ -20,6 +20,9 @@ export const SenderQueueActionBar: React.FC<SenderQueueActionBarProps> = React.m
   onRevisiManifest,
   onUploadReceipt,
 }) => {
+  const bundlesList = selectedManifest.bundles || selectedManifest.bundle || [];
+  const isManifestEmpty = bundlesList.length === 0;
+
   return (
     <div className="border border-slate-200/90 bg-slate-50 p-5 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none shadow-3xs mt-auto font-sans">
       <div className="text-[12px] text-slate-500 font-normal max-w-lg flex items-center gap-2 font-sans">
@@ -41,12 +44,16 @@ export const SenderQueueActionBar: React.FC<SenderQueueActionBarProps> = React.m
         {selectedManifest.status === "DRAFT" && (
           <button
             onClick={onLockManifest}
-            disabled={loading || selectedManifest.bundle?.length === 0}
+            disabled={loading || isManifestEmpty}
             className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed capitalize"
             title="Kunci Manifest"
           >
-            <Lock className="w-4 h-4 text-white stroke-[2]" />
-            <span>Kunci Manifest</span>
+            {loading ? (
+              <Loader2 className="w-4 h-4 text-white animate-spin" />
+            ) : (
+              <Lock className="w-4 h-4 text-white stroke-[2]" />
+            )}
+            <span>{loading ? "Mengunci..." : "Kunci Manifest"}</span>
           </button>
         )}
 
@@ -58,8 +65,12 @@ export const SenderQueueActionBar: React.FC<SenderQueueActionBarProps> = React.m
               className="px-3 py-2 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md font-normal text-[13px] font-sans transition-all cursor-pointer shadow-3xs flex items-center gap-1.5 disabled:opacity-40 capitalize"
               title="Batal Kunci Manifest"
             >
-              <Unlock className="w-4 h-4 text-rose-600" />
-              <span>Revisi Manifest</span>
+              {loading ? (
+                <Loader2 className="w-4 h-4 text-rose-600 animate-spin" />
+              ) : (
+                <Unlock className="w-4 h-4 text-rose-600" />
+              )}
+              <span>{loading ? "Merevisi..." : "Revisi Manifest"}</span>
             </button>
 
             <a
@@ -83,11 +94,15 @@ export const SenderQueueActionBar: React.FC<SenderQueueActionBarProps> = React.m
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
-              className="px-4 py-2 text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md font-normal text-[13px] font-sans shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 capitalize"
+              className="px-4 py-2 text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md font-normal text-[13px] font-sans shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 capitalize disabled:opacity-50"
               title="Unggah Bukti Tanda Terima"
             >
-              <Upload className="w-4 h-4 text-white" />
-              <span>Unggah Bukti Tanda Terima</span>
+              {loading ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-white" />
+              )}
+              <span>{loading ? "Mengunggah..." : "Unggah Bukti Tanda Terima"}</span>
             </button>
           </div>
         )}

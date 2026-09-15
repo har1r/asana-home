@@ -129,7 +129,9 @@ export function useApplicationQueue() {
     try {
       const res = await addPermohonanToBundle(bundleId, permohonanId);
       if (res.success) {
-        setSuccess('Permohonan berhasil dimasukkan ke dalam bundle.');
+        if (!onSuccessCallback) {
+          setSuccess('Permohonan berhasil dimasukkan ke dalam bundle.');
+        }
         await fetchSubmittedQueue();
         if (onSuccessCallback) {
           await onSuccessCallback();

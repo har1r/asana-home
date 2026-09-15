@@ -15,6 +15,8 @@ export interface DigitalArchiveItem {
   revisionNote?: string | null;
   supersededBy?: string | null;
   supersededAt?: Date | string | null;
+  versi?: number;
+  dataBaruId?: string | null;
 }
 
 export interface TargetDataItem {

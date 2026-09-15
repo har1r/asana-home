@@ -20,9 +20,25 @@ import {
   Eye,
 } from "lucide-react";
 import { useArchivistHistory, FormattedBundleItem } from "./useArchivistHistory";
-import { BundleVersionDrawer } from "@/components/workspaces/shared/BundleVersionDrawer";
-import { BundleHistoryDetailView } from "@/components/workspaces/researcher-history/BundleHistoryDetailView";
+import { BundleSnapshotDrawer } from "@/components/workspaces/shared/BundleSnapshotDrawer";
+import { ArchivistBundleDetailView } from "./ArchivistBundleDetailView";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+import { ResearcherHistorySkeleton } from "@/components/skeletons/ResearcherHistorySkeleton";
+import { getAbbreviatedJenis, formatJenisLayananLabel } from "@/components/workspaces/shared/constants";
+
+// Helper for Jenis Permohonan Badge Styling (Singkatan Resmi, Warna Netral Clean, Center Aligned & Font Sans)
+const getJenisPermohonanBadge = (jenis?: string | null) => {
+  const abbr = getAbbreviatedJenis(jenis || "");
+  const fullName = formatJenisLayananLabel(jenis);
+  return (
+    <span
+      className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[11px] font-medium font-sans bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs whitespace-nowrap select-none text-center"
+      title={fullName}
+    >
+      {abbr}
+    </span>
+  );
+};
 
 // Helper for Bundle Status Badge Styling matching ResearcherHistory standard
 const getStatusBadge = (status: string) => {
@@ -177,34 +193,74 @@ export default function ArchivistHistory() {
   // IF A BUNDLE IS SELECTED FOR DETAILS, RENDER FULL PAGE VIEW (MIMICKING CETAK REKOMENDASI TAB & BUNDLE HISTORY DETAIL VIEW)
   if (selectedDetailsBundle) {
     return (
-      <BundleHistoryDetailView
+      <ArchivistBundleDetailView
         bundle={selectedDetailsBundle}
         onBack={() => setSelectedDetailsBundle(null)}
       />
     );
   }
 
+  if (loading && visibleBundles.length === 0) {
+    return <ResearcherHistorySkeleton />;
+  }
+
   return (
     <div className="w-full flex flex-col gap-3 animate-fadeIn font-sans select-none">
-      {/* 1. HEADER SECTION (Clean Title & Refresh Button) */}
-      <div className="flex items-center justify-between gap-4 py-1 select-none font-sans">
-        <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-          Riwayat Digitalisasi
-        </h1>
+      {/* 1. HEADER SECTION (Clean Title, View Mode Switcher, Refresh Button & Smooth Divider Line) */}
+      <div className="flex flex-col gap-2 select-none">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1 select-none font-sans">
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+            Riwayat Digitalisasi
+          </h1>
 
-        <button
-          type="button"
-          onClick={refreshData}
-          disabled={loading || isRefreshing}
-          className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs shrink-0"
-          title="Refresh Data"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#00a389]" : ""}`} />
-        </button>
+          <div className="flex items-center gap-2">
+            {/* VIEW MODE TOGGLE SWITCH: LIST VS GRID (HIJAU #00a389) */}
+            <div className="flex items-center bg-white border border-slate-200/90 rounded-md p-0.5 shadow-3xs shrink-0 h-9 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                  viewMode === "list"
+                    ? "bg-[#00a389] text-white shadow-3xs"
+                    : "text-slate-500 hover:text-[#00a389] hover:bg-slate-100"
+                }`}
+                title="Tampilan Tabel (List View)"
+              >
+                <LayoutList className="w-4 h-4 stroke-[2.2]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                  viewMode === "grid"
+                    ? "bg-[#00a389] text-white shadow-3xs"
+                    : "text-slate-500 hover:text-[#00a389] hover:bg-slate-100"
+                }`}
+                title="Tampilan Kisi (Grid View / Google Drive Style)"
+              >
+                <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
+              </button>
+            </div>
+
+            {/* Tombol Refresh Data */}
+            <button
+              type="button"
+              onClick={refreshData}
+              disabled={loading || isRefreshing}
+              className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs shrink-0"
+              title="Refresh Data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#00a389]" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* THIN DIVIDER LINE BELOW HEADER (SMOOTH & CLEAN LIKE DATAENTRYWORKSPACE) */}
+        <div className="w-full border-b border-slate-200/80 my-0.5" />
       </div>
 
-      {/* 2. TOOLBAR: SEARCH & VIEW MODE SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
+      {/* 2. TOOLBAR: SEARCH */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none mt-1">
         {/* Left Side: Search Bar */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -231,34 +287,6 @@ export default function ArchivistHistory() {
               <X className="w-3.5 h-3.5" />
             </button>
           )}
-        </div>
-
-        {/* Right Side: View Mode Toggle Switch */}
-        <div className="flex items-center bg-white border border-slate-200/90 rounded-md p-1 shadow-3xs shrink-0 self-end sm:self-auto gap-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            className={`px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center justify-center ${
-              viewMode === "list"
-                ? "bg-slate-900 text-white shadow-3xs"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-            }`}
-            title="Tampilan Tabel (List View)"
-          >
-            <LayoutList className="w-4 h-4 stroke-[2.2]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("grid")}
-            className={`px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center justify-center ${
-              viewMode === "grid"
-                ? "bg-slate-900 text-white shadow-3xs"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-            }`}
-            title="Tampilan Kisi (Grid View)"
-          >
-            <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
-          </button>
         </div>
       </div>
 
@@ -287,12 +315,13 @@ export default function ArchivistHistory() {
         <div className="w-full overflow-x-auto select-none mt-1">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-slate-200 text-[13px] font-semibold text-slate-600 select-none">
-                <th className="py-2.5 px-3 min-w-[240px] font-semibold text-slate-700">Nomor Bundle</th>
-                <th className="py-2.5 px-3 min-w-[150px] font-semibold text-slate-700">Tanggal Dibuat</th>
-                <th className="py-2.5 px-3 min-w-[180px] font-semibold text-slate-700">Nama Pembuat</th>
-                <th className="py-2.5 px-3 min-w-[140px] font-semibold text-slate-700">Status</th>
-                <th className="py-2.5 px-3 w-12 text-center font-semibold text-slate-700"></th>
+              <tr className="border-b border-slate-200 text-[13px] font-normal text-slate-600 select-none">
+                <th className="py-2.5 px-3 min-w-[200px] font-normal text-slate-600">Nomor Bundle</th>
+                <th className="py-2.5 px-3 min-w-[130px] font-normal text-slate-600 text-center">Jenis Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600">Tanggal Dibuat</th>
+                <th className="py-2.5 px-3 min-w-[160px] font-normal text-slate-600">Nama Pembuat</th>
+                <th className="py-2.5 px-3 min-w-[130px] font-normal text-slate-600">Status</th>
+                <th className="py-2.5 px-3 w-12 text-center font-normal text-slate-600"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 text-[13px] font-normal text-slate-700">
@@ -308,20 +337,27 @@ export default function ArchivistHistory() {
                       <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                         <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.2]" />
                       </div>
-                      <span className="font-bold text-slate-900 font-mono tracking-tight text-[13px]">
+                      <span className="font-normal text-slate-700 font-mono tracking-tight text-[13px]">
                         {item.bundleNumber}
                       </span>
                     </div>
                   </td>
 
+                  {/* Jenis Permohonan Column (Center Aligned) */}
+                  <td className="py-3 px-3 text-center">
+                    <div className="flex items-center justify-center">
+                      {getJenisPermohonanBadge(item.applicationType)}
+                    </div>
+                  </td>
+
                   {/* Tanggal Dibuat Column */}
-                  <td className="py-3 px-3 text-slate-600 text-[13px]">
+                  <td className="py-3 px-3 text-slate-700 text-[13px] font-normal">
                     <span>{formatDateDisplay(item.createdAt)}</span>
                   </td>
 
                   {/* Nama Pembuat Column */}
                   <td className="py-3 px-3">
-                    <span className="text-slate-800 font-medium text-[13px] truncate max-w-[220px]">
+                    <span className="text-slate-700 font-normal text-[13px] truncate max-w-[220px]">
                       {item.creatorName}
                     </span>
                   </td>
@@ -354,17 +390,17 @@ export default function ArchivistHistory() {
           </table>
         </div>
       ) : (
-        /* ==================== 3B. GRID VIEW ==================== */
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 mt-1">
+        /* ==================== 3B. GOOGLE DRIVE KISI / GRID VIEW ==================== */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3.5 mt-1">
           {visibleBundles.map((item: FormattedBundleItem) => (
             <div
               key={item.id}
               onClick={() => setSelectedDetailsBundle(item.original)}
-              className="group bg-white border border-slate-200/90 hover:border-slate-300 rounded-md p-3.5 shadow-3xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden"
+              className="group bg-white border border-slate-200/90 hover:border-slate-300 rounded-md p-4 shadow-3xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 relative overflow-hidden min-h-[130px]"
             >
               {/* Tile Header */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-bold font-mono text-slate-900 truncate tracking-tight" title={item.bundleNumber}>
+                <span className="text-[13px] font-normal font-mono text-slate-700 truncate tracking-tight" title={item.bundleNumber}>
                   {item.bundleNumber}
                 </span>
                 <button
@@ -379,6 +415,11 @@ export default function ArchivistHistory() {
                 >
                   <MoreVertical className="w-4 h-4" />
                 </button>
+              </div>
+
+              {/* Tile Sub-Header: Jenis Permohonan Badge */}
+              <div className="flex items-center gap-1.5">
+                {getJenisPermohonanBadge(item.applicationType)}
               </div>
 
               {/* Tile Body: Nama Pembuat */}
@@ -439,7 +480,9 @@ export default function ArchivistHistory() {
               <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
               <span>Lihat Isi Bundle</span>
             </button>
+          </div>
 
+          <div className="py-0.5">
             <button
               type="button"
               onClick={(e) => {
@@ -450,7 +493,7 @@ export default function ArchivistHistory() {
               }}
               className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
             >
-              <History className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00a389] transition-colors" />
+              <History className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
               <span>Versi Bundle</span>
             </button>
           </div>
@@ -458,9 +501,9 @@ export default function ArchivistHistory() {
         document.body
       )}
 
-      {/* 6. BUNDLE VERSION DRAWER */}
+      {/* 6. BUNDLE SNAPSHOT DRAWER */}
       {selectedVersionBundle && (
-        <BundleVersionDrawer
+        <BundleSnapshotDrawer
           isOpen={Boolean(selectedVersionBundle)}
           onClose={() => setSelectedVersionBundle(null)}
           bundle={selectedVersionBundle}

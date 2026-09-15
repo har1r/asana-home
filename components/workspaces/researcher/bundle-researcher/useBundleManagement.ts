@@ -44,7 +44,7 @@ export function useBundleManagement() {
       const res = await createBundle(jenisLayanan);
       if (res.success && res.bundle) {
         setSuccess(`Bundle ${res.bundle.bundleNumber} berhasil dibuat.`);
-        await fetchBundles();
+        fetchBundles();
         return res.bundle;
       } else {
         setError(res.error || 'Gagal membuat bundle baru.');
@@ -62,12 +62,15 @@ export function useBundleManagement() {
       const res = await lockBundle(bundleId);
       if (res.success) {
         setSuccess('Bundle berhasil dikunci dan dikirim ke Pengarsip.');
-        await fetchBundles();
+        fetchBundles();
+        return true;
       } else {
         setError(res.error || 'Gagal mengunci bundle.');
+        return false;
       }
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan saat mengunci bundle.');
+      return false;
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { uploadArsipDigital, ajukanKembalikanKePeneliti, getBundleDetails } from "@/app/actions/archivist";
+import { uploadArsipDigital, ajukanKembalikanKePeneliti, getBundleDetails, toggleArchiveStatus } from "@/app/actions/archivist";
 import { toggleFavoriteApplication } from "@/app/actions/data-entry";
 
 export interface UseArchivistArsipQueueOptions {
@@ -72,16 +72,19 @@ export function useArchivistArsipQueue({
   }, []);
 
   // Handle Upload File PDF Arsip
+  const [uploadingTargetId, setUploadingTargetId] = useState<string | null>(null);
+
   const handleUploadFile = async (
     permohonanId: string,
     event: React.ChangeEvent<HTMLInputElement>,
-    dataBaruId?: string
+    dataBaruId?: string,
+    uploadMode: "REPLACE" | "APPEND" = "REPLACE"
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (file.type !== "application/pdf") {
-      setError("File harus berformat PDF.");
+      setError("Hanya file PDF yang diperbolehkan.");
       return;
     }
 
@@ -90,6 +93,8 @@ export function useArchivistArsipQueue({
       return;
     }
 
+    const targetKey = dataBaruId || permohonanId;
+    setUploadingTargetId(targetKey);
     setLoading(true);
     setError("");
     setSuccess("");
@@ -101,6 +106,7 @@ export function useArchivistArsipQueue({
       if (dataBaruId) {
         formData.append("dataBaruId", dataBaruId);
       }
+      formData.append("uploadMode", uploadMode);
 
       const res = await uploadArsipDigital(formData);
 
@@ -133,6 +139,7 @@ export function useArchivistArsipQueue({
       setError(err.message || "Terjadi kesalahan saat mengunggah file.");
     } finally {
       setLoading(false);
+      setUploadingTargetId(null);
       if (event.target) event.target.value = "";
     }
   };
@@ -140,6 +147,43 @@ export function useArchivistArsipQueue({
   const triggerFileInput = (permohonanId: string) => {
     const ref = fileInputRefs.current[permohonanId];
     if (ref) ref.click();
+  };
+
+  const handleToggleArchiveStatus = async (
+    permohonanId: string,
+    archiveId: string,
+    newStatus: "ACTIVE" | "SUPERSEDED",
+    targetDataId?: string | null
+  ) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await toggleArchiveStatus(permohonanId, archiveId, newStatus, targetDataId);
+      if (res.success) {
+        setSuccess(`Status berkas berhasil diubah menjadi ${newStatus === "ACTIVE" ? "Aktif" : "Digantikan"}.`);
+        if (selectedBundle) {
+          await fetchBundleDetail(selectedBundle.id);
+        }
+        await fetchBundles(true);
+
+        if (showFractionsModal && fractionTargetPermohonan && selectedBundle) {
+          const updatedRes = await getBundleDetails(selectedBundle.id);
+          if (updatedRes.success && "bundle" in updatedRes && updatedRes.bundle) {
+            const appList = (updatedRes.bundle as any).applications || (updatedRes.bundle as any).permohonan || [];
+            const updatedP = appList.find((p: any) => p.id === fractionTargetPermohonan.id);
+            if (updatedP) setFractionTargetPermohonan(updatedP);
+          }
+        }
+      } else {
+        setError("error" in res && res.error ? (res.error as string) : "Gagal mengubah status berkas.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Terjadi kesalahan saat mengubah status berkas.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle pengembalian berkas ke Peneliti
@@ -366,8 +410,10 @@ export function useArchivistArsipQueue({
     copiedText,
     handleCopy,
     fileInputRefs,
+    uploadingTargetId,
     handleUploadFile,
     triggerFileInput,
+    handleToggleArchiveStatus,
     handleRequestCorrection,
     openCorrectionModal,
     handleToggleFavorite,

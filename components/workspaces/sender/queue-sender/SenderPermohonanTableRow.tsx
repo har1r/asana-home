@@ -2,26 +2,7 @@
 
 import React from "react";
 import { Star, Clock, AlertTriangle, Check, Copy, CircleArrowLeft } from "lucide-react";
-import { formatNop, toTitleCase } from "@/components/workspaces/shared/constants";
-
-const getAbbreviatedJenis = (jenis: string) => {
-  switch (jenis) {
-    case "OBJEK_PAJAK_BARU":
-      return "OPB";
-    case "MUTASI_SEBAGIAN":
-      return "MS";
-    case "MUTASI_HABIS_REGULER":
-      return "MHR";
-    case "MUTASI_HABIS_UPDATE":
-      return "MHU";
-    case "PEMBETULAN":
-      return "PBT";
-    case "PENGAKTIFAN":
-      return "AKT";
-    default:
-      return jenis?.replace(/_/g, " ") || "Umum";
-  }
-};
+import { formatNop, toTitleCase, getAbbreviatedJenis, formatJenisLayananLabel } from "@/components/workspaces/shared/constants";
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   SUBMITTED: "Diajukan",
@@ -79,12 +60,21 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
   onReportBundleLost,
 }) => {
   const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
-  const nopolDate = p.tanggalNoPelayanan
-    ? new Date(p.tanggalNoPelayanan).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+  const rawNopolDate = p.serviceNumberDate || p.tanggalNoPelayanan || p.createdAt;
+  const nopolDate = rawNopolDate
+    ? new Date(rawNopolDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
     : "—";
-  const penyelesaianDate = p.tanggalPenyelesaian
-    ? new Date(p.tanggalPenyelesaian).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+
+  const rawPenyelesaianDate = p.completionDate || p.tanggalPenyelesaian;
+  const penyelesaianDate = rawPenyelesaianDate
+    ? new Date(rawPenyelesaianDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
     : "—";
+
+  const displayNoPelayanan = p.applicationNumber || p.nomorPelayanan || p.nomorPermohonan || "—";
+  const rawNop = p.nop || p.previousData?.[0]?.nop || p.targetData?.[0]?.nopTemporary || "";
+  const displayNop = rawNop ? formatNop(rawNop) : "—";
+  const displayNama = p.displayNamaWajibPajak || p.namaWajibPajak || p.applicantName || p.previousData?.[0]?.ownerName || p.targetData?.[0]?.ownerName || "—";
+  const displayJenis = p.applicationType || p.jenisPermohonan || selectedBundleInManifest?.applicationType || selectedBundleInManifest?.jenisPermohonan;
 
   return (
     <tr
@@ -126,9 +116,9 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       </td>
 
       <td className="py-3 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap capitalize">
-        <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || "Petugas Input"}>
+        <div className="flex items-center gap-1.5 min-w-0" title={p.penginput?.name || p.user?.name || p.createdBy?.name || "Petugas Input"}>
           <span className="truncate max-w-[130px] font-sans font-normal capitalize">
-            {toTitleCase(p.penginput?.name || "Petugas Input")}
+            {toTitleCase(p.penginput?.name || p.user?.name || p.createdBy?.name || "Petugas Input")}
           </span>
         </div>
       </td>
@@ -138,14 +128,14 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       </td>
 
       <td className="py-3 px-4 whitespace-nowrap font-sans">
-        {p.tanggalPenyelesaian ? (
+        {rawPenyelesaianDate ? (
           <div className="flex items-center gap-1">
-            {isOverdue(p.tanggalPenyelesaian, p.status) && (
+            {isOverdue(rawPenyelesaianDate, p.status) && (
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             )}
             <span
               className={`text-[12px] font-sans font-normal capitalize ${
-                isOverdue(p.tanggalPenyelesaian, p.status) ? "text-rose-600 font-normal" : "text-slate-600"
+                isOverdue(rawPenyelesaianDate, p.status) ? "text-rose-600 font-normal" : "text-slate-600"
               }`}
             >
               {penyelesaianDate}
@@ -159,7 +149,7 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       <td className="py-3 px-4 min-w-[150px] group/cell relative font-sans">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[12px] font-normal text-slate-700 font-sans tracking-tight capitalize">
-            {p.nomorPelayanan || p.nomorPermohonan}
+            {displayNoPelayanan}
           </span>
           {isFrozen && (
             <span className="text-[9px] font-normal capitalize bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none font-sans">
@@ -169,11 +159,11 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
           )}
           <button
             type="button"
-            onClick={(e) => onCopy(e, p.nomorPelayanan || p.nomorPermohonan)}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            onClick={(e) => onCopy(e, displayNoPelayanan)}
+            className="p-1 rounded-md opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin Nomor"
           >
-            {copiedText === (p.nomorPelayanan || p.nomorPermohonan) ? (
+            {copiedText === displayNoPelayanan ? (
               <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
             ) : (
               <Copy className="w-3 h-3" />
@@ -185,15 +175,15 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       <td className="py-3 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="text-[12px] font-normal text-slate-700 font-sans whitespace-nowrap capitalize">
-            {formatNop(p.nop)}
+            {displayNop}
           </span>
           <button
             type="button"
-            onClick={(e) => onCopy(e, p.nop)}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            onClick={(e) => onCopy(e, rawNop || displayNop)}
+            className="p-1 rounded-md opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin NOP"
           >
-            {copiedText === p.nop ? (
+            {copiedText === (rawNop || displayNop) ? (
               <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
             ) : (
               <Copy className="w-3 h-3" />
@@ -205,7 +195,7 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
       <td className="py-3 px-4 group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="text-[12px] font-normal text-slate-700 whitespace-nowrap capitalize font-sans">
-            {toTitleCase(p.displayNamaWajibPajak || p.namaWajibPajak)}
+            {toTitleCase(displayNama)}
           </span>
           {p.isPecahanRow && (
             <span className="text-[10px] font-normal text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded-md shrink-0 font-sans">
@@ -214,11 +204,11 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
           )}
           <button
             type="button"
-            onClick={(e) => onCopy(e, p.displayNamaWajibPajak || p.namaWajibPajak)}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            onClick={(e) => onCopy(e, displayNama)}
+            className="p-1 rounded-md opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin Nama Pemohon"
           >
-            {copiedText === (p.displayNamaWajibPajak || p.namaWajibPajak) ? (
+            {copiedText === displayNama ? (
               <Check className="w-3.5 h-3.5 text-emerald-600 transition-all duration-200 transform scale-110" />
             ) : (
               <Copy className="w-3 h-3" />
@@ -229,10 +219,10 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
 
       <td className="py-3 px-4 font-sans">
         <span
-          className="text-[11px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans tracking-wide select-none"
-          title={p.jenisPermohonan?.replace(/_/g, " ")}
+          className="text-[11px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded-md capitalize font-sans tracking-wide select-none cursor-help"
+          title={formatJenisLayananLabel(displayJenis)}
         >
-          {getAbbreviatedJenis(p.jenisPermohonan || selectedBundleInManifest?.jenisPermohonan)}
+          {getAbbreviatedJenis(displayJenis)}
         </span>
       </td>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
-import { ManifestStatusCounts } from "../statistic-sender/SenderKPIStrip";
+import { ManifestStatusCounts } from "../statistic-sender/useSenderStatistics";
 
 export function useSenderManifest(
   manifestsList: any[],
@@ -13,8 +13,9 @@ export function useSenderManifest(
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterManifestStatus, setFilterManifestStatus] = useState<string>("ALL");
 
-  // Load More / Infinite Scroll state
-  const [visibleCount, setVisibleCount] = useState(8);
+  // Page-based Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
   const searchManifestInputRef = useRef<HTMLInputElement | null>(null);
 
   // Keyboard shortcut: Ctrl+K or '/' to focus search
@@ -32,9 +33,9 @@ export function useSenderManifest(
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Reset visibleCount whenever search or status filter changes
+  // Reset currentPage to 1 whenever search query or status filter changes
   useEffect(() => {
-    setVisibleCount(8);
+    setCurrentPage(1);
   }, [searchQuery, filterManifestStatus]);
 
   // Computed manifest status counts for KPI Strip
@@ -51,23 +52,26 @@ export function useSenderManifest(
   // Filtered manifests list
   const filteredManifests = useMemo(() => {
     return manifestsList.filter((m) => {
+      const manifestNo = m.nomorManifest || m.manifestNumber || "";
       const matchesSearch =
-        m.nomorManifest.toLowerCase().includes(deferredSearchQuery.toLowerCase()) ||
-        (m.pengirim?.name || "").toLowerCase().includes(deferredSearchQuery.toLowerCase());
-      const matchesStatus = filterManifestStatus === "ALL" || m.status === filterManifestStatus;
+        manifestNo.toLowerCase().includes(deferredSearchQuery.toLowerCase()) ||
+        (m.pengirim?.name || m.user?.name || "").toLowerCase().includes(deferredSearchQuery.toLowerCase());
+      const matchesStatus =
+        filterManifestStatus === "ALL"
+          ? m.status === "DRAFT"
+          : m.status === filterManifestStatus;
       return matchesSearch && matchesStatus;
     });
   }, [manifestsList, deferredSearchQuery, filterManifestStatus]);
 
-  const hasMore = visibleCount < filteredManifests.length;
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredManifests.length / itemsPerPage) || 1;
+  }, [filteredManifests.length, itemsPerPage]);
 
-  const visibleManifests = useMemo(() => {
-    return filteredManifests.slice(0, visibleCount);
-  }, [filteredManifests, visibleCount]);
-
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + 8, filteredManifests.length));
-  }, [filteredManifests.length]);
+  const paginatedManifests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredManifests.slice(start, start + itemsPerPage);
+  }, [filteredManifests, currentPage, itemsPerPage]);
 
   return {
     searchQuery,
@@ -76,13 +80,14 @@ export function useSenderManifest(
     setIsSearchFocused,
     filterManifestStatus,
     setFilterManifestStatus,
-    visibleCount,
-    setVisibleCount,
-    hasMore,
-    loadMore,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    paginatedManifests,
     manifestStatusCounts,
     filteredManifests,
-    visibleManifests,
     searchManifestInputRef,
   };
 }

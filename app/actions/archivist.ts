@@ -8,15 +8,71 @@ import fs from "fs";
 import path from "path";
 import { UserRole } from "@prisma/client";
 
+function parseArchiveMeta(ad: any, defaultIndex: number) {
+  let archiveType = "REVISION";
+  let labelCode = `v${ad.versi || defaultIndex}`;
+  let versi = ad.versi || defaultIndex;
+
+  if (ad.archiveType) archiveType = ad.archiveType;
+  if (ad.labelCode) labelCode = ad.labelCode;
+
+  if (ad.revisionNote) {
+    try {
+      const meta = JSON.parse(ad.revisionNote);
+      if (meta && typeof meta === "object") {
+        if (meta.archiveType) archiveType = meta.archiveType;
+        if (meta.labelCode) labelCode = meta.labelCode;
+        if (meta.versi) versi = meta.versi;
+      }
+    } catch (e) {
+      if (ad.revisionNote.startsWith("v") || ad.revisionNote.startsWith("L")) {
+        labelCode = ad.revisionNote;
+        archiveType = ad.revisionNote.startsWith("L") ? "ATTACHMENT" : "REVISION";
+      }
+    }
+  }
+
+  return { archiveType, labelCode, versi };
+}
+
 function normalizeApplicationData(app: any) {
   if (!app) return app;
-  const targetDataArchives = (app.targetData || []).flatMap((td: any) => td.digitalArchives || []);
+  const normalizedTargetData = (app.targetData || []).map((td: any) => {
+    const archives = td.digitalArchives || [];
+    const tdId = td.idTargetData || td.id;
+    const normalizedArchives = archives.map((ad: any, idx: number) => {
+      const meta = parseArchiveMeta(ad, idx + 1);
+      return {
+        ...ad,
+        archiveType: meta.archiveType,
+        labelCode: meta.labelCode,
+        versi: meta.versi,
+        dataBaruId: ad.dataBaruId || tdId || null
+      };
+    });
+    return {
+      ...td,
+      digitalArchives: normalizedArchives
+    };
+  });
+
+  const targetDataArchives = normalizedTargetData.flatMap((td: any) => td.digitalArchives || []);
+
   const arsipDigital = (app.arsipDigital && app.arsipDigital.length > 0)
-    ? app.arsipDigital
+    ? app.arsipDigital.map((ad: any, idx: number) => {
+      const meta = parseArchiveMeta(ad, idx + 1);
+      return {
+        ...ad,
+        archiveType: meta.archiveType,
+        labelCode: meta.labelCode,
+        versi: meta.versi
+      };
+    })
     : targetDataArchives;
 
   return {
     ...app,
+    targetData: normalizedTargetData,
     arsipDigital
   };
 }
@@ -57,17 +113,14 @@ export async function getDigitizationBundles() {
         orderBy: { createdAt: "desc" }
       }),
       prisma.application.findMany({
-        where: {
-          currentBundle: {
-            status: { in: ["LOCKED", "IN_MANIFEST"] }
-          }
-        },
         select: {
           id: true,
           status: true,
           applicationType: true,
           currentBundleId: true,
-          targetData: true
+          targetData: true,
+          createdAt: true,
+          updatedAt: true
         }
       })
     ]);
@@ -187,6 +240,7 @@ export async function uploadArsipDigital(formData: FormData) {
   const file = formData.get("file") as File;
   const permohonanId = formData.get("permohonanId") as string;
   const targetDataId = (formData.get("targetDataId") || formData.get("idTargetData") || formData.get("dataBaruId")) as string | null;
+  const uploadMode = (formData.get("uploadMode") || formData.get("mode") || "REPLACE") as "REPLACE" | "APPEND";
 
   if (!file || !permohonanId) {
     return { success: false, error: "File dan Permohonan ID wajib diisi." };
@@ -213,17 +267,52 @@ export async function uploadArsipDigital(formData: FormData) {
         throw new Error("Permohonan tidak ditemukan.");
       }
 
-      const archiveId = `arc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const newArchiveItem = {
-        idArchive: archiveId,
-        urlBlob,
-        fileName: file.name,
-        status: "ACTIVE" as const,
-        uploadedBy: session.user.id,
-        createdAt: new Date(),
-        revisionNote: null,
-        supersededBy: null,
-        supersededAt: null
+      let archiveId = "";
+
+      const createNewArchiveItemAndSupersedeOld = (currentArchives: any[], targetIdForArchive: string | null) => {
+        archiveId = `arc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+        const isAttachment = uploadMode === "APPEND";
+        const archiveType = isAttachment ? "ATTACHMENT" : "REVISION";
+
+        let revisionCount = 0;
+        let attachmentCount = 0;
+
+        currentArchives.forEach((a: any, idx: number) => {
+          const meta = parseArchiveMeta(a, idx + 1);
+          if (meta.archiveType === "ATTACHMENT" || meta.labelCode.startsWith("L")) {
+            attachmentCount++;
+          } else {
+            revisionCount++;
+          }
+        });
+
+        const nextNumber = isAttachment ? attachmentCount + 1 : revisionCount + 1;
+        const labelCode = isAttachment ? `L${nextNumber}` : `v${nextNumber}`;
+
+        const revisionNotePayload = JSON.stringify({
+          archiveType,
+          labelCode,
+          versi: nextNumber
+        });
+
+        const newArchiveItem = {
+          idArchive: archiveId,
+          urlBlob,
+          fileName: file.name,
+          status: "ACTIVE" as const,
+          uploadedBy: session.user.id,
+          createdAt: new Date(),
+          revisionNote: revisionNotePayload,
+          supersededBy: null,
+          supersededAt: null,
+          archiveType,
+          labelCode,
+          versi: nextNumber,
+          dataBaruId: targetIdForArchive
+        };
+
+        return [...currentArchives, newArchiveItem];
       };
 
       let existingTargetData = (application.targetData || []) as any[];
@@ -236,10 +325,12 @@ export async function uploadArsipDigital(formData: FormData) {
           if (targetIdMatch || (!targetDataId && !matched)) {
             matched = true;
             const currentArchives = td.digitalArchives || [];
+            const effectiveTdId = td.idTargetData || td.id || targetDataId || null;
+            const updatedArchives = createNewArchiveItemAndSupersedeOld(currentArchives, effectiveTdId);
             return {
               ...td,
               isArchived: true,
-              digitalArchives: [...currentArchives, newArchiveItem]
+              digitalArchives: updatedArchives
             };
           }
           return td;
@@ -247,23 +338,43 @@ export async function uploadArsipDigital(formData: FormData) {
 
         // If targetDataId didn't match any existing target data, update the first one
         if (targetDataId && !matched) {
+          const firstTd = updatedTargetData[0];
+          const currentArchives = firstTd.digitalArchives || [];
+          const effectiveTdId = firstTd.idTargetData || firstTd.id || targetDataId || null;
+          const updatedArchives = createNewArchiveItemAndSupersedeOld(currentArchives, effectiveTdId);
           updatedTargetData[0] = {
-            ...updatedTargetData[0],
+            ...firstTd,
             isArchived: true,
-            digitalArchives: [...(updatedTargetData[0].digitalArchives || []), newArchiveItem]
+            digitalArchives: updatedArchives
           };
         }
       } else {
+        const effectiveTdId = targetDataId || `td_${Date.now()}`;
+        const newArchives = createNewArchiveItemAndSupersedeOld([], effectiveTdId);
         updatedTargetData = [
           {
-            idTargetData: targetDataId || `td_${Date.now()}`,
+            idTargetData: effectiveTdId,
             ownerName: "Pemohon",
             isVerified: false,
             isArchived: true,
-            digitalArchives: [newArchiveItem]
+            digitalArchives: newArchives
           }
         ];
       }
+
+      // Sanitize targetData for Prisma MongoDB composite type validation
+      const dbPayloadTargetData = updatedTargetData.map((td: any) => {
+        const { dataBaruId, id, ...validTd } = td;
+        const archives = validTd.digitalArchives || [];
+        const sanitizedArchives = archives.map((arc: any) => {
+          const { versi, dataBaruId, archiveType, labelCode, ...validArc } = arc;
+          return validArc;
+        });
+        return {
+          ...validTd,
+          digitalArchives: sanitizedArchives
+        };
+      });
 
       const isAllTargetArchived = checkAllTargetDataArchived(updatedTargetData);
       const oldStatus = application.status;
@@ -272,7 +383,7 @@ export async function uploadArsipDigital(formData: FormData) {
       const updatedApp = await tx.application.update({
         where: { id: permohonanId },
         data: {
-          targetData: updatedTargetData,
+          targetData: dbPayloadTargetData,
           status: newStatus
         }
       });
@@ -324,6 +435,82 @@ export async function uploadArsipDigital(formData: FormData) {
   } catch (error: any) {
     console.error("[UPLOAD-ARSIP-ERR]", error);
     return { success: false, error: error.message || "Gagal mengunggah berkas arsip digital." };
+  }
+}
+
+export async function toggleArchiveStatus(
+  permohonanId: string,
+  archiveId: string,
+  newStatus: "ACTIVE" | "SUPERSEDED",
+  targetDataId?: string | null
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["ARCHIVIST", "SUPERVISOR", "PENGARSIP"].includes((session.user as any).role)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const application = await tx.application.findUnique({
+        where: { id: permohonanId }
+      });
+
+      if (!application) {
+        throw new Error("Permohonan tidak ditemukan.");
+      }
+
+      const existingTargetData = (application.targetData || []) as any[];
+      const updatedTargetData = existingTargetData.map((td: any) => {
+        const matchesTd = !targetDataId || td.idTargetData === targetDataId || td.id === targetDataId;
+        if (!matchesTd) return td;
+
+        const archives = td.digitalArchives || [];
+        const updatedArchives = archives.map((arc: any) => {
+          if (arc.idArchive === archiveId) {
+            return {
+              ...arc,
+              status: newStatus,
+              supersededAt: newStatus === "SUPERSEDED" ? new Date() : null,
+              supersededBy: newStatus === "SUPERSEDED" ? session.user.id : null
+            };
+          }
+          return arc;
+        });
+
+        return {
+          ...td,
+          digitalArchives: updatedArchives
+        };
+      });
+
+      // Sanitize targetData for Prisma MongoDB composite type validation
+      const dbPayloadTargetData = updatedTargetData.map((td: any) => {
+        const { dataBaruId, id, ...validTd } = td;
+        const archives = validTd.digitalArchives || [];
+        const sanitizedArchives = archives.map((arc: any) => {
+          const { versi, dataBaruId, archiveType, labelCode, ...validArc } = arc;
+          return validArc;
+        });
+        return {
+          ...validTd,
+          digitalArchives: sanitizedArchives
+        };
+      });
+
+      const updatedApp = await tx.application.update({
+        where: { id: permohonanId },
+        data: {
+          targetData: dbPayloadTargetData
+        }
+      });
+
+      const normalizedApp = normalizeApplicationData(updatedApp);
+      revalidatePath("/");
+      return { success: true, application: normalizedApp };
+    });
+  } catch (error: any) {
+    console.error("[TOGGLE-ARCHIVE-STATUS-ERR]", error);
+    return { success: false, error: error.message || "Gagal mengubah status berkas." };
   }
 }
 

@@ -12,8 +12,11 @@ import {
   FileSpreadsheet,
   FileCheck,
   ArrowLeftRight,
+  Loader2,
 } from "lucide-react";
 import { formatNop, toTitleCase, getAbbreviatedJenis } from "@/components/workspaces/shared/constants";
+import { ArchiveVersionDropdown } from "./ArchiveVersionDropdown";
+import { ArchivistUploadDropdown } from "./ArchivistUploadDropdown";
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   SUBMITTED: "Diajukan",
@@ -64,11 +67,13 @@ export interface ArchivistArsipTableRowProps {
   selectedBundle: any | null;
   copiedText: string | null;
   loading: boolean;
+  uploadingTargetId?: string | null;
   arsipDisplayMode: "berkas" | "pemohon";
   onSelect: (item: any) => void;
   onToggleFavorite: (id: string) => void;
   onCopy: (e: React.MouseEvent, text: string) => void;
-  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string) => void;
+  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string, uploadMode?: "REPLACE" | "APPEND") => void;
+  onToggleArchiveStatus?: (permohonanId: string, archiveId: string, newStatus: "ACTIVE" | "SUPERSEDED", targetDataId?: string | null) => Promise<void>;
   triggerFileInput: (permohonanId: string) => void;
   fileInputRefs: React.MutableRefObject<{ [key: string]: HTMLInputElement | null }>;
   checkPermohonanNeedsReupload: (p: any, targetId?: string | null) => boolean;
@@ -83,42 +88,56 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
     selectedBundle,
     copiedText,
     loading,
+    uploadingTargetId,
     arsipDisplayMode,
     onSelect,
     onToggleFavorite,
     onCopy,
     onUploadFile,
+    onToggleArchiveStatus,
     triggerFileInput,
     fileInputRefs,
     checkPermohonanNeedsReupload,
     onOpenCorrectionModal,
     onOpenFractionsModal,
   }) => {
+    const uploadModeRef = React.useRef<"REPLACE" | "APPEND">("REPLACE");
     const isFrozen = p.permintaanKoreksi && p.permintaanKoreksi.length > 0;
     const activeArchives = (p.arsipDigital || []).filter((ad: any) => ad.status === "ACTIVE");
+    const targetDataList = p.targetData || p.dataBaru || [];
+    const targetDataMatch = targetDataList.find((td: any) => (td.idTargetData === p.targetDataBaruId || td.id === p.targetDataBaruId));
+
     const activeArchive = p.targetDataBaruId
       ? activeArchives.find((ad: any) => ad.dataBaruId === p.targetDataBaruId)
       : activeArchives.find((ad: any) => ad.dataBaruId === null) ||
-        activeArchives[activeArchives.length - 1] ||
-        activeArchives[0];
+      activeArchives[activeArchives.length - 1];
 
     const needsReUpload = checkPermohonanNeedsReupload(p, p.targetDataBaruId);
-    const isArchived = p.status === "ARCHIVED";
+    const isArchived = p.isPecahanRow
+      ? (targetDataMatch?.isArchived === true || activeArchive != null)
+      : (p.status === "ARCHIVED" || (targetDataList.length > 0 && targetDataList.every((td: any) => td.isArchived === true)));
+
+    const rowArchives = p.targetDataBaruId
+      ? (p.arsipDigital || []).filter((ad: any) => ad.dataBaruId === p.targetDataBaruId)
+      : (p.arsipDigital || []);
+
+    const rowTargetKey = p.targetDataBaruId || p.uniqueRowKey || p.id;
+    const isThisRowUploading = loading && (uploadingTargetId === rowTargetKey || uploadingTargetId === p.targetDataBaruId || uploadingTargetId === p.id);
 
     const nopolDate = p.tanggalNoPelayanan || p.serviceNumberDate
       ? new Date(p.tanggalNoPelayanan || p.serviceNumberDate).toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
 
     const penyelesaianDate = p.tanggalPenyelesaian || p.completionDate
       ? new Date(p.tanggalPenyelesaian || p.completionDate).toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
 
     const nomorVal = p.nomorPelayanan || p.nomorPermohonan || p.applicationNumber || "-";
@@ -168,15 +187,12 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
     return (
       <tr
         onClick={() => onSelect(p)}
-        className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans h-11 border-b border-slate-100 ${
-          p.isPecahanRow
+        className={`hover:bg-slate-50/90 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans h-11 border-b border-slate-100 ${p.isPecahanRow
             ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5"
-            : needsReUpload
-            ? "bg-amber-50/50 border-l-4 border-l-amber-500"
             : isFrozen
-            ? "bg-amber-50/20"
-            : ""
-        }`}
+              ? "bg-amber-50/20"
+              : ""
+          }`}
       >
         {/* 1. Index */}
         <td className="py-2.5 px-4 text-center text-[12px] font-normal text-slate-600 font-sans">
@@ -197,11 +213,10 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
             title={p.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
           >
             <Star
-              className={`w-4 h-4 transition-all duration-200 ${
-                p.isFavorite
+              className={`w-4 h-4 transition-all duration-200 ${p.isFavorite
                   ? "text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]"
                   : "text-slate-300"
-              }`}
+                }`}
             />
           </button>
         </td>
@@ -210,10 +225,10 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
         <td className="py-2.5 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
           {p.createdAt
             ? new Date(p.createdAt).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
             : "—"}
         </td>
 
@@ -239,11 +254,10 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
               )}
               <span
-                className={`text-[12px] font-sans font-normal capitalize ${
-                  isOverdue(p.tanggalPenyelesaian || p.completionDate, p.status)
+                className={`text-[12px] font-sans font-normal capitalize ${isOverdue(p.tanggalPenyelesaian || p.completionDate, p.status)
                     ? "text-rose-600 font-normal"
                     : "text-slate-600"
-                }`}
+                  }`}
               >
                 {penyelesaianDate}
               </span>
@@ -263,12 +277,6 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
               <span className="text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 select-none">
                 <Clock className="w-2.5 h-2.5 shrink-0 animate-pulse" />
                 Frozen
-              </span>
-            )}
-            {needsReUpload && !isFrozen && (
-              <span className="text-[8.5px] font-black uppercase bg-amber-500 text-white px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-3xs select-none">
-                <RotateCcw className="w-2.5 h-2.5 shrink-0" />
-                Re-upload
               </span>
             )}
             <button
@@ -355,10 +363,10 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
         <td className="py-2.5 px-4 text-[12px] font-normal text-slate-600 font-sans whitespace-nowrap capitalize">
           {activeArchive?.createdAt
             ? new Date(activeArchive.createdAt).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
             : "—"}
         </td>
 
@@ -372,18 +380,17 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
             ) : (
               <>
                 {arsipDisplayMode === "berkas" &&
-                (p.jenisPermohonan === "MUTASI_SEBAGIAN" || p.applicationType === "MUTASI_SEBAGIAN") ? (
+                  (p.jenisPermohonan === "MUTASI_SEBAGIAN" || p.applicationType === "MUTASI_SEBAGIAN" || p.jenisPermohonan === "PARTIAL_MUTATION" || p.applicationType === "PARTIAL_MUTATION") ? (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenFractionsModal(p);
                     }}
-                    className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 border hover:scale-105 active:scale-95 ${
-                      isArchived
+                    className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 border hover:scale-105 active:scale-95 ${isArchived
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                         : "bg-[#00a389]/10 text-[#008f78] border-[#00a389]/20 hover:bg-[#00a389]/20"
-                    }`}
+                      }`}
                     title="Kelola berkas pecahan (Mutasi Sebagian)"
                   >
                     <FolderOpen className="w-3.5 h-3.5" />
@@ -396,67 +403,53 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
                       ref={(el) => {
                         fileInputRefs.current[p.uniqueRowKey || p.id] = el;
                       }}
-                      onChange={(e) => onUploadFile(p.id, e, p.targetDataBaruId)}
+                      onChange={(e) => onUploadFile(p.id, e, p.targetDataBaruId, uploadModeRef.current)}
                       className="hidden"
                       disabled={isFrozen || loading}
                     />
 
-                    {p.status === "BUNDLED" && needsReUpload && (
+                    {!activeArchive && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          uploadModeRef.current = "REPLACE";
                           triggerFileInput(p.uniqueRowKey || p.id);
                         }}
                         disabled={loading}
-                        className="p-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-3xs transition-all cursor-pointer flex items-center justify-center shrink-0"
-                        title="Re-upload arsip PDF baru"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {p.status === "BUNDLED" && !needsReUpload && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerFileInput(p.uniqueRowKey || p.id);
-                        }}
-                        disabled={loading}
-                        className="p-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg shadow-3xs transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        className="p-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-50 disabled:cursor-wait text-white rounded-lg shadow-3xs transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title="Unggah arsip PDF"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        {isThisRowUploading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     )}
 
-                    {isArchived && activeArchive && (
-                      <a
-                        href={activeArchive.urlBlob}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-all flex items-center justify-center shrink-0"
-                        title={`v${activeArchive.versi || 1} — Buka arsip PDF`}
-                      >
-                        <FileCheck className="w-3.5 h-3.5 text-[#00a389]" />
-                      </a>
-                    )}
+                    {activeArchive && (
+                      <>
+                        <ArchiveVersionDropdown
+                          archives={rowArchives.length > 0 ? rowArchives : [activeArchive]}
+                          compact={true}
+                          onToggleStatus={(arcId, newStatus) =>
+                            onToggleArchiveStatus
+                              ? onToggleArchiveStatus(p.id, arcId, newStatus, p.targetDataBaruId)
+                              : Promise.resolve()
+                          }
+                        />
 
-                    {isArchived && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerFileInput(p.uniqueRowKey || p.id);
-                        }}
-                        disabled={loading}
-                        className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center shrink-0"
-                        title="Ganti file arsip"
-                      >
-                        <FolderOpen className="w-3.5 h-3.5" />
-                      </button>
+                        <ArchivistUploadDropdown
+                          disabled={loading}
+                          loading={isThisRowUploading}
+                          currentVersion={activeArchive?.versi || 1}
+                          onSelectMode={(mode) => {
+                            uploadModeRef.current = mode;
+                            triggerFileInput(p.uniqueRowKey || p.id);
+                          }}
+                        />
+                      </>
                     )}
                   </>
                 )}
@@ -478,11 +471,10 @@ export const ArchivistArsipTableRow: React.FC<ArchivistArsipTableRowProps> = Rea
                         onOpenCorrectionModal(p);
                       }}
                       disabled={loading || isFrozen || !canReturnToPeneliti}
-                      className={`p-1.5 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${
-                        !canReturnToPeneliti
+                      className={`p-1.5 rounded-lg border transition-all flex items-center justify-center shrink-0 shadow-3xs ${!canReturnToPeneliti
                           ? "bg-slate-100/60 border-slate-200/60 text-slate-300 cursor-not-allowed opacity-50"
                           : "bg-slate-50 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 cursor-pointer"
-                      }`}
+                        }`}
                       title={
                         !canReturnToPeneliti
                           ? "Bundle sudah di Pengirim (Dimanifest). Tidak dapat dikembalikan ke Peneliti tanpa adanya pengembalian resmi dari Pengirim."

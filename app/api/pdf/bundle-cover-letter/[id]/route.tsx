@@ -43,8 +43,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: '#000000',
-    paddingBottom: 6,
-    marginBottom: 15,
+    paddingBottom: 5,
+    marginBottom: 0,
   },
   logo: {
     width: 60,
@@ -120,15 +120,19 @@ const styles = StyleSheet.create({
   // Table Page 1
   tablePage1: {
     width: '100%',
-    borderWidth: 1.5,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     borderColor: '#000000',
     marginBottom: 15,
   },
   tableRowPage1: {
     flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000000',
   },
   tableHeaderColPage1: {
-    borderRightWidth: 1.5,
+    borderRightWidth: 1,
     borderRightColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tableCellColPage1: {
-    borderRightWidth: 1.5,
+    borderRightWidth: 1,
     borderRightColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
@@ -160,7 +164,9 @@ const styles = StyleSheet.create({
   // Table Page 2 (Landscape layout matching the second page)
   tablePage2: {
     width: '100%',
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     borderColor: '#000000',
     marginTop: 10,
     marginBottom: 20,
@@ -327,17 +333,43 @@ const styles = StyleSheet.create({
   },
 });
 
-// Helper function to format jenis permohonan
+// Helper function to format jenis permohonan ke Bahasa Indonesia standar
 const formatJenisLayanan = (jenis: string) => {
-  if (!jenis) return '';
-  switch (jenis) {
-    case 'MUTASI_SEBAGIAN': return 'Mutasi Sebagian';
-    case 'MUTASI_HABIS_UPDATE': return 'Mutasi Habis Update';
-    case 'MUTASI_HABIS_REGULER': return 'Mutasi Habis Reguler';
-    case 'OBJEK_PAJAK_BARU': return 'Objek Pajak Baru';
-    case 'PEMBETULAN': return 'Pembetulan';
-    case 'PENGAKTIFAN': return 'Pengaktifan';
-    default: return jenis.replace(/_/g, ' ');
+  if (!jenis) return '-';
+  const j = jenis.trim().toUpperCase();
+  switch (j) {
+    case 'MUTASI_SEBAGIAN':
+    case 'PARTIAL_MUTATION':
+      return 'Mutasi Sebagian';
+    case 'MUTASI_PENGGABUNGAN':
+    case 'MERGER_MUTATION':
+      return 'Mutasi Penggabungan';
+    case 'MUTASI_HABIS_UPDATE':
+    case 'EXPIRED_UPDATE':
+      return 'Mutasi Habis Update';
+    case 'MUTASI_HABIS_REGULER':
+    case 'EXPIRED_REGULAR':
+      return 'Mutasi Habis Reguler';
+    case 'OBJEK_PAJAK_BARU':
+    case 'NEW_TAX_OBJECT':
+      return 'Objek Pajak Baru';
+    case 'PEMBETULAN':
+    case 'CORRECTION':
+      return 'Pembetulan';
+    case 'PENGAKTIFAN':
+    case 'REACTIVATION':
+      return 'Pengaktifan';
+    case 'SALINAN_SPPT':
+    case 'SPPT_COPY':
+      return 'Salinan SPPT';
+    case 'PEMBATALAN':
+    case 'CANCELLATION':
+      return 'Pembatalan';
+    default:
+      return jenis
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 };
 
@@ -345,10 +377,15 @@ const formatJenisLayanan = (jenis: string) => {
 // "jumlah itu merupakan jumlah berkas kecuali mutasi sebagian itu dihitung dari jumlah data barunya"
 const getJumlahBerkas = (bundle: any) => {
   let count = 0;
-  if (!bundle.permohonan) return 0;
-  for (const p of bundle.permohonan) {
-    if (p.jenisPermohonan === 'MUTASI_SEBAGIAN') {
-      count += p.dataBaru?.length || 0;
+  const list = bundle.applications || bundle.permohonan || [];
+  for (const p of list) {
+    const jenis = p.applicationType || p.jenisPermohonan || '';
+    const targets = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData : (Array.isArray(p.dataBaru) ? p.dataBaru : []);
+    const previous = Array.isArray(p.previousData) && p.previousData.length > 0 ? p.previousData : (Array.isArray(p.dataLama) ? p.dataLama : []);
+    if (jenis === 'MUTASI_SEBAGIAN' || jenis === 'PARTIAL_MUTATION') {
+      count += targets.length || 0;
+    } else if (jenis === 'MUTASI_PENGGABUNGAN' || jenis === 'MERGER_MUTATION') {
+      count += previous.length || 1;
     } else {
       count += 1;
     }
@@ -356,39 +393,109 @@ const getJumlahBerkas = (bundle: any) => {
   return count;
 };
 
-// Map database permohonan entries to flat table rows for Page 2 (Standard/Mutasi Sebagian)
+// Map database permohonan entries to flat table rows for Page 2 (Standard/Mutasi Sebagian/Mutasi Penggabungan)
 const getTableRows = (permohonanList: any[]) => {
   const rows: any[] = [];
-  permohonanList.forEach((p) => {
-    if (p.dataBaru && p.dataBaru.length > 0) {
-      p.dataBaru.forEach((db: any) => {
+  (permohonanList || []).forEach((p, appIdx) => {
+    const targets = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData : (Array.isArray(p.dataBaru) ? p.dataBaru : []);
+    const previous = Array.isArray(p.previousData) && p.previousData.length > 0 ? p.previousData : (Array.isArray(p.dataLama) ? p.dataLama : []);
+    const firstPrev = previous[0] || {};
+    const appType = p.applicationType || p.jenisPermohonan || '';
+
+    if (appType === 'MERGER_MUTATION' || appType === 'MUTASI_PENGGABUNGAN') {
+      if (previous.length > 0) {
+        let sumLt = 0;
+        let sumLb = 0;
+
+        previous.forEach((prev: any, prevIdx: number) => {
+          const itemLt = Number(prev.landArea ?? prev.luasTanahLama ?? 0);
+          const itemLb = Number(prev.buildingArea ?? prev.luasBangunanLama ?? 0);
+          sumLt += itemLt;
+          sumLb += itemLb;
+
+          rows.push({
+            noLabel: permohonanList.length > 1 ? `${appIdx + 1}.${prevIdx + 1}` : `${prevIdx + 1}`,
+            nomorPelayanan: p.applicationNumber || p.nomorPelayanan || '-',
+            nop: prev.nop || prev.nopLama || p.nop || '-',
+            namaPemohon: prev.ownerName || prev.namaPemilikLama || p.namaWajibPajak || '-',
+            namaSppt: prev.ownerName || prev.namaPemilikLama || p.namaWajibPajak || '-',
+            alamatOp: prev.objectAddress || prev.alamatObjekLama || p.alamat || '-',
+            desa: prev.objectDesa || prev.desaObjekLama || p.desaObjekLama || '-',
+            kec: prev.objectKecamatan || prev.kecamatanObjekLama || p.kecamatanObjekLama || '-',
+            jenis: formatJenisLayanan(appType),
+            lt: itemLt,
+            lb: itemLb,
+            bukti: prev.certificate || prev.sertifikatLama || p.sertifikatLama || '-',
+            isTotalRow: false
+          });
+        });
+
+        // Summary row for merged result
+        const target = targets[0] || {};
         rows.push({
-          nomorPelayanan: p.nomorPelayanan || '-',
-          nop: p.nop,
-          namaPemohon: db.namaPemilikBaru || '-',
-          namaSppt: p.namaPemilikLama || p.namaWajibPajak || '-',
-          alamatOp: db.alamatObjekBaru || '-',
-          desa: db.desaObjekBaru || '-',
-          kec: db.kecamatanObjekBaru || '-',
-          jenis: formatJenisLayanan(p.jenisPermohonan),
-          lt: db.luasTanahBaru || 0,
-          lb: db.luasBangunanBaru || 0,
-          bukti: db.sertifikatBaru || '-'
+          noLabel: permohonanList.length > 1 ? `${appIdx + 1}.H` : 'HASIL',
+          nomorPelayanan: p.applicationNumber || p.nomorPelayanan || '-',
+          nop: target.nopTemporary || target.nopBaru || p.nopBaru || p.nop || '-',
+          namaPemohon: target.ownerName || target.namaPemilikBaru || p.namaPemilikBaru || p.namaPemohon || '-',
+          namaSppt: '(Hasil Penggabungan)',
+          alamatOp: target.objectAddress || target.alamatObjekBaru || p.alamatObjekBaru || firstPrev.objectAddress || p.alamat || '-',
+          desa: target.objectDesa || target.desaObjekBaru || p.desaObjekBaru || firstPrev.objectDesa || p.desaObjekLama || '-',
+          kec: target.objectKecamatan || target.kecamatanObjekBaru || p.kecamatanObjekBaru || firstPrev.objectKecamatan || p.kecamatanObjekLama || '-',
+          jenis: formatJenisLayanan(appType),
+          lt: target.landArea ?? target.luasTanahBaru ?? sumLt,
+          lb: target.buildingArea ?? target.luasBangunanBaru ?? sumLb,
+          bukti: target.certificate || target.sertifikatBaru || firstPrev.certificate || '-',
+          isTotalRow: true
+        });
+      } else {
+        const target = targets[0] || {};
+        rows.push({
+          noLabel: String(appIdx + 1),
+          nomorPelayanan: p.applicationNumber || p.nomorPelayanan || '-',
+          nop: target.nopTemporary || p.nop || '-',
+          namaPemohon: target.ownerName || p.namaPemilikBaru || p.namaWajibPajak || '-',
+          namaSppt: p.namaPemilikLama || '-',
+          alamatOp: target.objectAddress || p.alamat || '-',
+          desa: target.objectDesa || p.desaObjekLama || '-',
+          kec: target.objectKecamatan || p.kecamatanObjekLama || '-',
+          jenis: formatJenisLayanan(appType),
+          lt: target.landArea ?? p.luasTanahBaru ?? 0,
+          lb: target.buildingArea ?? p.luasBangunanBaru ?? 0,
+          bukti: target.certificate || p.sertifikatBaru || '-',
+          isTotalRow: false
+        });
+      }
+    } else if (targets.length > 0) {
+      targets.forEach((db: any) => {
+        rows.push({
+          nomorPelayanan: p.applicationNumber || p.nomorPelayanan || '-',
+          nop: db.nopTemporary || p.nop || firstPrev.nop || '-',
+          namaPemohon: db.ownerName || db.namaPemilikBaru || '-',
+          namaSppt: firstPrev.ownerName || p.namaPemilikLama || p.namaWajibPajak || '-',
+          alamatOp: db.objectAddress || db.alamatObjekBaru || p.alamat || '-',
+          desa: db.objectDesa || db.desaObjekBaru || p.desaObjekLama || '-',
+          kec: db.objectKecamatan || db.kecamatanObjekBaru || p.kecamatanObjekLama || '-',
+          jenis: formatJenisLayanan(appType),
+          lt: db.landArea || db.luasTanahBaru || p.luasTanahLama || 0,
+          lb: db.buildingArea ?? db.luasBangunanBaru ?? p.luasBangunanLama ?? 0,
+          bukti: db.certificate || db.sertifikatBaru || '-',
+          isTotalRow: false
         });
       });
     } else {
       rows.push({
-        nomorPelayanan: p.nomorPelayanan || '-',
-        nop: p.nop,
-        namaPemohon: p.namaWajibPajak || '-',
-        namaSppt: p.namaPemilikLama || '-',
-        alamatOp: p.alamat || '-',
-        desa: p.desaObjekLama || '-',
-        kec: p.kecamatanObjekLama || '-',
-        jenis: formatJenisLayanan(p.jenisPermohonan),
-        lt: p.luasTanahLama || 0,
-        lb: p.luasBangunanLama || 0,
-        bukti: p.sertifikatLama || '-'
+        nomorPelayanan: p.applicationNumber || p.nomorPelayanan || '-',
+        nop: p.nop || firstPrev.nop || '-',
+        namaPemohon: firstPrev.ownerName || p.namaWajibPajak || '-',
+        namaSppt: firstPrev.ownerName || p.namaPemilikLama || '-',
+        alamatOp: p.objectAddress || p.alamat || '-',
+        desa: p.objectDesa || p.desaObjekLama || '-',
+        kec: p.objectKecamatan || p.kecamatanObjekLama || '-',
+        jenis: formatJenisLayanan(appType),
+        lt: firstPrev.landArea || p.luasTanahLama || 0,
+        lb: firstPrev.buildingArea ?? p.luasBangunanLama ?? 0,
+        bukti: firstPrev.certificate || p.sertifikatLama || '-',
+        isTotalRow: false
       });
     }
   });
@@ -446,38 +553,44 @@ const getTableRowsMH = (
   permohonanList: any[], 
   numbersMap: Record<string, { noBumi: number; noBangunan: number | null }>
 ) => {
-  return permohonanList.map((p) => {
+  return (permohonanList || []).map((p) => {
     const num = numbersMap[p.id] || { noBumi: 0, noBangunan: null };
-    const db = p.dataBaru?.[0];
+    const targets = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData : (Array.isArray(p.dataBaru) ? p.dataBaru : []);
+    const previous = Array.isArray(p.previousData) && p.previousData.length > 0 ? p.previousData : (Array.isArray(p.dataLama) ? p.dataLama : []);
+    const db = targets[0] || {};
+    const prev = previous[0] || {};
     
-    const oldAddrParsed = parseAddress(p.alamatObjekLama);
-    const newAddrParsed = parseAddress(db?.alamatObjekBaru);
+    const oldAddrStr = p.objectAddress || p.alamatObjekLama || p.alamat || prev.objectAddress || '';
+    const newAddrStr = db.objectAddress || db.alamatObjekBaru || '';
+
+    const oldAddrParsed = parseAddress(oldAddrStr);
+    const newAddrParsed = parseAddress(newAddrStr);
 
     return {
-      nomorPelayanan: insertZeroWidthSpaces(p.nomorPelayanan),
+      nomorPelayanan: insertZeroWidthSpaces(p.applicationNumber || p.nomorPelayanan || '-'),
       noBumi: num.noBumi,
       noBangunan: num.noBangunan,
-      nop: insertZeroWidthSpaces(p.nop),
-      wpLama: insertZeroWidthSpaces(p.namaPemilikLama || p.namaWajibPajak),
-      wpBaru: insertZeroWidthSpaces(db?.namaPemilikBaru),
+      nop: insertZeroWidthSpaces(p.nop || db.nopTemporary || prev.nop || '-'),
+      wpLama: insertZeroWidthSpaces(prev.ownerName || p.namaPemilikLama || p.namaWajibPajak || '-'),
+      wpBaru: insertZeroWidthSpaces(db.ownerName || db.namaPemilikBaru || '-'),
       
       // Letak Objek Saat Ini (Lama)
       jalanLama: insertZeroWidthSpaces(oldAddrParsed.jalan),
-      blokLama: insertZeroWidthSpaces(oldAddrParsed.blok),
-      rtLama: insertZeroWidthSpaces(oldAddrParsed.rt),
-      rwLama: insertZeroWidthSpaces(oldAddrParsed.rw),
+      blokLama: insertZeroWidthSpaces(oldAddrParsed.blok || prev.objectBlock),
+      rtLama: insertZeroWidthSpaces(oldAddrParsed.rt || prev.objectRt),
+      rwLama: insertZeroWidthSpaces(oldAddrParsed.rw || prev.objectRw),
 
       // Letak Objek Seharusnya (Baru)
       jalanBaru: insertZeroWidthSpaces(newAddrParsed.jalan),
-      blokBaru: insertZeroWidthSpaces(newAddrParsed.blok),
-      rtBaru: insertZeroWidthSpaces(newAddrParsed.rt),
-      rwBaru: insertZeroWidthSpaces(newAddrParsed.rw),
+      blokBaru: insertZeroWidthSpaces(newAddrParsed.blok || db.objectBlock),
+      rtBaru: insertZeroWidthSpaces(newAddrParsed.rt || db.objectRt),
+      rwBaru: insertZeroWidthSpaces(newAddrParsed.rw || db.objectRw),
 
-      luasTanahLama: p.luasTanahLama || 0,
-      luasTanahBaru: db?.luasTanahBaru || 0,
-      luasBangunanLama: p.luasBangunanLama || 0,
-      luasBangunanBaru: db?.luasBangunanBaru || 0,
-      kepemilikan: insertZeroWidthSpaces(db?.sertifikatBaru),
+      luasTanahLama: prev.landArea || p.luasTanahLama || 0,
+      luasTanahBaru: db.landArea || db.luasTanahBaru || 0,
+      luasBangunanLama: prev.buildingArea ?? p.luasBangunanLama ?? 0,
+      luasBangunanBaru: db.buildingArea ?? db.luasBangunanBaru ?? 0,
+      kepemilikan: insertZeroWidthSpaces(db.certificate || db.sertifikatBaru || '-'),
     };
   });
 };
@@ -489,25 +602,40 @@ interface Props {
 }
 
 const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) => {
-  const formattedDate = new Date(bundle.updatedAt).toLocaleDateString('id-ID', {
+  const formattedDate = new Date(bundle.updatedAt || bundle.createdAt).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
 
   const currentYear = new Date(bundle.createdAt).getFullYear();
-  const jenisLayanan = formatJenisLayanan(bundle.jenisPermohonan || '');
+  const rawBundleNum = bundle.bundleNumber || bundle.nomorBundle || '';
+  const appType = bundle.applicationType || bundle.jenisPermohonan || '';
+  const jenisLayanan = formatJenisLayanan(appType);
   const totalBerkas = getJumlahBerkas(bundle);
-  const bundleSeq = bundle.nomorBundle.split('/')[1] || bundle.nomorBundle;
 
-  const isMutasiHabis = bundle.jenisPermohonan === 'MUTASI_HABIS_UPDATE' || bundle.jenisPermohonan === 'MUTASI_HABIS_REGULER';
+  // Helper to extract sequence number for NO AGENDA e.g. 973/002-UPT.PD.WIL.IV/2026 -> '002'
+  const extractBundleSeqNumber = (str: string) => {
+    if (!str) return '-';
+    const slashParts = str.split('/');
+    if (slashParts.length > 1) {
+      const seqPart = slashParts[1].split('-')[0].trim();
+      if (seqPart) return seqPart;
+    }
+    return str.split('-')[0].trim();
+  };
+
+  const bundleSeq = extractBundleSeqNumber(rawBundleNum);
+
+  const isMutasiHabis = appType === 'EXPIRED_UPDATE' || appType === 'EXPIRED_REGULAR' || appType === 'MUTASI_HABIS_UPDATE' || appType === 'MUTASI_HABIS_REGULER';
   
+  const appList = bundle.applications || bundle.permohonan || [];
   const tableRowsPage2 = isMutasiHabis 
     ? [] 
-    : getTableRows(bundle.permohonan || []);
+    : getTableRows(appList);
 
   const tableRowsPage2MH = isMutasiHabis 
-    ? getTableRowsMH(bundle.permohonan || [], mutasiHabisNumbersMap) 
+    ? getTableRowsMH(appList, mutasiHabisNumbersMap) 
     : [];
 
   const roleTitle = isMutasiHabis ? 'KEPALA UNIT PELAKSANA TEKNIS' : 'Kepala UPTD';
@@ -530,6 +658,7 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
             </Text>
           </View>
         </View>
+        <View style={{ borderBottomWidth: 0.75, borderBottomColor: '#000000', marginTop: 1.5, marginBottom: 14 }} />
 
         {/* Metadata Section */}
         <View style={styles.metaContainer}>
@@ -537,7 +666,7 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Nomor</Text>
               <Text style={styles.metaColon}>:</Text>
-              <Text style={styles.metaValueBold}>{bundle.nomorBundle}</Text>
+              <Text style={styles.metaValueBold}>{rawBundleNum}</Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Lampiran</Text>
@@ -571,7 +700,7 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
         {/* Table Page 1 */}
         <View style={styles.tablePage1}>
           {/* Header Row */}
-          <View style={[styles.tableRowPage1, { borderBottomWidth: 1.5, borderBottomColor: '#000000', backgroundColor: '#ffffff' }]}>
+          <View style={[styles.tableRowPage1, { backgroundColor: '#ffffff' }]}>
             <View style={[styles.tableHeaderColPage1, { width: '20%' }]}><Text>NO AGENDA</Text></View>
             <View style={[styles.tableHeaderColPage1, { width: '35%' }]}><Text>JENIS</Text></View>
             <View style={[styles.tableHeaderColPage1, { width: '20%' }]}><Text>JUMLAH</Text></View>
@@ -616,7 +745,7 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
             <View style={styles.metaLandscapeRow}>
               <Text style={styles.metaLandscapeLabelMH}>Nomor Pengantar</Text>
               <Text style={styles.metaLandscapeColon}>:</Text>
-              <Text style={styles.metaLandscapeValue}>{bundle.nomorBundle}</Text>
+              <Text style={styles.metaLandscapeValue}>{rawBundleNum}</Text>
             </View>
             <View style={styles.metaLandscapeRow}>
               <Text style={styles.metaLandscapeLabelMH}>Tanggal</Text>
@@ -629,7 +758,7 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
             <View style={styles.metaLandscapeRow}>
               <Text style={styles.metaLandscapeLabel}>Nomor</Text>
               <Text style={styles.metaLandscapeColon}>:</Text>
-              <Text style={styles.metaLandscapeValue}>{bundle.nomorBundle}</Text>
+              <Text style={styles.metaLandscapeValue}>{rawBundleNum}</Text>
             </View>
             <View style={styles.metaLandscapeRow}>
               <Text style={styles.metaLandscapeLabel}>Tanggal</Text>
@@ -794,22 +923,54 @@ const SuratPengantarPdf: React.FC<Props> = ({ bundle, mutasiHabisNumbersMap }) =
             </View>
 
             {/* Data Rows Standard */}
-            {tableRowsPage2.map((row, index) => (
-              <View style={styles.tableRowPage2} key={index}>
-                <View style={[styles.tableCellColPage2, { width: '3%', textAlign: 'center' }]}><Text>{String(index + 1)}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '9%', textAlign: 'center' }]}><Text>{row.nomorPelayanan}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '13%', textAlign: 'center' }]}><Text>{row.nop}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '11%' }]}><Text>{row.namaPemohon}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '11%' }]}><Text>{row.namaSppt}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '13%' }]}><Text>{row.alamatOp}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text>{row.desa}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '8%' }]}><Text>{row.kec}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '10%' }]}><Text>{row.jenis}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '4%', textAlign: 'center' }]}><Text>{String(row.lt)}</Text></View>
-                <View style={[styles.tableCellColPage2, { width: '4%', textAlign: 'center' }]}><Text>{String(row.lb)}</Text></View>
-                <View style={[styles.tableCellColLastPage2, { width: '6%' }]}><Text>{row.bukti}</Text></View>
-              </View>
-            ))}
+            {tableRowsPage2.map((row, index) => {
+              const isTotal = row.isTotalRow;
+              const rowStyle = isTotal
+                ? [styles.tableRowPage2, { backgroundColor: '#f1f5f9' }]
+                : styles.tableRowPage2;
+              const textStyle = isTotal ? { fontFamily: 'Helvetica-Bold' } : {};
+
+              return (
+                <View style={rowStyle} key={index}>
+                  <View style={[styles.tableCellColPage2, { width: '3%', textAlign: 'center' }]}>
+                    <Text style={isTotal ? { fontFamily: 'Helvetica-Bold', fontSize: 4.8 } : {}}>{row.noLabel || String(index + 1)}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '9%', textAlign: 'center' }]}>
+                    <Text style={textStyle}>{row.nomorPelayanan}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '13%', textAlign: 'center' }]}>
+                    <Text style={textStyle}>{row.nop}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '11%' }]}>
+                    <Text style={textStyle}>{row.namaPemohon}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '11%' }]}>
+                    <Text style={textStyle}>{row.namaSppt}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '13%' }]}>
+                    <Text style={textStyle}>{row.alamatOp}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '8%' }]}>
+                    <Text style={textStyle}>{row.desa}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '8%' }]}>
+                    <Text style={textStyle}>{row.kec}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '10%' }]}>
+                    <Text style={textStyle}>{row.jenis}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '4%', textAlign: 'center' }]}>
+                    <Text style={textStyle}>{String(row.lt)}</Text>
+                  </View>
+                  <View style={[styles.tableCellColPage2, { width: '4%', textAlign: 'center' }]}>
+                    <Text style={textStyle}>{String(row.lb)}</Text>
+                  </View>
+                  <View style={[styles.tableCellColLastPage2, { width: '6%' }]}>
+                    <Text style={textStyle}>{row.bukti}</Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
 

@@ -58,7 +58,7 @@ export const MonitorBundleGrid: React.FC<MonitorBundleGridProps> = React.memo(({
   return (
     <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px] font-sans">
       {/* Bundle Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3.5 font-sans">
         {loading && uniqueBundlesList.length === 0 ? (
           <div className="col-span-full py-20 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />

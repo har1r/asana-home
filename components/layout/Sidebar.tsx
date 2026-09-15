@@ -57,7 +57,8 @@ export default function Sidebar() {
     setSearchQuery,
     setSelectedProject,
     setIsPersonalProfileDrawerOpen,
-    setIsMobileMenuOpen
+    setIsMobileMenuOpen,
+    sidebarStatsTrigger
   } = useDashboard();
 
   /** User Session (Digunakan pada JSX baris: 253 & 565 [skeleton loading], 583 [nama user profile]) */
@@ -125,7 +126,6 @@ export default function Sidebar() {
   /** Fetching data awal permohonan & statistik dari Server Actions */
   useEffect(() => {
     async function loadApplicationData() {
-      setIsDataLoading(true);
       try {
         const [globalRes, statsRes] = await Promise.all([
           getGlobalBerandaStats(),
@@ -147,7 +147,7 @@ export default function Sidebar() {
       }
     }
     loadApplicationData();
-  }, []);
+  }, [sidebarStatsTrigger]);
 
   /** List item TargetData/Pemohon (Digunakan pada JSX baris: 429 & 430 [daftar item di bawah accordion Projects]) */
   const targetDataItems = useMemo<TargetDataItem[]>(() => {
@@ -195,17 +195,30 @@ export default function Sidebar() {
     });
   }, []);
 
-  /** Pengecekan role peneliti & pengarsip (Digunakan pada mainMenuItems memo baris 206-217) */
+  /** Pengecekan role peneliti, pengarsip, & pengirim (Digunakan pada mainMenuItems memo baris 206-217) */
   const isResearcherRole = ['RESEARCHER', 'PENELITI'].includes(userRoleRaw);
   const isArchivistRole = ['ARCHIVIST', 'PENGARSIP'].includes(userRoleRaw);
+  const isSenderRole = ['SENDER', 'PENGIRIM'].includes(userRoleRaw);
 
   /** Menu navigasi utama (Digunakan pada JSX baris: 375-396 [render daftar button navigasi utama]) */
   const mainMenuItems: MenuItem[] = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     {
-      id: isResearcherRole ? 'bundle-history' : isArchivistRole ? 'archivist-history' : 'submission-history',
-      label: isResearcherRole ? 'Riwayat Bundle' : isArchivistRole ? 'Riwayat Digitalisasi' : 'Riwayat Pengajuan',
+      id: isResearcherRole
+        ? 'bundle-history'
+        : isArchivistRole
+        ? 'archivist-history'
+        : isSenderRole
+        ? 'sender-history'
+        : 'submission-history',
+      label: isResearcherRole
+        ? 'Riwayat Bundle'
+        : isArchivistRole
+        ? 'Riwayat Digitalisasi'
+        : isSenderRole
+        ? 'Riwayat Manifest'
+        : 'Riwayat Pengajuan',
       icon: FileClock
     },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },

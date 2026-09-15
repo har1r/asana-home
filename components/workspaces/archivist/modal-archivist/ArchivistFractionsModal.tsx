@@ -1,15 +1,18 @@
-"use client";
-
-import React, { useRef } from "react";
-import { X, FileCheck, FileSpreadsheet, RotateCcw, FolderOpen } from "lucide-react";
+import React, { useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { X, FileCheck, FileSpreadsheet, RotateCcw, FolderOpen, Loader2 } from "lucide-react";
 import { cleanPecahanSuffix } from "@/components/workspaces/shared/constants";
+import { ArchiveVersionDropdown } from "@/components/workspaces/archivist/queue-archivist/ArchiveVersionDropdown";
+import { ArchivistUploadDropdown } from "@/components/workspaces/archivist/queue-archivist/ArchivistUploadDropdown";
 
 export interface ArchivistFractionsModalProps {
   isOpen: boolean;
   permohonan: any | null;
   loading: boolean;
+  uploadingTargetId?: string | null;
   onClose: () => void;
-  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string) => void;
+  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string, uploadMode?: "REPLACE" | "APPEND") => void;
+  onToggleArchiveStatus?: (permohonanId: string, archiveId: string, newStatus: "ACTIVE" | "SUPERSEDED", targetDataId?: string | null) => Promise<void>;
   checkPermohonanNeedsReupload: (p: any, targetId?: string | null) => boolean;
 }
 
@@ -18,13 +21,21 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
     isOpen,
     permohonan,
     loading,
+    uploadingTargetId,
     onClose,
     onUploadFile,
+    onToggleArchiveStatus,
     checkPermohonanNeedsReupload,
   }) => {
     const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+    const [mounted, setMounted] = useState(false);
+    const uploadModeRef = useRef<"REPLACE" | "APPEND">("REPLACE");
 
-    if (!isOpen || !permohonan) return null;
+    useEffect(() => {
+      setMounted(true);
+    }, []);
+
+    if (!isOpen || !permohonan || !mounted) return null;
 
     const dataBaruList = (permohonan.dataBaru && permohonan.dataBaru.length > 0) ? permohonan.dataBaru : (permohonan.targetData || []);
 
@@ -33,24 +44,28 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
       if (ref) ref.click();
     };
 
-    return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn font-sans select-none">
-        <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 max-h-[85vh] overflow-hidden">
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn font-sans select-none">
+        <div className="bg-white rounded-md max-w-2xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 max-h-[85vh] overflow-hidden animate-scaleUp">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-[#00a389]/10 rounded-xl text-[#008f78] border border-[#00a389]/20">
+              <div className="p-2 bg-[#00a389]/10 rounded-md text-[#008f78] border border-[#00a389]/20">
                 <FolderOpen className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 text-base">Kelola Berkas Pecahan</h3>
+                <h3 className="font-bold text-slate-800 text-base">
+                  {dataBaruList.length > 1 ? "Kelola Berkas Pecahan" : "Kelola Arsip Digital"}
+                </h3>
                 <p className="text-xs text-slate-500 font-sans">
-                  Unggah arsip digital PDF untuk masing-masing pemohon pecahan Mutasi Sebagian.
+                  {dataBaruList.length > 1
+                    ? "Unggah arsip digital PDF untuk masing-masing pemohon pecahan Mutasi Sebagian."
+                    : "Unggah, revisi, atau tambah lampiran berkas PDF untuk permohonan ini."}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -58,7 +73,7 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs flex items-center justify-between">
+            <div className="bg-slate-50 p-3 rounded-md border border-slate-200/80 text-xs flex items-center justify-between">
               <div>
                 <span className="text-slate-500 font-sans">No. Permohonan: </span>
                 <span className="font-mono font-bold text-slate-800">
@@ -75,19 +90,29 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
 
             <div className="flex flex-col gap-2.5">
               {dataBaruList.map((db: any, idx: number) => {
-                const activeArchives = (permohonan.arsipDigital || []).filter(
-                  (ad: any) => ad.dataBaruId === db.id && ad.status === "ACTIVE"
+                const targetId = db.id || db.idTargetData || `td_${idx}`;
+                const isThisItemLoading = loading && (
+                  uploadingTargetId === targetId ||
+                  uploadingTargetId === db.id ||
+                  uploadingTargetId === db.idTargetData ||
+                  uploadingTargetId === permohonan.id
                 );
+                const itemArchives = (db.digitalArchives && db.digitalArchives.length > 0)
+                  ? db.digitalArchives
+                  : (permohonan.arsipDigital || []).filter(
+                      (ad: any) => (ad.dataBaruId === targetId || ad.dataBaruId === db.id || ad.dataBaruId === db.idTargetData)
+                    );
+                const activeArchives = itemArchives.filter((ad: any) => ad.status === "ACTIVE");
                 const activeArchive = activeArchives[0];
-                const needsReupload = checkPermohonanNeedsReupload(permohonan, db.id);
+                const needsReupload = checkPermohonanNeedsReupload(permohonan, targetId);
 
                 return (
                   <div
-                    key={db.id || idx}
-                    className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-[#00a389]/50 transition-all flex items-center justify-between gap-3 shadow-3xs"
+                    key={targetId || idx}
+                    className="p-3.5 rounded-md border border-slate-200 bg-white hover:border-[#00a389]/50 transition-all flex items-center justify-between gap-3 shadow-3xs"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-7 h-7 rounded-lg bg-emerald-50 text-[#008f78] border border-emerald-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                      <span className="w-7 h-7 rounded-md bg-emerald-50 text-[#008f78] border border-emerald-200 text-xs font-mono font-bold flex items-center justify-center shrink-0">
                         #{idx + 1}
                       </span>
                       <div className="flex flex-col min-w-0">
@@ -105,58 +130,52 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
                         type="file"
                         accept=".pdf"
                         ref={(el) => {
-                          fileInputRefs.current[db.id] = el;
+                          fileInputRefs.current[targetId] = el;
                         }}
-                        onChange={(e) => onUploadFile(permohonan.id, e, db.id)}
+                        onChange={(e) => onUploadFile(permohonan.id, e, targetId, uploadModeRef.current)}
                         className="hidden"
                         disabled={loading}
                       />
 
-                      {needsReupload && (
+                      {!activeArchive && (
                         <button
                           type="button"
-                          onClick={() => triggerInput(db.id)}
+                          onClick={() => {
+                            uploadModeRef.current = "REPLACE";
+                            triggerInput(targetId);
+                          }}
                           disabled={loading}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-lg text-xs font-semibold shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-50 text-white rounded-md text-xs font-semibold shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-wait font-sans"
                         >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Re-upload</span>
-                        </button>
-                      )}
-
-                      {!needsReupload && !activeArchive && (
-                        <button
-                          type="button"
-                          onClick={() => triggerInput(db.id)}
-                          disabled={loading}
-                          className="px-3 py-1.5 bg-[#00a389] hover:bg-[#008f78] disabled:opacity-40 text-white rounded-lg text-xs font-semibold shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <FileSpreadsheet className="w-3.5 h-3.5" />
-                          <span>Upload PDF</span>
+                          {isThisItemLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                          )}
+                          <span>{isThisItemLoading ? "Mengunggah..." : "Upload PDF"}</span>
                         </button>
                       )}
 
                       {activeArchive && (
                         <>
-                          <a
-                            href={activeArchive.urlBlob}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-emerald-700 text-xs font-medium transition-all flex items-center gap-1"
-                          >
-                            <FileCheck className="w-3.5 h-3.5 text-[#00a389]" />
-                            <span>Lihat PDF</span>
-                          </a>
+                          <ArchiveVersionDropdown
+                            archives={itemArchives.length > 0 ? itemArchives : [activeArchive]}
+                            onToggleStatus={(arcId, newStatus) =>
+                              onToggleArchiveStatus
+                                ? onToggleArchiveStatus(permohonan.id, arcId, newStatus, targetId)
+                                : Promise.resolve()
+                            }
+                          />
 
-                          <button
-                            type="button"
-                            onClick={() => triggerInput(db.id)}
+                          <ArchivistUploadDropdown
                             disabled={loading}
-                            className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 transition-all cursor-pointer disabled:opacity-40"
-                            title="Ganti PDF"
-                          >
-                            <FolderOpen className="w-3.5 h-3.5" />
-                          </button>
+                            loading={isThisItemLoading}
+                            currentVersion={activeArchive?.versi || 1}
+                            onSelectMode={(mode) => {
+                              uploadModeRef.current = mode;
+                              triggerInput(targetId);
+                            }}
+                          />
                         </>
                       )}
                     </div>
@@ -169,13 +188,14 @@ export const ArchivistFractionsModal: React.FC<ArchivistFractionsModalProps> = R
           <div className="flex justify-end pt-3 border-t border-slate-100 shrink-0">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md transition-all cursor-pointer font-sans"
             >
               Selesai
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 );

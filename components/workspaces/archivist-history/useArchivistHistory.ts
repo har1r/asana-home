@@ -58,13 +58,20 @@ export function useArchivistHistory() {
         ? item.permohonan
         : [];
       const creator = item.createdBy?.name || item.creatorName || "Pengarsip";
+      const appType =
+        item.applicationType ||
+        item.jenisPermohonan ||
+        apps[0]?.applicationType ||
+        apps[0]?.jenisPermohonan ||
+        "";
+
       return {
         id: item.id,
         bundleNumber: item.bundleNumber || item.nomorBundle || "-",
         createdAt: item.createdAt,
         creatorName: creator,
         status: item.status || "LOCKED",
-        applicationType: item.applicationType || item.jenisPermohonan || "",
+        applicationType: appType,
         totalApplications: apps.length,
         original: item,
       };
@@ -79,7 +86,8 @@ export function useArchivistHistory() {
         const bNo = item.bundleNumber.toLowerCase();
         const creator = item.creatorName.toLowerCase();
         const status = item.status.toLowerCase();
-        return bNo.includes(q) || creator.includes(q) || status.includes(q);
+        const appTypeStr = (item.applicationType || "").toLowerCase();
+        return bNo.includes(q) || creator.includes(q) || status.includes(q) || appTypeStr.includes(q);
       });
     }
     return list;

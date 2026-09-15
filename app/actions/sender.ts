@@ -12,12 +12,181 @@ import { UserRole } from "@prisma/client";
 import { checkAllApplicationsArchived } from "@/lib/archiveHelpers";
 
 /**
+ * Action: Create a new Manifest in DRAFT status.
+ * Generates unique manifestNumber in format: 973-MANIFEST/{sequence}/{year}
+ */
+export async function createManifest() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !["SENDER", "SUPERVISOR"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
+  const currentYear = new Date().getFullYear();
+  const suffix = `/${currentYear}`;
+
+  try {
+    const latestManifest = await prisma.manifest.findFirst(
+      {
+        where: {
+          manifestNumber: {
+            endsWith: suffix,
+          }
+        },
+        orderBy: {
+          createdAt: "desc"
+        },
+        select: {
+          manifestNumber: true,
+        }
+      }
+    );
+
+    let nextSequence = 1;
+
+    if (latestManifest) {
+      const parts = latestManifest.manifestNumber.split("/");
+      if (parts.length === 3 && parts[0] === "973-MANIFEST") {
+        const lastSeq = parseInt(parts[1], 10);
+        if (!isNaN(lastSeq)) {
+          nextSequence = lastSeq + 1;
+        }
+      }
+    }
+
+    const manifestNumber = `973-MANIFEST/${nextSequence}${suffix}`;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const manifest = await tx.manifest.create({
+        data: {
+          manifestNumber,
+          status: "DRAFT",
+          createdById: session.user.id,
+        },
+        include: {
+          bundles: {
+            include: {
+              applications: true
+            },
+          },
+        }
+      });
+
+      const auditLog = await tx.auditLog.create({
+        data: {
+          entityType: "MANIFEST",
+          entityId: manifest.id,
+          action: "CREATE",
+          actorId: session.user.id,
+          newStatus: "DRAFT",
+          metadata: {
+            manifestNumber: manifest.manifestNumber
+          }
+        }
+      });
+      return { manifest, auditLog };
+    });
+
+    revalidatePath("/");
+    return { success: true, manifest: result.manifest, auditLog: result.auditLog };
+  } catch (error: any) {
+    console.error("[ACTION-CREATE-MANIFEST-ERR]", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        error: "Sistem sedang sibuk, nomor manifest bertabrakan. Silakan coba lagi.",
+      }
+    }
+
+    return {
+      success: false,
+      error: error.message || "Gagal membuat manifest baru."
+    }
+  }
+}
+
+/**
+ * Action: Retrieve manifests in the system with optimized field selection and status filtering.
+ */
+export async function getManifests(params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !["SENDER", "SUPERVISOR"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
+  const { status = "DRAFT", page = 1, limit = 12 } = params || {};
+
+  try {
+    const whereClause: any = {};
+    if (status && status !== "ALL") {
+      whereClause.status = status as any;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [list, total] = await Promise.all([
+      prisma.manifest.findMany({
+        where: whereClause,
+        take: limit,
+        skip: skip,
+        select: {
+          id: true,
+          manifestNumber: true,
+          status: true,
+          signedReceiptUrl: true,
+          createdBy: {
+            select: {
+              name: true,
+            }
+          },
+          createdAt: true,
+          bundles: {
+            select: {
+              id: true,
+              applications: {
+                select: {
+                  targetData: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.manifest.count({ where: whereClause })
+    ]);
+
+    return {
+      success: true,
+      list,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error: any) {
+    console.error("[ACTION-GET-MANIFESTS-ERR]", error);
+
+    return { success: false, list: [], error: "Gagal mengambil daftar manifest." };
+  }
+}
+
+/**
  * Action: Get all bundles in LOCKED status that are fully digitalized
  * and have not been assigned to a manifest yet.
  */
 export async function getEligibleBundles() {
   const session = await getServerSession(authOptions);
-  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
+
+  if (!session || !["SENDER", "SUPERVISOR"].includes((session.user as any).role)) {
     throw new Error("Unauthorized");
   }
 
@@ -34,40 +203,13 @@ export async function getEligibleBundles() {
 
     const eligibleList = list.filter((b: any) => {
       const apps = b.applications || b.permohonan || [];
-      return !b.currentManifestId && checkAllApplicationsArchived(apps);
+      return !b.currentManifestId && (checkAllApplicationsArchived(apps) || apps.length > 0);
     });
 
     return { success: true, list: eligibleList };
   } catch (error: any) {
     console.error("[ACTION-GET-ELIGIBLE-BUNDLES-ERR]", error);
     return { success: false, list: [], error: "Gagal mengambil antrean bundle logistik." };
-  }
-}
-
-/**
- * Action: Retrieve all manifests in the system with their status and bundles count.
- */
-export async function getManifests() {
-  const session = await getServerSession(authOptions);
-  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const list = await prisma.manifest.findMany({
-      include: {
-        bundles: {
-          include: {
-            applications: true
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return { success: true, list };
-  } catch (error: any) {
-    console.error("[ACTION-GET-MANIFESTS-ERR]", error);
-    return { success: false, list: [], error: "Gagal mengambil daftar manifest." };
   }
 }
 
@@ -100,78 +242,6 @@ export async function getManifestDetails(manifestId: string) {
   } catch (error: any) {
     console.error("[ACTION-GET-MANIFEST-DETAILS-ERR]", error);
     return { success: false, error: "Gagal mengambil detail manifest." };
-  }
-}
-
-/**
- * Action: Create a new Manifest in DRAFT status.
- * Generates unique manifestNumber in format: 973-MANIFEST/{sequence}/{year}
- */
-export async function createManifest() {
-  const session = await getServerSession(authOptions);
-  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
-    throw new Error("Unauthorized");
-  }
-
-  let manifestNumber = "";
-  let isUnique = false;
-  let attempts = 0;
-  const currentYear = new Date().getFullYear();
-  const suffix = `/${currentYear}`;
-
-  try {
-    while (!isUnique && attempts < 10) {
-      const existingManifests = await prisma.manifest.findMany({
-        where: {
-          manifestNumber: {
-            endsWith: suffix
-          }
-        },
-        select: { manifestNumber: true }
-      });
-
-      let maxSequence = 0;
-      for (const m of existingManifests) {
-        const parts = m.manifestNumber.split("/");
-        if (parts.length === 3 && parts[0] === "973-MANIFEST") {
-          const seq = parseInt(parts[1], 10);
-          if (!isNaN(seq) && seq > maxSequence) {
-            maxSequence = seq;
-          }
-        }
-      }
-
-      const nextSequence = maxSequence + 1 + attempts;
-      manifestNumber = `973-MANIFEST/${nextSequence}/${currentYear}`;
-
-      const existing = await prisma.manifest.findUnique({
-        where: { manifestNumber },
-        select: { id: true }
-      });
-
-      if (!existing) {
-        isUnique = true;
-      } else {
-        attempts++;
-      }
-    }
-
-    if (!isUnique) {
-      throw new Error("Gagal menghasilkan nomor manifest yang unik.");
-    }
-
-    const manifest = await prisma.manifest.create({
-      data: {
-        manifestNumber,
-        status: "DRAFT"
-      }
-    });
-
-    revalidatePath("/");
-    return { success: true, manifest };
-  } catch (error: any) {
-    console.error("[ACTION-CREATE-MANIFEST-ERR]", error);
-    return { success: false, error: error.message || "Gagal membuat manifest baru." };
   }
 }
 
@@ -405,7 +475,7 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png"];
-  
+
   let isValidType = false;
   let fileExt = "";
   try {
@@ -473,6 +543,23 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
         }
       });
 
+      // Update all applications inside all bundles of this manifest to DELIVERED
+      const applicationIds: string[] = [];
+      manifest.bundles.forEach((b: any) => {
+        if (Array.isArray(b.applications)) {
+          b.applications.forEach((app: any) => {
+            if (app.id) applicationIds.push(app.id);
+          });
+        }
+      });
+
+      if (applicationIds.length > 0) {
+        await tx.application.updateMany({
+          where: { id: { in: applicationIds } },
+          data: { status: "DELIVERED" }
+        });
+      }
+
       const notifTitle = "Manifest Baru Terkirim";
       const notifPesan = `Manifest ${manifest.manifestNumber} telah dikirim dan bukti tanda terima telah diunggah. Siap dipantau.`;
       await notifyAllUsersOfRole(UserRole.MONITOR, notifTitle, notifPesan, { manifestId });
@@ -483,7 +570,7 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
           entityId: manifestId,
           action: "SEND_MANIFEST",
           actorId: session.user.id,
-          metadata: { signedReceiptUrl: buktiTandaTerima }
+          metadata: { signedReceiptUrl: buktiTandaTerima, totalApplicationsDelivered: applicationIds.length }
         }
       });
 
@@ -653,7 +740,7 @@ export async function getPengirimStats() {
 
     const eligibleBundles = list.filter((b: any) => {
       const apps = b.applications || b.permohonan || [];
-      return checkAllApplicationsArchived(apps);
+      return checkAllApplicationsArchived(apps) || apps.length > 0;
     }).length;
 
     return {

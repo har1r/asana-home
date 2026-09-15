@@ -66,6 +66,11 @@ interface DashboardContextType {
   }) => void;
   favoritePermohonans: any[];
   refreshFavorites: () => Promise<void>;
+  sidebarStatsTrigger: number;
+  triggerRefreshSidebarStats: () => void;
+  duplicatedApplicationData: any | null;
+  setDuplicatedApplicationData: (data: any | null) => void;
+  handleDuplicateApplication: (appItem: any) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -78,6 +83,12 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [messages, setMessages] = useState<TeamMessage[]>(INITIAL_MESSAGES);
   const [favoritePermohonans, setFavoritePermohonans] = useState<any[]>([]);
+  const [sidebarStatsTrigger, setSidebarStatsTrigger] = useState(0);
+  const [duplicatedApplicationData, setDuplicatedApplicationData] = useState<any | null>(null);
+
+  const triggerRefreshSidebarStats = useCallback(() => {
+    setSidebarStatsTrigger(prev => prev + 1);
+  }, []);
 
   // UI state
   const router = useRouter();
@@ -92,6 +103,15 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     setActiveTabState(tab);
     const params = new URLSearchParams(window.location.search);
     params.set('tab', tab);
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  const handleDuplicateApplication = useCallback((appItem: any) => {
+    setDuplicatedApplicationData(appItem);
+    setActiveTabState('my-tasks');
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'my-tasks');
+    params.set('view', 'create');
     router.push(`?${params.toString()}`, { scroll: false });
   }, [router]);
   const [selectedTeamId, setSelectedTeamId] = useState('team-marketing');
@@ -427,7 +447,12 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     showConfirm,
     isInitialized,
     favoritePermohonans,
-    refreshFavorites
+    refreshFavorites,
+    sidebarStatsTrigger,
+    triggerRefreshSidebarStats,
+    duplicatedApplicationData,
+    setDuplicatedApplicationData,
+    handleDuplicateApplication
   }), [
     members,
     tasks,
@@ -460,7 +485,12 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     showConfirm,
     isInitialized,
     favoritePermohonans,
-    refreshFavorites
+    refreshFavorites,
+    sidebarStatsTrigger,
+    triggerRefreshSidebarStats,
+    duplicatedApplicationData,
+    setDuplicatedApplicationData,
+    handleDuplicateApplication
   ]);
 
   return (

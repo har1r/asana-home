@@ -1,25 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { ManifestStatusCounts, SenderStatisticMetrics } from "./useSenderStatistics";
 
-export interface ManifestStatusCounts {
-  ALL: number;
-  DRAFT: number;
-  LOCKED: number;
-  SENT: number;
-  [key: string]: number;
-}
+export type { ManifestStatusCounts, SenderStatisticMetrics };
 
 export interface SenderKPIStripProps {
-  manifestStatusCounts: ManifestStatusCounts;
-  totalManifests: number;
-  filterManifestStatus: string;
-  onSelectAll: () => void;
-  onSelectDraft: () => void;
-  onSelectLocked: () => void;
-  onSelectSent: () => void;
+  metrics?: SenderStatisticMetrics;
+  totalManifests?: number;
+  manifestStatusCounts?: ManifestStatusCounts;
 }
+
+const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
 
 // ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
@@ -27,8 +20,9 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
   const width = 84;
   const height = 40;
   const maxVal = Math.max(...data, 1);
-  const barWidth = 7;
-  const gap = 5;
+  const isFourPoints = data.length === 4;
+  const barWidth = isFourPoints ? 13 : 7;
+  const gap = isFourPoints ? 8 : 5;
 
   return (
     <div className="relative group/chart">
@@ -58,8 +52,8 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
 
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded-md shadow-lg z-20 pointer-events-none whitespace-nowrap">
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
@@ -127,77 +121,78 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
 
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded-md shadow-lg z-20 pointer-events-none whitespace-nowrap">
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
   );
 };
 
+// Helper badge component for dynamic Week-over-Week growth rendering
+const GrowthBadge: React.FC<{
+  growthPct: number;
+  subtext: string;
+  positiveColorClass?: string;
+  inverted?: boolean;
+}> = ({ growthPct, subtext, positiveColorClass = "text-emerald-600", inverted = false }) => {
+  const isPositive = growthPct > 0;
+  const isNegative = growthPct < 0;
+
+  let colorClass = "text-slate-500";
+  let Icon = TrendingUp;
+
+  if (isPositive) {
+    colorClass = inverted ? "text-rose-600" : positiveColorClass;
+    Icon = TrendingUp;
+  } else if (isNegative) {
+    colorClass = inverted ? "text-emerald-600" : "text-rose-600";
+    Icon = TrendingDown;
+  }
+
+  const formattedVal = isPositive ? `+${growthPct}%` : `${growthPct}%`;
+
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-medium ${colorClass}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>
+        {formattedVal} <span className="text-slate-400 font-normal">{subtext}</span>
+      </span>
+    </div>
+  );
+};
+
 export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
-  manifestStatusCounts,
-  totalManifests,
-  filterManifestStatus,
-  onSelectAll,
-  onSelectDraft,
-  onSelectLocked,
-  onSelectSent,
+  metrics,
+  totalManifests: propTotalManifests,
+  manifestStatusCounts: propManifestStatusCounts,
 }) => {
-  const draftCount = manifestStatusCounts.DRAFT || 0;
-  const lockedCount = manifestStatusCounts.LOCKED || 0;
-  const sentCount = manifestStatusCounts.SENT || 0;
+  const totalManifests = metrics?.totalManifests ?? propTotalManifests ?? 0;
+  const draftCount = metrics?.manifestStatusCounts?.DRAFT ?? propManifestStatusCounts?.DRAFT ?? 0;
+  const lockedCount = metrics?.manifestStatusCounts?.LOCKED ?? propManifestStatusCounts?.LOCKED ?? 0;
+  const sentCount = metrics?.manifestStatusCounts?.SENT ?? propManifestStatusCounts?.SENT ?? 0;
 
   // Percentage calculations
   const draftPct = totalManifests > 0 ? `${((draftCount / totalManifests) * 100).toFixed(0)}%` : "0%";
   const lockedPct = totalManifests > 0 ? `${((lockedCount / totalManifests) * 100).toFixed(0)}%` : "0%";
   const sentPct = totalManifests > 0 ? `${((sentCount / totalManifests) * 100).toFixed(0)}%` : "0%";
 
-  // Dynamic sparkline trends
-  const totalTrend = [
-    Math.max(1, Math.round(totalManifests * 0.4)),
-    Math.max(1, Math.round(totalManifests * 0.6)),
-    Math.max(1, Math.round(totalManifests * 0.75)),
-    Math.max(1, Math.round(totalManifests * 0.9)),
-    totalManifests,
-    Math.max(1, Math.round(totalManifests * 0.85)),
-    totalManifests,
-  ];
+  // 4-week timeline trend data (from metrics or fallbacks)
+  const totalTrend = metrics?.totalTrend || [Math.ceil(totalManifests * 0.2), Math.ceil(totalManifests * 0.5), Math.ceil(totalManifests * 0.8), totalManifests];
+  const draftTrend = metrics?.draftTrend || [Math.ceil(draftCount * 0.3), Math.ceil(draftCount * 0.6), Math.ceil(draftCount * 0.8), draftCount];
+  const lockedTrend = metrics?.lockedTrend || [Math.ceil(lockedCount * 0.2), Math.ceil(lockedCount * 0.5), Math.ceil(lockedCount * 0.8), lockedCount];
+  const sentTrend = metrics?.sentTrend || [Math.ceil(sentCount * 0.2), Math.ceil(sentCount * 0.6), Math.ceil(sentCount * 0.8), sentCount];
 
-  const draftTrend = [
-    Math.max(0, Math.round(draftCount * 0.5)),
-    Math.max(0, Math.round(draftCount * 0.8)),
-    Math.max(0, Math.round(draftCount * 0.6)),
-    Math.max(0, Math.round(draftCount * 0.9)),
-    draftCount,
-  ];
-
-  const lockedTrend = [
-    Math.max(0, Math.round(lockedCount * 0.3)),
-    Math.max(0, Math.round(lockedCount * 0.5)),
-    Math.max(0, Math.round(lockedCount * 0.7)),
-    Math.max(0, Math.round(lockedCount * 0.85)),
-    lockedCount,
-  ];
-
-  const sentTrend = [
-    Math.max(0, Math.round(sentCount * 0.2)),
-    Math.max(0, Math.round(sentCount * 0.6)),
-    Math.max(0, Math.round(sentCount * 0.8)),
-    sentCount,
-  ];
+  // Growth percentages (WoW)
+  const totalGrowth = metrics?.totalGrowthPct ?? 0;
+  const draftGrowth = metrics?.draftGrowthPct ?? 0;
+  const lockedGrowth = metrics?.lockedGrowthPct ?? 0;
+  const sentGrowth = metrics?.sentGrowthPct ?? 0;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-1 select-none font-sans">
       {/* CARD 1: TOTAL MANIFEST */}
-      <div
-        onClick={onSelectAll}
-        className={`rounded-md p-4 border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-          filterManifestStatus === "ALL"
-            ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-sm"
-        }`}
-      >
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Total Manifest</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah seluruh manifest pengiriman</p>
@@ -208,10 +203,11 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {totalManifests.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>100% <span className="text-slate-400 font-normal">total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={totalGrowth}
+              subtext="vs M lalu"
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -221,14 +217,7 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 2: MANIFEST DRAF */}
-      <div
-        onClick={onSelectDraft}
-        className={`rounded-md p-4 border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-          filterManifestStatus === "DRAFT"
-            ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-sm"
-        }`}
-      >
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Draf</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Manifest dalam penyusunan draf</p>
@@ -239,10 +228,11 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {draftCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{draftPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={draftGrowth}
+              subtext={`vs M lalu (${draftPct})`}
+              positiveColorClass="text-amber-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -252,14 +242,7 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 3: MANIFEST TERKUNCI */}
-      <div
-        onClick={onSelectLocked}
-        className={`rounded-md p-4 border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-          filterManifestStatus === "LOCKED"
-            ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-sm"
-        }`}
-      >
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Terkunci</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Manifest selesai dan dikunci</p>
@@ -270,10 +253,11 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {lockedCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-sky-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{lockedPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={lockedGrowth}
+              subtext={`vs M lalu (${lockedPct})`}
+              positiveColorClass="text-sky-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -283,14 +267,7 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 4: MANIFEST DIKIRIM */}
-      <div
-        onClick={onSelectSent}
-        className={`rounded-md p-4 border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-          filterManifestStatus === "SENT"
-            ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-sm"
-        }`}
-      >
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Dikirim</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Manifest telah dikirim (ber-resi)</p>
@@ -301,10 +278,11 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {sentCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{sentPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={sentGrowth}
+              subtext={`vs M lalu (${sentPct})`}
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">

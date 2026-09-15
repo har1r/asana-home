@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { PemohonKpiCounts } from "./useMonitorStatistics";
 
 export interface MonitorKPIStripProps {
   pemohonKpiCounts: PemohonKpiCounts;
 }
+
+const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
 
 // ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
@@ -14,8 +16,9 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
   const width = 84;
   const height = 40;
   const maxVal = Math.max(...data, 1);
-  const barWidth = 7;
-  const gap = 5;
+  const isFourPoints = data.length === 4;
+  const barWidth = isFourPoints ? 13 : 7;
+  const gap = isFourPoints ? 8 : 5;
 
   return (
     <div className="relative group/chart">
@@ -46,7 +49,7 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
@@ -115,58 +118,69 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
   );
 };
 
-export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
-  pemohonKpiCounts,
-}) => {
-  const { total, completed, pending, percentage } = pemohonKpiCounts;
+// Helper badge component for dynamic Week-over-Week growth rendering
+const GrowthBadge: React.FC<{
+  growthPct: number;
+  subtext: string;
+  positiveColorClass?: string;
+  inverted?: boolean;
+}> = ({ growthPct, subtext, positiveColorClass = "text-emerald-600", inverted = false }) => {
+  const isPositive = growthPct > 0;
+  const isNegative = growthPct < 0;
+
+  let colorClass = "text-slate-500";
+  let Icon = TrendingUp;
+
+  if (isPositive) {
+    colorClass = inverted ? "text-rose-600" : positiveColorClass;
+    Icon = TrendingUp;
+  } else if (isNegative) {
+    colorClass = inverted ? "text-emerald-600" : "text-rose-600";
+    Icon = TrendingDown;
+  }
+
+  const formattedVal = isPositive ? `+${growthPct}%` : `${growthPct}%`;
+
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-medium ${colorClass}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>
+        {formattedVal} <span className="text-slate-400 font-normal">{subtext}</span>
+      </span>
+    </div>
+  );
+};
+
+export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({ pemohonKpiCounts }) => {
+  const {
+    total,
+    completed,
+    pending,
+    percentage,
+    totalGrowthPct = 0,
+    completedGrowthPct = 0,
+    pendingGrowthPct = 0,
+    progressGrowthPct = 0,
+    totalTrend = [Math.ceil(total * 0.2), Math.ceil(total * 0.5), Math.ceil(total * 0.8), total],
+    completedTrend = [Math.ceil(completed * 0.2), Math.ceil(completed * 0.5), Math.ceil(completed * 0.8), completed],
+    pendingTrend = [Math.ceil(pending * 0.3), Math.ceil(pending * 0.6), Math.ceil(pending * 0.8), pending],
+    progressTrend = [Math.max(0, percentage - 15), Math.max(0, percentage - 10), Math.max(0, percentage - 5), percentage],
+  } = pemohonKpiCounts;
 
   const completedPct = total > 0 ? `${percentage}%` : "0%";
   const pendingPct = total > 0 ? `${Math.round((pending / total) * 100)}%` : "0%";
 
-  // Dynamic sparkline trends
-  const totalTrend = [
-    Math.max(1, Math.round(total * 0.4)),
-    Math.max(1, Math.round(total * 0.6)),
-    Math.max(1, Math.round(total * 0.75)),
-    Math.max(1, Math.round(total * 0.9)),
-    total,
-    Math.max(1, Math.round(total * 0.85)),
-    total,
-  ];
-
-  const completedTrend = [
-    Math.max(0, Math.round(completed * 0.3)),
-    Math.max(0, Math.round(completed * 0.5)),
-    Math.max(0, Math.round(completed * 0.75)),
-    Math.max(0, Math.round(completed * 0.9)),
-    completed,
-  ];
-
-  const pendingTrend = [
-    Math.max(0, Math.round(pending * 0.5)),
-    Math.max(0, Math.round(pending * 0.8)),
-    Math.max(0, Math.round(pending * 0.6)),
-    pending,
-  ];
-
-  const progressTrend = [
-    Math.max(0, Math.round(percentage * 0.2)),
-    Math.max(0, Math.round(percentage * 0.5)),
-    Math.max(0, Math.round(percentage * 0.8)),
-    percentage,
-  ];
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-1 select-none font-sans">
       {/* CARD 1: TOTAL PEMOHON */}
-      <div className="bg-white rounded-md p-4 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Total Pemohon</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Total berkas permohonan dipantau</p>
@@ -177,10 +191,11 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {total.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 font-sans">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              <span>100% <span className="text-slate-400 font-normal">total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={totalGrowthPct}
+              subtext="vs M lalu"
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -190,7 +205,7 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 2: SELESAI */}
-      <div className="bg-white rounded-md p-4 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Selesai</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Berkas selesai dikerjakan</p>
@@ -201,10 +216,11 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {completed.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 font-sans">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{completedPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={completedGrowthPct}
+              subtext={`vs M lalu (${completedPct})`}
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -214,7 +230,7 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 3: BELUM SELESAI */}
-      <div className="bg-white rounded-md p-4 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Belum Selesai</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Berkas dalam proses pemantauan</p>
@@ -225,10 +241,11 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {pending.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600 font-sans">
-              <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
-              <span>{pendingPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={pendingGrowthPct}
+              subtext={`vs M lalu (${pendingPct})`}
+              positiveColorClass="text-amber-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -238,7 +255,7 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
       </div>
 
       {/* CARD 4: PROGRES */}
-      <div className="bg-white rounded-md p-4 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Progres</h3>
           <p className="text-[11px] font-normal text-slate-500 truncate">Tingkat penyelesaian seluruh berkas</p>
@@ -249,10 +266,11 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {percentage}%
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-sky-600 font-sans">
-              <TrendingUp className="w-3.5 h-3.5 text-sky-600" />
-              <span>{completed}/{total} <span className="text-slate-400 font-normal">berkas</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={progressGrowthPct}
+              subtext={`vs M lalu (${completed}/${total} berkas)`}
+              positiveColorClass="text-sky-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -265,3 +283,4 @@ export const MonitorKPIStrip: React.FC<MonitorKPIStripProps> = React.memo(({
 });
 
 MonitorKPIStrip.displayName = "MonitorKPIStrip";
+

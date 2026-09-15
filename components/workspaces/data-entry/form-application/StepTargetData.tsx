@@ -54,7 +54,7 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                             {targetData.length > 1 && (
                                 <div className="flex items-center justify-between select-none border-b border-slate-100 pb-3">
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-[#e6f6f4] text-[#008f78] border border-[#00a389]/30 font-sans">
-                                        Pemilik Baru #{idx + 1}
+                                        Pemohon #{idx + 1}
                                     </span>
                                     <button
                                         type="button"
@@ -64,7 +64,6 @@ export const StepTargetData: React.FC<StepTargetDataProps> = ({
                                         title="Hapus Pemilik Baru Ini"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Hapus Pemilik Baru</span>
                                     </button>
                                 </div>
                             )}

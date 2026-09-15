@@ -29,7 +29,7 @@ import { EditApplication } from './edit-application/EditApplication';
 
 export default function PenginputWorkspace() {
   const { data: session } = useSession();
-  const { showConfirm, refreshFavorites } = useDashboard();
+  const { showConfirm, refreshFavorites, triggerRefreshSidebarStats, duplicatedApplicationData, setDuplicatedApplicationData } = useDashboard();
   const [list, setList] = useState<any[]>([]);
   const [globalKpiList, setGlobalKpiList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,9 +106,10 @@ export default function PenginputWorkspace() {
 
   const handleCancelCreate = useCallback(() => {
     setDuplicateTarget(null);
+    setDuplicatedApplicationData(null);
     setViewMode('list');
     router.replace('/?tab=my-tasks', { scroll: false });
-  }, [router]);
+  }, [router, setDuplicatedApplicationData]);
 
   // Status Modal State
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -297,6 +298,7 @@ export default function PenginputWorkspace() {
             setStatusModalMessage('Permohonan berhasil dikirim ulang! Status diubah kembali ke Diajukan (SUBMITTED).');
             setStatusModalStatus('success');
             fetchData();
+            triggerRefreshSidebarStats();
           } else {
             setStatusModalTitle('Kirim Ulang Gagal');
             setStatusModalMessage(res.error || 'Gagal melakukan resubmit.');
@@ -573,11 +575,13 @@ export default function PenginputWorkspace() {
           <CreateApplication
             onSuccess={() => {
               setDuplicateTarget(null);
+              setDuplicatedApplicationData(null);
               switchViewMode('list');
               fetchData();
+              triggerRefreshSidebarStats();
             }}
             onCancel={handleCancelCreate}
-            initialData={duplicateTarget}
+            initialData={duplicateTarget || duplicatedApplicationData}
           />
         )}
 
@@ -588,6 +592,7 @@ export default function PenginputWorkspace() {
             onSuccess={() => {
               handleCloseEdit();
               fetchData();
+              triggerRefreshSidebarStats();
             }}
             onCancel={handleCloseEdit}
           />

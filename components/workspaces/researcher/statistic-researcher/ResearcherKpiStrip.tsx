@@ -1,21 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { TrendingUp } from "lucide-react";
-import { BundleStatusCounts } from "./useResearcherStatistics";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { BundleStatusCounts, ResearcherStatisticMetrics } from "./useResearcherStatistics";
 
 export interface ResearcherKpiStripProps {
   viewMode?: 'bundle' | 'list' | 'print';
-  totalBundles: number;
-  bundleStatusCounts: BundleStatusCounts;
-  returnedFromPengarsipCount: number;
-  returnedFromPengirimLogistikCount: number;
-  returnedFromPengirimPusatCount: number;
+  totalBundles?: number;
+  bundleStatusCounts?: BundleStatusCounts;
+  returnedFromPengarsipCount?: number;
+  returnedFromPengirimLogistikCount?: number;
+  returnedFromPengirimPusatCount?: number;
+  metrics?: ResearcherStatisticMetrics;
   filterRevisionSource?: string;
   filterBundleStatus?: string;
   onSelectZoneABundleStatus?: (status: string) => void;
   onSelectZoneBRevisionSource?: (source: string) => void;
 }
+
+const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
 
 // ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
@@ -23,8 +26,9 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
   const width = 84;
   const height = 40;
   const maxVal = Math.max(...data, 1);
-  const barWidth = 7;
-  const gap = 5;
+  const isFourPoints = data.length === 4;
+  const barWidth = isFourPoints ? 13 : 7;
+  const gap = isFourPoints ? 8 : 5;
 
   return (
     <div className="relative group/chart">
@@ -55,7 +59,7 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
@@ -124,25 +128,69 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
       {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
   );
 };
 
+// Helper badge component for dynamic Week-over-Week growth rendering
+const GrowthBadge: React.FC<{
+  growthPct: number;
+  subtext: string;
+  positiveColorClass?: string;
+  inverted?: boolean;
+}> = ({ growthPct, subtext, positiveColorClass = 'text-emerald-600', inverted = false }) => {
+  const isPositive = growthPct > 0;
+  const isNegative = growthPct < 0;
+
+  let colorClass = 'text-slate-500';
+  let Icon = TrendingUp;
+
+  if (isPositive) {
+    colorClass = inverted ? 'text-rose-600' : positiveColorClass;
+    Icon = TrendingUp;
+  } else if (isNegative) {
+    colorClass = inverted ? 'text-emerald-600' : 'text-rose-600';
+    Icon = TrendingDown;
+  }
+
+  const formattedVal = isPositive ? `+${growthPct}%` : `${growthPct}%`;
+
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-medium ${colorClass}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>
+        {formattedVal} <span className="text-slate-400 font-normal">{subtext}</span>
+      </span>
+    </div>
+  );
+};
+
 export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(({
   viewMode = 'bundle',
-  totalBundles,
-  bundleStatusCounts,
-  returnedFromPengarsipCount,
-  returnedFromPengirimLogistikCount,
-  returnedFromPengirimPusatCount,
+  totalBundles: propTotalBundles,
+  bundleStatusCounts: propBundleStatusCounts,
+  returnedFromPengarsipCount: propReturnedFromPengarsipCount,
+  returnedFromPengirimLogistikCount: propReturnedFromPengirimLogistikCount,
+  returnedFromPengirimPusatCount: propReturnedFromPengirimPusatCount,
+  metrics,
+  filterRevisionSource = 'ALL',
+  filterBundleStatus = 'ALL',
+  onSelectZoneABundleStatus,
+  onSelectZoneBRevisionSource,
 }) => {
-  const draftCount = bundleStatusCounts.DRAFT || 0;
-  const lockedCount = bundleStatusCounts.LOCKED || 0;
-  const manifestCount = bundleStatusCounts.IN_MANIFEST || 0;
-  const totalReturCount = returnedFromPengarsipCount + returnedFromPengirimLogistikCount + returnedFromPengirimPusatCount;
+  const totalBundles = metrics?.totalBundles ?? propTotalBundles ?? 0;
+  const draftCount = metrics?.bundleStatusCounts?.DRAFT ?? propBundleStatusCounts?.DRAFT ?? 0;
+  const lockedCount = metrics?.bundleStatusCounts?.LOCKED ?? propBundleStatusCounts?.LOCKED ?? 0;
+  const manifestCount = metrics?.bundleStatusCounts?.IN_MANIFEST ?? propBundleStatusCounts?.IN_MANIFEST ?? 0;
+
+  const returnedFromPengarsipCount = metrics?.returnedFromPengarsipCount ?? propReturnedFromPengarsipCount ?? 0;
+  const returnedFromPengirimLogistikCount = metrics?.returnedFromPengirimLogistikCount ?? propReturnedFromPengirimLogistikCount ?? 0;
+  const returnedFromPengirimPusatCount = metrics?.returnedFromPengirimPusatCount ?? propReturnedFromPengirimPusatCount ?? 0;
+
+  const totalReturCount = metrics?.totalReturCount ?? (returnedFromPengarsipCount + returnedFromPengirimLogistikCount + returnedFromPengirimPusatCount);
 
   // Percentage calculations
   const draftPct = totalBundles > 0 ? `${((draftCount / totalBundles) * 100).toFixed(0)}%` : "0%";
@@ -154,67 +202,29 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
   const logistikPct = totalBundles > 0 ? `${((returnedFromPengirimLogistikCount / totalBundles) * 100).toFixed(0)}%` : "0%";
   const pusatPct = totalBundles > 0 ? `${((returnedFromPengirimPusatCount / totalBundles) * 100).toFixed(0)}%` : "0%";
 
-  // Dummy trend arrays for smooth sparkline visuals
-  const totalTrend = [
-    Math.max(1, Math.round(totalBundles * 0.4)),
-    Math.max(1, Math.round(totalBundles * 0.6)),
-    Math.max(1, Math.round(totalBundles * 0.75)),
-    Math.max(1, Math.round(totalBundles * 0.9)),
-    totalBundles,
-    Math.max(1, Math.round(totalBundles * 0.85)),
-    totalBundles,
-  ];
+  // 4-week timeline trend data (from metrics or fallback)
+  const totalTrend = metrics?.totalBundlesTrend || [Math.ceil(totalBundles * 0.2), Math.ceil(totalBundles * 0.5), Math.ceil(totalBundles * 0.8), totalBundles];
+  const draftTrend = metrics?.draftTrend || [Math.ceil(draftCount * 0.3), Math.ceil(draftCount * 0.6), Math.ceil(draftCount * 0.8), draftCount];
+  const lockedTrend = metrics?.lockedTrend || [Math.ceil(lockedCount * 0.2), Math.ceil(lockedCount * 0.5), Math.ceil(lockedCount * 0.8), lockedCount];
+  const manifestTrend = metrics?.manifestTrend || [Math.ceil(manifestCount * 0.2), Math.ceil(manifestCount * 0.6), Math.ceil(manifestCount * 0.8), manifestCount];
 
-  const draftTrend = [
-    Math.max(0, Math.round(draftCount * 0.5)),
-    Math.max(0, Math.round(draftCount * 0.8)),
-    Math.max(0, Math.round(draftCount * 0.6)),
-    Math.max(0, Math.round(draftCount * 0.9)),
-    draftCount,
-  ];
+  const totalReturTrend = metrics?.totalReturTrend || [Math.ceil(totalReturCount * 0.3), Math.ceil(totalReturCount * 0.6), Math.ceil(totalReturCount * 0.8), totalReturCount];
+  const pengarsipTrend = metrics?.pengarsipTrend || [Math.ceil(returnedFromPengarsipCount * 0.3), Math.ceil(returnedFromPengarsipCount * 0.6), Math.ceil(returnedFromPengarsipCount * 0.8), returnedFromPengarsipCount];
+  const logistikTrend = metrics?.logistikTrend || [Math.ceil(returnedFromPengirimLogistikCount * 0.3), Math.ceil(returnedFromPengirimLogistikCount * 0.6), Math.ceil(returnedFromPengirimLogistikCount * 0.8), returnedFromPengirimLogistikCount];
+  const pusatTrend = metrics?.pusatTrend || [Math.ceil(returnedFromPengirimPusatCount * 0.3), Math.ceil(returnedFromPengirimPusatCount * 0.6), Math.ceil(returnedFromPengirimPusatCount * 0.8), returnedFromPengirimPusatCount];
 
-  const lockedTrend = [
-    Math.max(0, Math.round(lockedCount * 0.3)),
-    Math.max(0, Math.round(lockedCount * 0.5)),
-    Math.max(0, Math.round(lockedCount * 0.7)),
-    Math.max(0, Math.round(lockedCount * 0.85)),
-    lockedCount,
-  ];
+  // Growth percentages (WoW)
+  const totalBundlesGrowth = metrics?.totalBundlesGrowthPct ?? 0;
+  const draftGrowth = metrics?.draftGrowthPct ?? 0;
+  const lockedGrowth = metrics?.lockedGrowthPct ?? 0;
+  const manifestGrowth = metrics?.manifestGrowthPct ?? 0;
 
-  const manifestTrend = [
-    Math.max(0, Math.round(manifestCount * 0.2)),
-    Math.max(0, Math.round(manifestCount * 0.6)),
-    Math.max(0, Math.round(manifestCount * 0.8)),
-    manifestCount,
-  ];
+  const totalReturGrowth = metrics?.totalReturGrowthPct ?? 0;
+  const pengarsipGrowth = metrics?.pengarsipGrowthPct ?? 0;
+  const logistikGrowth = metrics?.logistikGrowthPct ?? 0;
+  const pusatGrowth = metrics?.pusatGrowthPct ?? 0;
 
-  const totalReturTrend = [
-    Math.max(0, Math.round(totalReturCount * 0.3)),
-    Math.max(0, Math.round(totalReturCount * 0.6)),
-    Math.max(0, Math.round(totalReturCount * 0.8)),
-    totalReturCount,
-  ];
-
-  const pengarsipTrend = [
-    Math.max(0, Math.round(returnedFromPengarsipCount * 0.3)),
-    Math.max(0, Math.round(returnedFromPengarsipCount * 0.7)),
-    Math.max(0, Math.round(returnedFromPengarsipCount * 0.5)),
-    returnedFromPengarsipCount,
-  ];
-
-  const logistikTrend = [
-    Math.max(0, Math.round(returnedFromPengirimLogistikCount * 0.4)),
-    Math.max(0, Math.round(returnedFromPengirimLogistikCount * 0.8)),
-    returnedFromPengirimLogistikCount,
-  ];
-
-  const pusatTrend = [
-    Math.max(0, Math.round(returnedFromPengirimPusatCount * 0.2)),
-    Math.max(0, Math.round(returnedFromPengirimPusatCount * 0.6)),
-    returnedFromPengirimPusatCount,
-  ];
-
-  // ==================== MODE 1: QUEUE ANTREAN PERMOHONAN (DISPLAY ONLY) ====================
+  // ==================== MODE 1: QUEUE ANTREAN PERMOHONAN (RETUR MODE) ====================
   if (viewMode === 'list') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2 select-none font-sans">
@@ -230,10 +240,12 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {totalReturCount.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-rose-600">
-                <TrendingUp className="w-3.5 h-3.5 text-rose-600" />
-                <span>{totalReturPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={totalReturGrowth}
+                subtext={`vs M lalu (${totalReturPct})`}
+                positiveColorClass="text-rose-600"
+                inverted={true}
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -254,10 +266,12 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {returnedFromPengarsipCount.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
-                <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
-                <span>{pengarsipPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={pengarsipGrowth}
+                subtext={`vs M lalu (${pengarsipPct})`}
+                positiveColorClass="text-amber-700"
+                inverted={true}
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -278,10 +292,12 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {returnedFromPengirimLogistikCount.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-orange-700">
-                <TrendingUp className="w-3.5 h-3.5 text-orange-600" />
-                <span>{logistikPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={logistikGrowth}
+                subtext={`vs M lalu (${logistikPct})`}
+                positiveColorClass="text-orange-700"
+                inverted={true}
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -302,10 +318,12 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {returnedFromPengirimPusatCount.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-rose-700">
-                <TrendingUp className="w-3.5 h-3.5 text-rose-600" />
-                <span>{pusatPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={pusatGrowth}
+                subtext={`vs M lalu (${pusatPct})`}
+                positiveColorClass="text-rose-700"
+                inverted={true}
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -317,7 +335,7 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
     );
   }
 
-  // ==================== MODE 2: KELOLA BUNDLE & DEFAULT (DISPLAY ONLY) ====================
+  // ==================== MODE 2: KELOLA BUNDLE & DEFAULT (BUNDLE MODE) ====================
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2 select-none font-sans">
       {/* CARD 1: TOTAL BUNDLE */}
@@ -332,10 +350,11 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {totalBundles.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>100% <span className="text-slate-400 font-normal">total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={totalBundlesGrowth}
+              subtext="vs M lalu"
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -356,10 +375,11 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {draftCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{draftPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={draftGrowth}
+              subtext={`vs M lalu (${draftPct})`}
+              positiveColorClass="text-amber-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -380,10 +400,11 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {lockedCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-sky-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{lockedPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={lockedGrowth}
+              subtext={`vs M lalu (${lockedPct})`}
+              positiveColorClass="text-sky-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">
@@ -404,10 +425,11 @@ export const ResearcherKpiStrip: React.FC<ResearcherKpiStripProps> = React.memo(
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
               {manifestCount.toLocaleString("id-ID")}
             </span>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{manifestPct} <span className="text-slate-400 font-normal">dari total</span></span>
-            </div>
+            <GrowthBadge
+              growthPct={manifestGrowth}
+              subtext={`vs M lalu (${manifestPct})`}
+              positiveColorClass="text-emerald-600"
+            />
           </div>
 
           <div className="shrink-0 pb-0.5">

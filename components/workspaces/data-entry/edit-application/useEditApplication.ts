@@ -318,6 +318,11 @@ export const useEditApplication = ({ editTarget, onSuccess, onCancel }: UseEditA
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
             setError('Form kurang lengkap. Harap periksa detail isian merah di bawah.');
+            setTimeout(() => {
+                const firstKey = Object.keys(errors)[0];
+                const el = document.getElementById(firstKey);
+                if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            }, 50);
             return;
         }
         setFormErrors({});

@@ -171,7 +171,7 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
                 key={size}
                 type="button"
                 onClick={() => onItemsPerPageChange(size)}
-                className={`px-2 py-0.5 rounded text-[11px] font-normal transition-all cursor-pointer font-sans ${
+                className={`px-2 py-0.5 rounded-md text-[11px] font-normal transition-all cursor-pointer font-sans ${
                   itemsPerPage === size
                     ? "bg-[#00a389] text-white font-semibold shadow-3xs"
                     : "text-slate-500 hover:text-slate-700"

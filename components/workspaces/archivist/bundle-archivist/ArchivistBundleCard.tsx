@@ -112,15 +112,18 @@ export const ArchivistBundleCard: React.FC<ArchivistBundleCardProps> = React.mem
       (acc: { totalCount: number; uploadedCount: number }, p: any) => {
         const activeArchives = (p.arsipDigital || []).filter((ad: any) => ad.status === "ACTIVE");
         const appJenis = p.jenisPermohonan || p.applicationType;
+        const isPartialMutation = appJenis === "MUTASI_SEBAGIAN" || appJenis === "PARTIAL_MUTATION";
+        const fractions = p.targetData || p.dataBaru || [];
 
-        if (appJenis === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
-          const totalPecahan = p.dataBaru.length;
+        if (isPartialMutation && fractions.length > 0) {
+          const totalPecahan = fractions.length;
           let uploadedPecahan = 0;
           if (p.status === "ARCHIVED") {
             uploadedPecahan = totalPecahan;
           } else {
-            p.dataBaru.forEach((db: any) => {
-              const hasUpload = activeArchives.some((ad: any) => ad.dataBaruId === db.id);
+            fractions.forEach((db: any) => {
+              const targetId = db.idTargetData || db.id;
+              const hasUpload = db.isArchived === true || activeArchives.some((ad: any) => ad.dataBaruId === targetId || ad.dataBaruId === db.id || ad.dataBaruId === db.idTargetData);
               if (hasUpload) uploadedPecahan++;
             });
           }
@@ -129,7 +132,7 @@ export const ArchivistBundleCard: React.FC<ArchivistBundleCardProps> = React.mem
             uploadedCount: acc.uploadedCount + uploadedPecahan,
           };
         } else {
-          const isUploaded = p.status === "ARCHIVED" || activeArchives.length > 0;
+          const isUploaded = p.status === "ARCHIVED" || (p.targetData && p.targetData.some((td: any) => td.isArchived === true)) || activeArchives.length > 0;
           return {
             totalCount: acc.totalCount + 1,
             uploadedCount: acc.uploadedCount + (isUploaded ? 1 : 0),
@@ -155,7 +158,7 @@ export const ArchivistBundleCard: React.FC<ArchivistBundleCardProps> = React.mem
     return (
       <div
         onClick={() => onSelect(b)}
-        className={`p-3 rounded-md border flex flex-col justify-between gap-2 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
+        className={`p-3.5 rounded-lg border flex flex-col justify-between gap-2.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
           hasReupload
             ? "bg-amber-50/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md"
             : isSelected
@@ -190,26 +193,28 @@ export const ArchivistBundleCard: React.FC<ArchivistBundleCardProps> = React.mem
                   e.stopPropagation();
                   setMenuOpen((prev) => !prev);
                 }}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Opsi Bundle"
               >
                 <MoreVertical className="w-3.5 h-3.5" />
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200/90 rounded-md shadow-lg z-30 py-1 text-xs font-sans animate-fadeIn">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      if (onOpenVersionDrawer) onOpenVersionDrawer(b);
-                    }}
-                    className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 hover:text-[#00a389] flex items-center gap-2 transition-colors cursor-pointer font-sans"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-[#00a389]" />
-                    <span>Riwayat Versi Bundle</span>
-                  </button>
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200/90 rounded-lg shadow-xl py-1 z-30 text-left font-sans animate-fadeIn select-none divide-y divide-slate-100">
+                  <div className="py-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuOpen(false);
+                        if (onOpenVersionDrawer) onOpenVersionDrawer(b);
+                      }}
+                      className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+                      <span>Riwayat Versi Bundle</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -258,17 +263,17 @@ export const ArchivistBundleCard: React.FC<ArchivistBundleCardProps> = React.mem
         </div>
 
         {/* Bottom Row: Peneliti Profile Initials Avatar & Creation Date */}
-        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100/80 text-[11px] text-slate-500 font-normal select-none mt-auto font-sans">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100/90 text-[11px] text-slate-500 font-normal select-none mt-auto font-sans">
           {/* Peneliti Avatar Initials */}
           <div className="flex items-center gap-1.5 min-w-0" title={`Pembuat Bundle: ${penelitiName}`}>
-            <div className="w-4.5 h-4.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
+            <div className="w-5 h-5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9.5px] font-bold shrink-0 shadow-3xs font-sans">
               {getInitials(penelitiName)}
             </div>
-            <span className="truncate text-slate-600 font-normal text-[11px] font-sans">{penelitiName}</span>
+            <span className="truncate text-slate-700 font-medium text-[11.5px] font-sans">{penelitiName}</span>
           </div>
 
           {/* Creation Date */}
-          <span className="font-mono text-[11px] text-slate-500 font-normal shrink-0">
+          <span className="font-mono text-[11px] text-slate-500 font-medium shrink-0">
             {b.createdAt ? new Date(b.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—"}
           </span>
         </div>

@@ -27,12 +27,13 @@ export function useSenderQueue(selectedManifest: any | null) {
 
   // Sync selectedBundleInManifest when selectedManifest changes
   useEffect(() => {
-    if (selectedManifest?.bundle && selectedManifest.bundle.length > 0) {
-      const exists = selectedManifest.bundle.find((b: any) => b.id === selectedBundleInManifest?.id);
+    const bundlesList = selectedManifest?.bundles || selectedManifest?.bundle || [];
+    if (bundlesList.length > 0) {
+      const exists = bundlesList.find((b: any) => b.id === selectedBundleInManifest?.id);
       if (exists) {
         setSelectedBundleInManifest(exists);
       } else {
-        setSelectedBundleInManifest(selectedManifest.bundle[0]);
+        setSelectedBundleInManifest(bundlesList[0]);
       }
     } else {
       setSelectedBundleInManifest(null);
@@ -49,29 +50,33 @@ export function useSenderQueue(selectedManifest: any | null) {
 
   const handleToggleFavorite = useCallback((permohonanId: string) => {
     setSelectedBundleInManifest((prevBundle: any) => {
-      if (!prevBundle?.permohonan) return prevBundle;
-      const updatedPermohonan = prevBundle.permohonan.map((p: any) =>
+      const permohonanList = prevBundle?.applications || prevBundle?.permohonan;
+      if (!permohonanList) return prevBundle;
+      const updatedPermohonan = permohonanList.map((p: any) =>
         p.id === permohonanId ? { ...p, isFavorite: !p.isFavorite } : p
       );
-      return { ...prevBundle, permohonan: updatedPermohonan };
+      return { ...prevBundle, applications: updatedPermohonan, permohonan: updatedPermohonan };
     });
   }, []);
 
   // Process Permohonan List according to Display Mode (berkas vs pemohon)
   const processedBundlePermohonanList = useMemo(() => {
-    const permohonanList = selectedBundleInManifest?.permohonan || [];
+    const permohonanList =
+      selectedBundleInManifest?.applications || selectedBundleInManifest?.permohonan || [];
 
     if (bundleDisplayMode === "pemohon") {
       const result: any[] = [];
       permohonanList.forEach((p: any) => {
-        if (p.jenisPermohonan === "MUTASI_SEBAGIAN" && p.dataBaru && p.dataBaru.length > 0) {
-          p.dataBaru.forEach((db: any, idx: number) => {
+        const type = p.applicationType || p.jenisPermohonan;
+        const targetList = p.targetData || p.dataBaru || [];
+        if ((type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") && targetList.length > 0) {
+          targetList.forEach((db: any, idx: number) => {
             result.push({
               ...p,
               isPecahanRow: true,
               pecahanIndex: idx + 1,
-              totalPecahan: p.dataBaru.length,
-              displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || p.namaWajibPajak),
+              totalPecahan: targetList.length,
+              displayNamaWajibPajak: cleanPecahanSuffix(db.namaPemilikBaru || db.ownerName || p.namaWajibPajak || p.applicantName),
               targetDataBaruId: db.id,
               uniqueRowKey: `${p.id}-db-${idx}`,
             });
@@ -80,7 +85,7 @@ export function useSenderQueue(selectedManifest: any | null) {
           result.push({
             ...p,
             isPecahanRow: false,
-            displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+            displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak || p.applicantName),
             uniqueRowKey: p.id,
           });
         }
@@ -91,7 +96,7 @@ export function useSenderQueue(selectedManifest: any | null) {
     return permohonanList.map((p: any) => ({
       ...p,
       isPecahanRow: false,
-      displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak),
+      displayNamaWajibPajak: cleanPecahanSuffix(p.namaWajibPajak || p.applicantName),
       uniqueRowKey: p.id,
     }));
   }, [selectedBundleInManifest, bundleDisplayMode]);

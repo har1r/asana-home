@@ -182,7 +182,8 @@ export function useDataEntryHistory() {
         const appNo = item.applicationNumber.toLowerCase();
         const owner = item.ownerName.toLowerCase();
         const nop = item.nop.toLowerCase();
-        return appNo.includes(q) || owner.includes(q) || nop.includes(q);
+        const appTypeStr = (item.applicationType || "").toLowerCase();
+        return appNo.includes(q) || owner.includes(q) || nop.includes(q) || appTypeStr.includes(q);
       });
     }
 

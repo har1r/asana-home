@@ -103,7 +103,51 @@ export async function requestRevision(permohonanId: string, catatan: string) {
 }
 
 /**
- * 3. GET DRAFT BUNDLES (Mengambil Daftar Bundle DRAFT Peneliti)
+ * 3. GET ALL BUNDLES (Mengambil Seluruh Daftar Bundle Peneliti Murni untuk KPI)
+ */
+export async function getAllBundles(arg?: any) {
+  const session = await getServerSession(authOptions);
+  if (!session || !['RESEARCHER', 'SUPERVISOR', 'PENELITI'].includes((session.user as any).role)) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const rawList = await prisma.bundle.findMany({
+      include: {
+        applications: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const userIds = Array.from(new Set(rawList.map((b: any) => b.createdById).filter(Boolean))) as string[];
+    let userMap = new Map<string, any>();
+    if (userIds.length > 0) {
+      try {
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, email: true }
+        });
+        userMap = new Map(users.map(u => [u.id, u]));
+      } catch (uErr) {
+        // Fallback jika pencarian user terpisah tidak berhasil
+      }
+    }
+
+    const currentUserName = session.user?.name || 'Peneliti';
+    const list = rawList.map((b: any) => ({
+      ...b,
+      createdBy: b.createdBy || (b.createdById ? userMap.get(b.createdById) : null) || { name: currentUserName }
+    }));
+
+    return { success: true, list };
+  } catch (error: any) {
+    console.error('[ACTION-GET-ALL-BUNDLES-ERR]', error);
+    return { success: false, list: [], error: 'Gagal mengambil daftar seluruh bundle.' };
+  }
+}
+
+/**
+ * 3b. GET DRAFT BUNDLES (Mengambil Hanya Bundle Berstatus DRAFT untuk Card View Kelola Bundle)
  */
 export async function getDraftBundles(arg?: any) {
   const session = await getServerSession(authOptions);
@@ -295,7 +339,38 @@ export async function addApplicationToBundle(bundleId: string, permohonanId?: st
         throw new Error('Permohonan tidak ditemukan.');
       }
 
-      // 1. Update Bundle: SINKRONISASI applicationType BUNDLE DENGAN PERMOHONAN YANG DIMASUKKAN
+      // 1. Validasi Homogenitas Jenis Permohonan dalam Bundle
+      const existingApps = await tx.application.findMany({
+        where: { currentBundleId: bundleId },
+      });
+
+      const normalizeType = (t?: string | null) => {
+        if (!t) return '';
+        const s = t.trim().toUpperCase();
+        if (s === 'PARTIAL_MUTATION') return 'MUTASI_SEBAGIAN';
+        if (s === 'MERGER_MUTATION') return 'MUTASI_PENGGABUNGAN';
+        if (s === 'EXPIRED_UPDATE') return 'MUTASI_HABIS_UPDATE';
+        if (s === 'EXPIRED_REGULAR') return 'MUTASI_HABIS_REGULER';
+        if (s === 'NEW_TAX_OBJECT') return 'OBJEK_PAJAK_BARU';
+        if (s === 'CORRECTION') return 'PEMBETULAN';
+        if (s === 'REACTIVATION') return 'PENGAKTIFAN';
+        return s;
+      };
+
+      if (existingApps.length > 0) {
+        const existingTypeNormalized = normalizeType(existingApps[0].applicationType || bundle.applicationType);
+        const appTypeNormalized = normalizeType(application.applicationType);
+
+        if (existingTypeNormalized && appTypeNormalized && existingTypeNormalized !== appTypeNormalized) {
+          const formatType = (t: string) => t.replace(/_/g, ' ');
+          throw new Error(
+            `Gagal: Bundle ini sudah terisi permohonan jenis ${formatType(existingTypeNormalized)}. ` +
+            `Tidak dapat memasukkan permohonan jenis ${formatType(appTypeNormalized)}.`
+          );
+        }
+      }
+
+      // 2. Update Bundle: SINKRONISASI applicationType BUNDLE DENGAN PERMOHONAN YANG DIMASUKKAN
       const updatedBundle = await tx.bundle.update({
         where: { id: bundleId },
         data: {

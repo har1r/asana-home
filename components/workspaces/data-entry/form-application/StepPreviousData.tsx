@@ -114,7 +114,6 @@ export const StepPreviousData: React.FC<StepPreviousDataProps> = ({
                                                 title="Hapus NOP Asal Ini"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
-                                                <span>Hapus</span>
                                             </button>
                                         )}
                                     </div>

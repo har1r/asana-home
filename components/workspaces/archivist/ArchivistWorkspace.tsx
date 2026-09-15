@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
-import { BundleVersionDrawer } from "@/components/workspaces/shared/BundleVersionDrawer";
+import { BundleSnapshotDrawer } from "@/components/workspaces/shared/BundleSnapshotDrawer";
 
 import { useArchivistBundleManagement } from "./bundle-archivist/useArchivistBundleManagement";
 import { useArchivistArsipQueue } from "./queue-archivist/useArchivistArsipQueue";
@@ -31,22 +31,27 @@ export default function ArchivistWorkspace() {
     return "bundle";
   });
 
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   useEffect(() => {
-    if (viewParam === "arsip") {
-      setViewMode("arsip");
-    } else {
-      setViewMode("bundle");
+    if (viewParam && (viewParam === "arsip" || viewParam === "bundle") && viewParam !== viewModeRef.current) {
+      setViewMode(viewParam as ViewMode);
+      viewModeRef.current = viewParam as ViewMode;
     }
   }, [viewParam]);
 
   const handleSwitchTab = useCallback(
     (mode: ViewMode) => {
       setViewMode(mode);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("view", mode);
-      router.push(`/?${params.toString()}`, { scroll: false });
+      viewModeRef.current = mode;
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("view", mode);
+        window.history.replaceState(null, "", url.toString());
+      }
     },
-    [router, searchParams]
+    []
   );
 
   // Sub-domain Custom Hooks
@@ -162,72 +167,74 @@ export default function ArchivistWorkspace() {
       <div className="w-full border-b border-slate-200/80 my-0.5" />
 
       {/* MAIN VIEW CONTENT */}
-      {bundleMgmt.listLoading ? (
-        viewMode === "bundle" ? (
-          <PengarsipBundleSkeleton />
-        ) : (
-          <PengarsipArsipSkeleton />
-        )
-      ) : viewMode === "bundle" ? (
-        <div className="flex flex-col gap-4">
-          <ArchivistBundleToolbar
-            searchBundleQuery={bundleMgmt.searchBundleQuery}
-            onSearchChange={bundleMgmt.setSearchBundleQuery}
-            filterBundleStatus={bundleMgmt.filterBundleStatus}
-            onFilterStatusChange={bundleMgmt.setFilterBundleStatus}
-            filterBundleJenisLayanan={bundleMgmt.filterBundleJenisLayanan}
-            onFilterJenisLayananChange={bundleMgmt.setFilterBundleJenisLayanan}
-            bundleJenisCounts={bundleMgmt.bundleJenisCounts}
-          />
-          <ArchivistBundleGrid
-            bundlesList={bundleMgmt.bundlesList}
-            filteredBundlesList={bundleMgmt.filteredBundlesList}
-            selectedBundle={bundleMgmt.selectedBundle}
-            loading={isLoading}
-            searchBundleQuery={bundleMgmt.searchBundleQuery}
-            currentBundlePage={bundleMgmt.currentBundlePage}
-            itemsPerBundlePage={bundleMgmt.itemsPerBundlePage}
-            onSelectBundle={bundleMgmt.handleSelectBundle}
-            onPageChange={bundleMgmt.setCurrentBundlePage}
-            bundleHasReupload={bundleMgmt.bundleHasReupload}
-            onOpenVersionDrawer={(b) => setVersionDrawerBundle(b)}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <ArchivistArsipToolbar
-            selectedBundle={bundleMgmt.selectedBundle}
-            bundlesList={bundleMgmt.bundlesList}
-            onSelectBundle={bundleMgmt.handleSelectBundle}
-            arsipDisplayMode={arsipQueue.arsipDisplayMode}
-            onDisplayModeChange={arsipQueue.setArsipDisplayMode}
-          />
-          <ArchivistArsipTable
-            filteredArsipList={arsipQueue.filteredArsipList}
-            selectedBundle={bundleMgmt.selectedBundle}
-            searchArsipQuery={arsipQueue.searchArsipQuery}
-            currentArsipPage={arsipQueue.currentArsipPage}
-            itemsPerArsipPage={arsipQueue.itemsPerArsipPage}
-            arsipDisplayMode={arsipQueue.arsipDisplayMode}
-            copiedText={arsipQueue.copiedText}
-            loading={isLoading}
-            onSelectRequest={arsipQueue.setGlobalSelectedRequest}
-            onToggleFavorite={arsipQueue.handleToggleFavorite}
-            onCopy={arsipQueue.handleCopy}
-            onUploadFile={arsipQueue.handleUploadFile}
-            triggerFileInput={arsipQueue.triggerFileInput}
-            fileInputRefs={arsipQueue.fileInputRefs}
-            checkPermohonanNeedsReupload={bundleMgmt.checkPermohonanNeedsReupload}
-            onOpenCorrectionModal={arsipQueue.openCorrectionModal}
-            onOpenFractionsModal={(item) => {
-              arsipQueue.setFractionTargetPermohonan(item);
-              arsipQueue.setShowFractionsModal(true);
-            }}
-            onPageChange={arsipQueue.setCurrentArsipPage}
-            onItemsPerPageChange={arsipQueue.setItemsPerArsipPage}
-          />
-        </div>
-      )}
+      {(() => {
+        const hasInitialData = bundleMgmt.bundlesList.length > 0 || bundleMgmt.permohonanList.length > 0;
+        if (!hasInitialData && bundleMgmt.listLoading) {
+          return viewMode === "bundle" ? <PengarsipBundleSkeleton /> : <PengarsipArsipSkeleton />;
+        }
+        return null;
+      })()}
+
+      <div className={viewMode === "bundle" ? "flex flex-col gap-4" : "hidden"}>
+        <ArchivistBundleToolbar
+          searchBundleQuery={bundleMgmt.searchBundleQuery}
+          onSearchChange={bundleMgmt.setSearchBundleQuery}
+          filterBundleStatus={bundleMgmt.filterBundleStatus}
+          onFilterStatusChange={bundleMgmt.setFilterBundleStatus}
+          filterBundleJenisLayanan={bundleMgmt.filterBundleJenisLayanan}
+          onFilterJenisLayananChange={bundleMgmt.setFilterBundleJenisLayanan}
+          bundleJenisCounts={bundleMgmt.bundleJenisCounts}
+        />
+        <ArchivistBundleGrid
+          bundlesList={bundleMgmt.bundlesList}
+          filteredBundlesList={bundleMgmt.filteredBundlesList}
+          selectedBundle={bundleMgmt.selectedBundle}
+          loading={isLoading}
+          searchBundleQuery={bundleMgmt.searchBundleQuery}
+          currentBundlePage={bundleMgmt.currentBundlePage}
+          itemsPerBundlePage={bundleMgmt.itemsPerBundlePage}
+          onSelectBundle={bundleMgmt.handleSelectBundle}
+          onPageChange={bundleMgmt.setCurrentBundlePage}
+          bundleHasReupload={bundleMgmt.bundleHasReupload}
+          onOpenVersionDrawer={(b) => setVersionDrawerBundle(b)}
+        />
+      </div>
+
+      <div className={viewMode === "arsip" ? "flex flex-col gap-4" : "hidden"}>
+        <ArchivistArsipToolbar
+          selectedBundle={bundleMgmt.selectedBundle}
+          bundlesList={bundleMgmt.bundlesList}
+          onSelectBundle={bundleMgmt.handleSelectBundle}
+          arsipDisplayMode={arsipQueue.arsipDisplayMode}
+          onDisplayModeChange={arsipQueue.setArsipDisplayMode}
+        />
+        <ArchivistArsipTable
+          filteredArsipList={arsipQueue.filteredArsipList}
+          selectedBundle={bundleMgmt.selectedBundle}
+          searchArsipQuery={arsipQueue.searchArsipQuery}
+          currentArsipPage={arsipQueue.currentArsipPage}
+          itemsPerArsipPage={arsipQueue.itemsPerArsipPage}
+          arsipDisplayMode={arsipQueue.arsipDisplayMode}
+          copiedText={arsipQueue.copiedText}
+          loading={isLoading}
+          uploadingTargetId={arsipQueue.uploadingTargetId}
+          onSelectRequest={arsipQueue.setGlobalSelectedRequest}
+          onToggleFavorite={arsipQueue.handleToggleFavorite}
+          onCopy={arsipQueue.handleCopy}
+          onUploadFile={arsipQueue.handleUploadFile}
+          onToggleArchiveStatus={arsipQueue.handleToggleArchiveStatus}
+          triggerFileInput={arsipQueue.triggerFileInput}
+          fileInputRefs={arsipQueue.fileInputRefs}
+          checkPermohonanNeedsReupload={bundleMgmt.checkPermohonanNeedsReupload}
+          onOpenCorrectionModal={arsipQueue.openCorrectionModal}
+          onOpenFractionsModal={(item) => {
+            arsipQueue.setFractionTargetPermohonan(item);
+            arsipQueue.setShowFractionsModal(true);
+          }}
+          onPageChange={arsipQueue.setCurrentArsipPage}
+          onItemsPerPageChange={arsipQueue.setItemsPerArsipPage}
+        />
+      </div>
 
       {/* MODAL DETAIL PERMOHONAN */}
       {arsipQueue.globalSelectedRequest && (
@@ -261,18 +268,20 @@ export default function ArchivistWorkspace() {
           isOpen={arsipQueue.showFractionsModal}
           permohonan={arsipQueue.fractionTargetPermohonan}
           loading={isLoading}
+          uploadingTargetId={arsipQueue.uploadingTargetId}
           onClose={() => {
             arsipQueue.setShowFractionsModal(false);
             arsipQueue.setFractionTargetPermohonan(null);
           }}
           onUploadFile={arsipQueue.handleUploadFile}
+          onToggleArchiveStatus={arsipQueue.handleToggleArchiveStatus}
           checkPermohonanNeedsReupload={bundleMgmt.checkPermohonanNeedsReupload}
         />
       )}
 
-      {/* DRAWER RIWAYAT VERSI BUNDLE */}
+      {/* DRAWER RIWAYAT SNAPSHOT BUNDLE */}
       {versionDrawerBundle && (
-        <BundleVersionDrawer
+        <BundleSnapshotDrawer
           isOpen={!!versionDrawerBundle}
           onClose={() => setVersionDrawerBundle(null)}
           bundle={versionDrawerBundle}

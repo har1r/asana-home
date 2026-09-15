@@ -40,14 +40,20 @@ export function useMonitorBundle(
   const uniqueBundlesList = useMemo(() => {
     const map = new Map();
     permohonanList.forEach((p) => {
-      const b = p.bundle;
+      const b = p.bundle || p.currentBundle;
+      const appJenis = p.jenisPermohonan || p.applicationType;
       if (b && !map.has(b.id)) {
         map.set(b.id, {
           ...b,
+          jenisPermohonan: b.jenisPermohonan || b.applicationType || appJenis,
           permohonan: [p],
         });
       } else if (b) {
-        map.get(b.id).permohonan.push(p);
+        const existing = map.get(b.id);
+        if (!existing.jenisPermohonan) {
+          existing.jenisPermohonan = b.jenisPermohonan || b.applicationType || appJenis;
+        }
+        existing.permohonan.push(p);
       }
     });
     return Array.from(map.values());
@@ -65,8 +71,11 @@ export function useMonitorBundle(
       PENGAKTIFAN: 0,
     };
     uniqueBundlesList.forEach((b) => {
-      if (b.jenisPermohonan && counts[b.jenisPermohonan] !== undefined) {
-        counts[b.jenisPermohonan]++;
+      let j = b.jenisPermohonan;
+      if (j === "PARTIAL_MUTATION") j = "MUTASI_SEBAGIAN";
+      if (j === "MERGER_MUTATION") j = "MUTASI_PENGGABUNGAN";
+      if (j && counts[j] !== undefined) {
+        counts[j]++;
       }
     });
     return counts;
@@ -75,8 +84,14 @@ export function useMonitorBundle(
   // Filtered bundles list
   const filteredBundlesList = useMemo(() => {
     return uniqueBundlesList.filter((b) => {
-      const matchesSearch = b.nomorBundle.toLowerCase().includes(deferredSearchBundleQuery.toLowerCase());
-      const matchesJenis = filterJenisLayanan === "ALL" || b.jenisPermohonan === filterJenisLayanan;
+      const bundleNum = (b?.nomorBundle || b?.bundleNumber || "").toString();
+      const matchesSearch = bundleNum.toLowerCase().includes((deferredSearchBundleQuery || "").toLowerCase());
+
+      let j = b.jenisPermohonan;
+      if (j === "PARTIAL_MUTATION") j = "MUTASI_SEBAGIAN";
+      if (j === "MERGER_MUTATION") j = "MUTASI_PENGGABUNGAN";
+
+      const matchesJenis = filterJenisLayanan === "ALL" || j === filterJenisLayanan;
       return matchesSearch && matchesJenis;
     });
   }, [uniqueBundlesList, deferredSearchBundleQuery, filterJenisLayanan]);

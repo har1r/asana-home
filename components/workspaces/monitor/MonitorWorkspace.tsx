@@ -17,9 +17,7 @@ import { MonitorBundleToolbar } from "./bundle-monitor/MonitorBundleToolbar";
 import { MonitorBundleGrid } from "./bundle-monitor/MonitorBundleGrid";
 
 import { useMonitorQueue } from "./queue-monitor/useMonitorQueue";
-import { MonitorQueueHeader } from "./queue-monitor/MonitorQueueHeader";
-import { MonitorPermohonanListPanel } from "./queue-monitor/MonitorPermohonanListPanel";
-import { MonitorPermohonanDetailPanel } from "./queue-monitor/MonitorPermohonanDetailPanel";
+import { MonitorTableView } from "./queue-monitor/MonitorTableView";
 
 import { MonitorRollbackModal } from "./modal-monitor/MonitorRollbackModal";
 import { PemantauBundleSkeleton, PemantauPantauSkeleton } from "@/components/skeletons/MonitorSkeleton";
@@ -83,7 +81,7 @@ export default function PemantauWorkspace() {
           setPermohonanList(res.list);
 
           if (selectedBundle) {
-            const updatedBundlePermohonans = res.list.filter((p: any) => p.bundleId === selectedBundle.id);
+            const updatedBundlePermohonans = res.list.filter((p: any) => p.bundleId === selectedBundle.id || p.currentBundleId === selectedBundle.id || p.bundle?.id === selectedBundle.id || p.currentBundle?.id === selectedBundle.id);
             if (updatedBundlePermohonans && updatedBundlePermohonans.length > 0) {
               setSelectedBundle((prev: any) => ({
                 ...prev,
@@ -116,6 +114,14 @@ export default function PemantauWorkspace() {
   });
 
   const queueState = useMonitorQueue(selectedBundle, setPermohonanList, fetchData, showConfirm);
+
+  // Auto-select first bundle if in daftar-pantau view and no bundle is selected yet
+  useEffect(() => {
+    if (workspaceTab === "daftar-pantau" && !selectedBundle && bundleState.uniqueBundlesList.length > 0) {
+      const firstBundle = bundleState.uniqueBundlesList[0];
+      setSelectedBundle(firstBundle);
+    }
+  }, [workspaceTab, selectedBundle, bundleState.uniqueBundlesList]);
 
   return (
     <div id="pemantau-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-4">
@@ -241,7 +247,7 @@ export default function PemantauWorkspace() {
               onLoadMore={bundleState.loadMore}
               onSelectBundle={(b) => {
                 setSelectedBundle(b);
-                queueState.setSelectedPermohonan(null);
+                handleSwitchTab("daftar-pantau");
               }}
             />
           </div>
@@ -250,62 +256,20 @@ export default function PemantauWorkspace() {
         {/* ==================== TAB 2: DAFTAR PANTAU ==================== */}
         {workspaceTab === "daftar-pantau" && (
           <div className="w-full">
-            {!selectedBundle ? (
-              <div className="bg-white p-8 rounded-md border border-slate-200/90 shadow-3xs min-h-[350px] flex items-center justify-center font-sans">
-                <EmptyDataAnimation
-                  title="Pilih Bundle Terlebih Dahulu"
-                  description={
-                    <>
-                      Silakan pilih salah satu bundle di tab <strong>Daftar Bundle</strong> terlebih dahulu untuk melihat
-                      daftar permohonan yang harus dipantau.
-                    </>
-                  }
-                  action={
-                    <button
-                      onClick={() => handleSwitchTab("daftar-bundle")}
-                      className="px-4 py-2 bg-[#00a389] hover:bg-[#008f78] text-white font-extrabold text-xs rounded-md shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 font-sans"
-                    >
-                      <Boxes className="w-4 h-4 stroke-[2]" />
-                      <span>Ke Daftar Bundle</span>
-                    </button>
-                  }
-                />
-              </div>
-            ) : (
-              /* Master-Detail Stacked Panel Layout */
-              <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[500px]">
-                {/* Header Bar */}
-                <MonitorQueueHeader
-                  selectedBundle={selectedBundle}
-                  isRefreshing={isRefreshing}
-                  onRefresh={() => fetchData(true)}
-                />
-
-                {/* 2-Panel Layout: Panel Atas (Permohonan List) & Panel Bawah (Detail Permohonan) */}
-                <div className="flex flex-col items-start gap-5 w-full font-sans">
-                  <MonitorPermohonanListPanel
-                    selectedBundle={selectedBundle}
-                    selectedPermohonan={queueState.selectedPermohonan}
-                    filteredPantauList={queueState.filteredPantauList}
-                    paginatedPantau={queueState.paginatedPantau}
-                    activePantauPage={queueState.currentPantauPage}
-                    totalPantauPages={queueState.totalPantauPages}
-                    onPageChange={queueState.setCurrentPantauPage}
-                    onSelectPermohonan={queueState.setSelectedPermohonan}
-                  />
-
-                  <MonitorPermohonanDetailPanel
-                    selectedPermohonan={queueState.selectedPermohonan}
-                    checkedPecahanMap={queueState.checkedPecahanMap}
-                    loading={queueState.loading}
-                    onTogglePecahanVerified={queueState.handleTogglePecahanVerified}
-                    onVerifyAllPecahan={queueState.handleVerifyAllPecahan}
-                    onComplete={queueState.handleComplete}
-                    onOpenRollbackModal={() => queueState.setShowRollbackModal(true)}
-                  />
-                </div>
-              </div>
-            )}
+            <MonitorTableView
+              selectedBundle={selectedBundle}
+              bundlesList={bundleState.uniqueBundlesList}
+              onSelectBundle={(b) => setSelectedBundle(b)}
+              onRefresh={() => fetchData(true)}
+              isRefreshing={isRefreshing}
+              onTogglePecahanVerified={queueState.handleTogglePecahanVerified}
+              onVerifyAllPecahan={queueState.handleVerifyAllPecahan}
+              onComplete={queueState.handleComplete}
+              onCompleteBundle={queueState.handleCompleteBundle}
+              onOpenRollbackModal={() => queueState.setShowRollbackModal(true)}
+              loading={queueState.loading}
+              checkedPecahanMap={queueState.checkedPecahanMap}
+            />
           </div>
         )}
       </div>

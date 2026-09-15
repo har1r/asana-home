@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   completePermohonan,
+  completePermohonans,
   ajukanBatalSelesai,
   toggleVerifyDataBaru,
   verifyAllDataBaru,
@@ -30,56 +31,80 @@ export function useMonitorQueue(
   // Pagination for Pantau List
   const [currentPantauPage, setCurrentPantauPage] = useState(1);
 
+  // Auto-select first permohonan when selectedBundle changes
+  useEffect(() => {
+    if (selectedBundle && selectedBundle.permohonan && selectedBundle.permohonan.length > 0) {
+      const existsInBundle = selectedBundle.permohonan.some((p: any) => p.id === selectedPermohonan?.id);
+      if (!existsInBundle) {
+        setSelectedPermohonan(selectedBundle.permohonan[0]);
+      }
+    } else if (!selectedBundle) {
+      setSelectedPermohonan(null);
+    }
+  }, [selectedBundle]);
+
   // Sync checkedPecahanMap when selectedPermohonan changes
   useEffect(() => {
     if (!selectedPermohonan) {
       setCheckedPecahanMap({});
       return;
     }
-    if (selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0) {
+    const targetDataList = Array.isArray(selectedPermohonan.targetData) && selectedPermohonan.targetData.length > 0
+      ? selectedPermohonan.targetData
+      : (Array.isArray(selectedPermohonan.dataBaru) ? selectedPermohonan.dataBaru : []);
+
+    if (targetDataList.length > 0) {
       const initialMap: Record<string, boolean> = {};
-      selectedPermohonan.dataBaru.forEach((db: any, idx: number) => {
-        const itemKey = db.id || `pecahan_${idx}`;
+      targetDataList.forEach((db: any, idx: number) => {
+        const itemKey = db.idTargetData || db.id || `pecahan_${idx}`;
         initialMap[itemKey] = selectedPermohonan.status === "COMPLETED" || !!db.isVerified;
       });
       setCheckedPecahanMap(initialMap);
     } else {
       setCheckedPecahanMap({});
     }
-  }, [selectedPermohonan?.id, selectedPermohonan?.status, selectedPermohonan?.dataBaru]);
+  }, [selectedPermohonan?.id, selectedPermohonan?.status, selectedPermohonan?.targetData, selectedPermohonan?.dataBaru]);
 
   // Handler: Toggle individual DataBaru verification (persisted to Database)
   const handleTogglePecahanVerified = useCallback(
-    async (dbId: string | undefined, itemKey: string, isChecked: boolean) => {
+    async (permohonanId: string | undefined, dbId: string | undefined, itemKey: string, isChecked: boolean) => {
+      const targetAppId = permohonanId || selectedPermohonan?.id;
       setCheckedPecahanMap((prev) => ({ ...prev, [itemKey]: isChecked }));
 
       setPermohonanList((prevList) =>
         prevList.map((p) => {
-          if (p.id === selectedPermohonan?.id && p.dataBaru) {
-            const updatedDataBaru = p.dataBaru.map((db: any, idx: number) => {
-              const key = db.id || `pecahan_${idx}`;
-              return db.id === dbId || key === itemKey ? { ...db, isVerified: isChecked } : db;
-            });
-            return { ...p, dataBaru: updatedDataBaru };
+          if (p.id === targetAppId) {
+            const list = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData : p.dataBaru;
+            if (list) {
+              const updated = list.map((db: any, idx: number) => {
+                const key = db.idTargetData || db.id || `pecahan_${idx}`;
+                return db.idTargetData === dbId || db.id === dbId || key === itemKey ? { ...db, isVerified: isChecked } : db;
+              });
+              return Array.isArray(p.targetData) && p.targetData.length > 0 ? { ...p, targetData: updated } : { ...p, dataBaru: updated };
+            }
           }
           return p;
         })
       );
 
-      if (selectedPermohonan && selectedPermohonan.dataBaru) {
+      if (selectedPermohonan && selectedPermohonan.id === targetAppId) {
         setSelectedPermohonan((prev: any) => {
           if (!prev) return prev;
-          const updatedDataBaru = prev.dataBaru.map((db: any, idx: number) => {
-            const key = db.id || `pecahan_${idx}`;
-            return db.id === dbId || key === itemKey ? { ...db, isVerified: isChecked } : db;
-          });
-          return { ...prev, dataBaru: updatedDataBaru };
+          const list = Array.isArray(prev.targetData) && prev.targetData.length > 0 ? prev.targetData : prev.dataBaru;
+          if (list) {
+            const updated = list.map((db: any, idx: number) => {
+              const key = db.idTargetData || db.id || `pecahan_${idx}`;
+              return db.idTargetData === dbId || db.id === dbId || key === itemKey ? { ...db, isVerified: isChecked } : db;
+            });
+            return Array.isArray(prev.targetData) && prev.targetData.length > 0 ? { ...prev, targetData: updated } : { ...prev, dataBaru: updated };
+          }
+          return prev;
         });
       }
 
       const targetId = dbId || itemKey;
-      if (targetId && !targetId.startsWith("pecahan_")) {
-        const res = await toggleVerifyDataBaru(targetId, isChecked);
+      if (targetAppId) {
+        const res = await toggleVerifyDataBaru(targetAppId, targetId, isChecked);
         if (!res.success) {
           console.error("[TOGGLE-VERIFY-FAIL]", res.error);
         }
@@ -90,19 +115,26 @@ export function useMonitorQueue(
 
   // Handler: Verify all DataBaru entries (persisted to Database)
   const handleVerifyAllPecahan = useCallback(async () => {
-    if (!selectedPermohonan || !selectedPermohonan.dataBaru) return;
+    if (!selectedPermohonan) return;
+    const targetDataList = Array.isArray(selectedPermohonan.targetData) && selectedPermohonan.targetData.length > 0
+      ? selectedPermohonan.targetData
+      : (Array.isArray(selectedPermohonan.dataBaru) ? selectedPermohonan.dataBaru : []);
+    if (targetDataList.length === 0) return;
 
     const allMap: Record<string, boolean> = {};
-    selectedPermohonan.dataBaru.forEach((db: any, idx: number) => {
-      allMap[db.id || `pecahan_${idx}`] = true;
+    targetDataList.forEach((db: any, idx: number) => {
+      allMap[db.idTargetData || db.id || `pecahan_${idx}`] = true;
     });
     setCheckedPecahanMap(allMap);
 
     setPermohonanList((prevList) =>
       prevList.map((p) => {
-        if (p.id === selectedPermohonan.id && p.dataBaru) {
-          const updatedDataBaru = p.dataBaru.map((db: any) => ({ ...db, isVerified: true }));
-          return { ...p, dataBaru: updatedDataBaru };
+        if (p.id === selectedPermohonan.id) {
+          const list = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData : p.dataBaru;
+          if (list) {
+            const updated = list.map((db: any) => ({ ...db, isVerified: true }));
+            return Array.isArray(p.targetData) && p.targetData.length > 0 ? { ...p, targetData: updated } : { ...p, dataBaru: updated };
+          }
         }
         return p;
       })
@@ -110,8 +142,12 @@ export function useMonitorQueue(
 
     setSelectedPermohonan((prev: any) => {
       if (!prev) return prev;
-      const updatedDataBaru = (prev.dataBaru || []).map((db: any) => ({ ...db, isVerified: true }));
-      return { ...prev, dataBaru: updatedDataBaru };
+      const list = Array.isArray(prev.targetData) && prev.targetData.length > 0 ? prev.targetData : prev.dataBaru;
+      if (list) {
+        const updated = list.map((db: any) => ({ ...db, isVerified: true }));
+        return Array.isArray(prev.targetData) && prev.targetData.length > 0 ? { ...prev, targetData: updated } : { ...prev, dataBaru: updated };
+      }
+      return prev;
     });
 
     await verifyAllDataBaru(selectedPermohonan.id);
@@ -120,12 +156,17 @@ export function useMonitorQueue(
   // Filtered Pantau List inside selectedBundle
   const filteredPantauList = useMemo(() => {
     if (!selectedBundle) return [];
+    const query = (searchQuery || "").toLowerCase();
     return (selectedBundle.permohonan || []).filter((p: any) => {
-      const matchesSearch =
-        p.nop.includes(searchQuery) ||
-        p.namaWajibPajak.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.nomorPelayanan && p.nomorPelayanan.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesSearch;
+      if (!query) return true;
+      const prev = Array.isArray(p?.previousData) && p.previousData.length > 0 ? p.previousData[0] : (Array.isArray(p?.dataLama) && p.dataLama.length > 0 ? p.dataLama[0] : null);
+      const targ = Array.isArray(p?.targetData) && p.targetData.length > 0 ? p.targetData[0] : (Array.isArray(p?.dataBaru) && p.dataBaru.length > 0 ? p.dataBaru[0] : null);
+
+      const nopStr = (p?.nop || prev?.nop || targ?.nopFinal || targ?.nopTemporary || p?.nomorPelayanan || p?.applicationNumber || "").toString().toLowerCase();
+      const namaWpStr = (p?.namaWajibPajak || prev?.ownerName || prev?.namaPemilikLama || targ?.ownerName || p?.applicantName || "").toString().toLowerCase();
+      const noPelStr = (p?.nomorPelayanan || p?.applicationNumber || "").toString().toLowerCase();
+
+      return nopStr.includes(query) || namaWpStr.includes(query) || noPelStr.includes(query);
     });
   }, [selectedBundle, searchQuery]);
 
@@ -196,6 +237,43 @@ export function useMonitorQueue(
     [selectedPermohonan, rollbackReason, fetchData]
   );
 
+  // Complete Batch / Bundle Handler
+  const handleCompleteBundle = useCallback(
+    (bundle: any) => {
+      if (!bundle || !bundle.permohonan || bundle.permohonan.length === 0) return;
+      const uncompleted = bundle.permohonan.filter((p: any) => p.status !== "COMPLETED");
+      if (uncompleted.length === 0) return;
+
+      const ids = uncompleted.map((p: any) => p.id);
+      const bundleNum = bundle.nomorBundle || bundle.bundleNumber || "Bundle";
+
+      showConfirm({
+        title: "Konfirmasi Penyelesaian Bundle",
+        message: `Apakah Anda yakin ingin menandai seluruh (${uncompleted.length}) permohonan di ${bundleNum} SELESAI?`,
+        onConfirm: async () => {
+          setLoading(true);
+          setError("");
+          setSuccess("");
+          try {
+            const res: any = await completePermohonans(ids);
+            if (res.success) {
+              setSuccess(`Seluruh ${uncompleted.length} permohonan di ${bundleNum} berhasil ditandai selesai!`);
+              await fetchData(true);
+              setTimeout(() => setSuccess(""), 5000);
+            } else {
+              setError(res.error || "Gagal menyelesaikan permohonan.");
+            }
+          } catch (err: any) {
+            setError(err.message || "Sistem error.");
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+    },
+    [showConfirm, fetchData]
+  );
+
   return {
     selectedPermohonan,
     setSelectedPermohonan,
@@ -219,6 +297,7 @@ export function useMonitorQueue(
     handleTogglePecahanVerified,
     handleVerifyAllPecahan,
     handleComplete,
+    handleCompleteBundle,
     handleRollback,
   };
 }

@@ -1,69 +1,82 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   Search,
   X,
   Printer,
+  LayoutList,
+  LayoutGrid,
+  Calendar,
+  User,
+  MoreVertical,
+  BookCopy,
   FileSpreadsheet,
-  Copy,
-  Check,
-  Eye,
-  ChevronRight,
-  Layers,
-  Lock,
-  Archive,
-  CheckCircle,
-  History,
 } from "lucide-react";
-import { formatNop, formatBundleNumber, getAbbreviatedJenis, toTitleCase } from "@/components/workspaces/shared/constants";
+import { formatBundleNumber, toTitleCase, getAbbreviatedJenis, formatJenisLayananLabel } from "@/components/workspaces/shared/constants";
 import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
 import { ApplicationSnapshotDrawer } from "@/components/workspaces/shared/ApplicationSnapshotDrawer";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
+
+// Helper for Jenis Permohonan Badge Styling (Singkatan Resmi, Warna Netral Clean, Center Aligned & Font Sans)
+const getJenisPermohonanBadge = (jenis?: string | null) => {
+  const abbr = getAbbreviatedJenis(jenis || "");
+  const fullName = formatJenisLayananLabel(jenis);
+  return (
+    <span
+      className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[11px] font-medium font-sans bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs whitespace-nowrap select-none text-center"
+      title={fullName}
+    >
+      {abbr}
+    </span>
+  );
+};
 
 export interface BundleHistoryDetailViewProps {
   bundle: any;
   onBack: () => void;
 }
 
+// Helper for Status Badge Styling (Tanpa Icon, Gunakan rounded-md)
 const getStatusBadge = (status: string) => {
   const s = (status || "").toUpperCase();
-  if (s === "DRAFT") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 font-sans">
-        <Layers className="w-3 h-3 text-slate-500" />
-        <span>Draf</span>
-      </span>
-    );
+  let badgeClass = "bg-slate-100 text-slate-700 border-slate-200/80";
+  let label = status;
+
+  if (s === "BUNDLED" || s === "TERBUNDEL") {
+    badgeClass = "bg-blue-50 text-blue-700 border-blue-200/80";
+    label = "Terbundel";
+  } else if (s === "LOCKED" || s === "TERKUNCI") {
+    badgeClass = "bg-slate-900 text-white border-slate-900";
+    label = "Terkunci";
+  } else if (s === "IN_MANIFEST" || s === "MANIFESTED") {
+    badgeClass = "bg-emerald-50 text-[#008f78] border-emerald-200/80";
+    label = "Dimanifest";
+  } else if (s === "ARCHIVED" || s === "DIARSIPKAN") {
+    badgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200/80";
+    label = "Diarsipkan";
+  } else if (s === "COMPLETED" || s === "DELIVERED" || s === "SELESAI") {
+    badgeClass = "bg-[#e6f6f4] text-[#008f78] border-[#00a389]/30";
+    label = "Selesai";
+  } else if (s === "SUBMITTED" || s === "DIAJUKAN") {
+    badgeClass = "bg-amber-50 text-amber-700 border-amber-200/80";
+    label = "Diajukan";
+  } else if (s === "REVISION" || s === "REVISI") {
+    badgeClass = "bg-rose-50 text-rose-700 border-rose-200/80";
+    label = "Revisi";
+  } else if (s === "REJECTED" || s === "DITOLAK") {
+    badgeClass = "bg-rose-50 text-rose-700 border-rose-200/80";
+    label = "Ditolak";
+  } else if (s === "DRAFT" || s === "DRAF") {
+    badgeClass = "bg-slate-100 text-slate-700 border-slate-200/80";
+    label = "Draf";
   }
-  if (s === "LOCKED" || s === "TERKUNCI") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-900 text-white shadow-3xs font-sans">
-        <Lock className="w-3 h-3 text-amber-400" />
-        <span>Terkunci</span>
-      </span>
-    );
-  }
-  if (s === "IN_MANIFEST" || s === "MANIFESTED") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-[#008f78] border border-emerald-200/80 shadow-3xs font-sans">
-        <Archive className="w-3 h-3 text-[#008f78]" />
-        <span>Manifest</span>
-      </span>
-    );
-  }
-  if (s === "COMPLETED" || s === "ARCHIVED" || s === "DELIVERED") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300/80 shadow-3xs font-sans">
-        <CheckCircle className="w-3 h-3 text-emerald-600" />
-        <span>Selesai</span>
-      </span>
-    );
-  }
+
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 font-sans">
-      <span>{status}</span>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-normal border shadow-3xs font-sans capitalize ${badgeClass}`}>
+      {label}
     </span>
   );
 };
@@ -139,12 +152,18 @@ export const BundleHistoryDetailView: React.FC<BundleHistoryDetailViewProps> = R
   onBack
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [copiedText, setCopiedText] = useState<string | null>(null);
-  const [selectedApplication, setSelectedApplication] = useState<any | null>(null);
-  const [selectedSnapshotApplication, setSelectedSnapshotApplication] = useState<any | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [displayMode, setDisplayMode] = useState<"permohonan" | "pemohon">("permohonan");
+
+  const [selectedDetailsItem, setSelectedDetailsItem] = useState<any | null>(null);
+  const [selectedSnapshotItem, setSelectedSnapshotItem] = useState<any | null>(null);
+
+  // Dropdown Menu State
+  const [activeMenuItem, setActiveMenuItem] = useState<any | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownMenuRef = useRef<HTMLDivElement>(null);
 
   const rawBundleNumber = bundle.bundleNumber || bundle.nomorBundle || '';
   const bundleNum = rawBundleNumber ? formatBundleNumber(rawBundleNumber, bundle.createdAt) : '—';
@@ -154,34 +173,96 @@ export const BundleHistoryDetailView: React.FC<BundleHistoryDetailViewProps> = R
     return rawApplications.map((item) => normalizeAppItem(item));
   }, [rawApplications]);
 
+  // Mode Base List: transform applications based on displayMode ('permohonan' vs 'pemohon')
+  const modeBaseList = useMemo(() => {
+    if (displayMode === "permohonan") {
+      return normalizedApplications.map((item) => ({ ...item, uniqueRowKey: item.id, original: item }));
+    }
+
+    // DisplayMode === 'pemohon': FlatMap per target owner for Mutasi Sebagian
+    return normalizedApplications.flatMap((item) => {
+      const appType = item.applicationType || item.jenisPermohonan || "";
+      const isPartial = appType === "PARTIAL_MUTATION" || appType === "MUTASI_SEBAGIAN";
+      const targets = Array.isArray(item.targetData) && item.targetData.length > 0
+        ? item.targetData
+        : (Array.isArray(item.dataBaru) ? item.dataBaru : []);
+
+      if (isPartial && targets.length > 0) {
+        return targets.map((td: any, idx: number) => ({
+          ...item,
+          uniqueRowKey: `${item.id}-pecahan-${idx}`,
+          ownerName: td.ownerName || td.namaPemilikBaru || item.ownerName,
+          isPecahanRow: true,
+          pecahanInfo: `(Pecahan ${idx + 1}/${targets.length})`,
+          original: item,
+        }));
+      }
+
+      return [{ ...item, uniqueRowKey: item.id, original: item }];
+    });
+  }, [normalizedApplications, displayMode]);
+
   const filteredApplications = useMemo(() => {
-    if (!searchQuery.trim()) return normalizedApplications;
+    if (!searchQuery.trim()) return modeBaseList;
     const q = searchQuery.toLowerCase().trim();
-    return normalizedApplications.filter((item) => {
+    return modeBaseList.filter((item) => {
       const appNo = (item.applicationNumber || '').toLowerCase();
       const owner = (item.ownerName || '').toLowerCase();
       const nop = (item.nop || '').toLowerCase();
       return appNo.includes(q) || owner.includes(q) || nop.includes(q);
     });
-  }, [normalizedApplications, searchQuery]);
+  }, [modeBaseList, searchQuery]);
 
-  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage) || 1;
-
-  const paginatedApplications = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredApplications.slice(start, start + itemsPerPage);
-  }, [filteredApplications, currentPage, itemsPerPage]);
-
-  const handleCopy = (e: React.MouseEvent, text: string) => {
+  const handleOpenMenu = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    setTimeout(() => setCopiedText(null), 1200);
+    if (activeMenuItem?.uniqueRowKey === item.uniqueRowKey) {
+      setActiveMenuItem(null);
+      setMenuPos(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 176;
+    const menuHeight = 85;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < menuHeight && rect.top > menuHeight;
+
+    let top = openUpward ? rect.top - menuHeight - 4 : rect.bottom + 4;
+    let left = rect.right - menuWidth;
+    if (left < 8) left = 8;
+
+    setActiveMenuItem(item);
+    setMenuPos({ top, left });
   };
 
-  const handlePrintBundleCover = () => {
-    window.print();
-  };
+  useEffect(() => {
+    if (!activeMenuItem) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownMenuRef.current &&
+        dropdownMenuRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
+      setActiveMenuItem(null);
+      setMenuPos(null);
+    };
+
+    const handleScrollOrResize = () => {
+      setActiveMenuItem(null);
+      setMenuPos(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [activeMenuItem]);
 
   // Shortcut Ctrl+K
   useEffect(() => {
@@ -197,31 +278,85 @@ export const BundleHistoryDetailView: React.FC<BundleHistoryDetailViewProps> = R
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const startEntry = filteredApplications.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-  const endEntry = Math.min(currentPage * itemsPerPage, filteredApplications.length);
+  const handlePrintBundleCover = () => {
+    if (typeof window !== "undefined" && bundle?.id) {
+      window.open(`/api/pdf/bundle-cover-letter/${bundle.id}`, "_blank");
+    }
+  };
 
   return (
     <div className="w-full flex flex-col gap-3 animate-fadeIn font-sans select-none">
-      {/* 1. TOP HEADER NAVIGATION BAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none font-sans py-1">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-md text-xs font-semibold text-slate-700 transition-all cursor-pointer shadow-3xs font-sans shrink-0 self-start sm:self-auto"
-          title="Kembali ke Riwayat Bundle"
-        >
-          <ChevronLeft className="w-4 h-4 text-slate-500" />
-          <span>Kembali</span>
-        </button>
-
-        <div className="text-xs text-slate-500 font-medium font-sans">
-          Total: <span className="font-bold text-[#008f78]">{rawApplications.length} Permohonan</span>
+      {/* 1. HEADER SECTION */}
+      <div className="flex flex-col gap-2 select-none">
+        {/* Top Row: Back Button */}
+        <div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-3xs font-sans"
+            title="Kembali ke Riwayat Bundle"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
+            <span>Kembali</span>
+          </button>
         </div>
+
+        {/* Title & Action Controls Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight font-mono">
+              {bundleNum}
+            </h1>
+            {getStatusBadge(bundle.status)}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* VIEW MODE TOGGLE SWITCH: LIST VS GRID (HIJAU #00a389) */}
+            <div className="flex items-center bg-white border border-slate-200/90 rounded-md p-0.5 shadow-3xs shrink-0 h-9 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center ${viewMode === "list"
+                  ? "bg-[#00a389] text-white shadow-3xs"
+                  : "text-slate-500 hover:text-[#00a389] hover:bg-slate-100"
+                  }`}
+                title="Tampilan Tabel (List View)"
+              >
+                <LayoutList className="w-4 h-4 stroke-[2.2]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`h-8 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center ${viewMode === "grid"
+                  ? "bg-[#00a389] text-white shadow-3xs"
+                  : "text-slate-500 hover:text-[#00a389] hover:bg-slate-100"
+                  }`}
+                title="Tampilan Kisi (Grid View / Google Drive Style)"
+              >
+                <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
+              </button>
+            </div>
+
+            {/* Tombol Cetak Rekomendasi */}
+            <button
+              type="button"
+              onClick={handlePrintBundleCover}
+              className="h-9 px-3.5 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white rounded-md text-xs font-semibold shadow-3xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="Cetak Rekomendasi Bundle"
+            >
+              <Printer className="w-3.5 h-3.5 text-white" />
+              <span>Cetak Rekomendasi</span>
+            </button>
+          </div>
+        </div>
+
+        {/* THIN DIVIDER LINE BELOW HEADER */}
+        <div className="w-full border-b border-slate-200/80 my-0.5" />
       </div>
 
-      {/* 2. TOOLBAR BAR (Identical to Recommendation Toolbar) */}
-      <div className="p-3 border border-slate-200/90 rounded-md bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-3xs font-sans select-none animate-fadeIn">
-        {/* Left Side: Searchbar */}
+      {/* 2. TOOLBAR: SEARCH & DISPLAY MODE (PERMOHONAN VS PEMOHON) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none mt-1">
+        {/* Left Side: Search Bar */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -249,271 +384,239 @@ export const BundleHistoryDetailView: React.FC<BundleHistoryDetailViewProps> = R
           )}
         </div>
 
-        {/* Right Side: Print Recommendation Button */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Right Side: Display Mode Switcher (Permohonan vs Pemohon) */}
+        <div className="bg-slate-200/70 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-300/60 text-[13px] font-normal select-none h-8 font-sans shrink-0 self-end sm:self-auto">
           <button
             type="button"
-            onClick={handlePrintBundleCover}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white rounded-md text-[13px] font-semibold shadow-3xs transition-all cursor-pointer shrink-0 font-sans"
+            onClick={() => setDisplayMode("permohonan")}
+            className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === "permohonan"
+              ? "bg-white text-slate-900 shadow-3xs font-normal"
+              : "text-slate-600 hover:text-slate-900"
+              }`}
+            title="Tampilkan 1 baris per Nomor Pelayanan (NOPEL)"
           >
-            <Printer className="w-4 h-4 text-white" />
-            <span>Cetak Rekomendasi</span>
+            <span>Permohonan</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayMode("pemohon")}
+            className={`h-7 px-3 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === "pemohon"
+              ? "bg-white text-slate-900 shadow-3xs font-normal"
+              : "text-slate-600 hover:text-slate-900"
+              }`}
+            title="Tampilkan rincian pecahan pemilik baru (Mutasi Sebagian)"
+          >
+            <span>Pemohon</span>
           </button>
         </div>
       </div>
 
-      {/* 3. BUNDLE TITLE & STATUS BADGE (Placed directly between Search Toolbar & Table Canvas) */}
-      <div className="flex items-center justify-between px-1 py-0.5 select-none font-sans">
-        <h2 className="text-[13px] font-bold text-slate-900 font-sans tracking-tight font-mono">
-          {bundleNum}
-        </h2>
-        {getStatusBadge(bundle.status)}
-      </div>
-
-      {/* 4. ENTERPRISE DATA TABLE CANVAS (Matching RecommendationPrintView / Queue) */}
-      <div className="w-full bg-white border border-slate-200/90 rounded-md shadow-xs flex flex-col overflow-hidden min-h-[480px]">
-        <div className="p-0 flex-1 flex flex-col">
-          <div className="overflow-hidden bg-transparent flex flex-col flex-1 justify-between">
-            <div className="overflow-x-auto scrollbar-thin flex-1 flex flex-col">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/90 text-[13px] font-normal text-slate-600 capitalize text-left border-b border-slate-200/90 select-none font-sans">
-                    <th className="py-3 px-4 text-center w-12 min-w-[48px] relative font-normal text-slate-600">
-                      <span>No</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
-                      <span>Tgl. Input</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[140px] relative font-normal text-slate-600">
-                      <span>Petugas Input</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[130px] relative font-normal text-slate-600">
-                      <span>Tgl. Permohonan</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[110px] relative font-normal text-slate-600">
-                      <span>Tgl. Selesai</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[160px] relative font-normal text-slate-600">
-                      <span>No. Permohonan</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
-                      <span>Nomor Objek Pajak</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
-                      <span>Nama Pemohon</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 min-w-[130px] relative font-normal text-slate-600">
-                      <span>Jenis Layanan</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 text-center min-w-[130px] relative font-normal text-slate-600">
-                      <span>Status</span>
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
-                    </th>
-                    <th className="py-3 px-4 text-center min-w-[90px] font-normal text-slate-600">
-                      <span>Aksi</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-[12px] font-normal text-slate-600 font-sans">
-                  {paginatedApplications.length > 0 ? (
-                    paginatedApplications.map((item: any, idx: number) => {
-                      const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
-                      const appNo = item.applicationNumber || '-';
-                      const nopVal = item.nop || '-';
-
-                      return (
-                        <tr
-                          key={item.id || idx}
-                          onClick={() => setSelectedApplication(item)}
-                          className="hover:bg-slate-50/90 transition-colors group cursor-pointer h-11"
-                        >
-                          <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[12px]">
-                            {globalIdx}
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
-                            {formatDateDisplay(item.createdAt)}
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap">
-                            <span className="truncate max-w-[140px] font-sans font-normal text-[12px]">
-                              {toTitleCase(item.inputterName)}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
-                            {formatDateDisplay(item.serviceNumberDate)}
-                          </td>
-                          <td className="py-2.5 px-4 whitespace-nowrap font-sans text-slate-600 text-[12px]">
-                            {formatDateDisplay(item.completionDate)}
-                          </td>
-                          <td className="py-2.5 px-4 min-w-[150px] font-sans">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[12px] font-semibold font-mono text-slate-900 tracking-tight">
-                                {appNo}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap font-sans">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[12px] font-mono text-slate-700">
-                                {nopVal !== '-' ? formatNop(nopVal) : '-'}
-                              </span>
-                              {nopVal !== '-' && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleCopy(e, nopVal)}
-                                  className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer"
-                                  title="Salin NOP"
-                                >
-                                  {copiedText === nopVal ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-4 font-sans">
-                            <span className="text-[12px] font-medium text-slate-800 capitalize truncate max-w-[180px] block">
-                              {item.ownerName}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 font-sans">
-                            <span className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans">
-                              {getAbbreviatedJenis(item.applicationType)}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 text-center font-sans">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-[#008f78] border border-emerald-200/80">
-                              {item.status || 'BUNDLED'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 text-center font-sans">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedSnapshotApplication(item);
-                              }}
-                              className="p-1.5 rounded-md text-slate-400 hover:text-[#00a389] hover:bg-slate-100 transition-colors cursor-pointer"
-                              title="Lihat Versi Permohonan"
-                            >
-                              <History className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={11} className="py-10 text-center select-none font-sans">
-                        <EmptyDataAnimation
-                          title={searchQuery ? 'Tidak ada permohonan yang sesuai' : 'Belum ada permohonan dalam bundle ini'}
-                          description={searchQuery ? 'Coba ubah kata kunci pencarian.' : 'Data permohonan dalam bundle akan muncul di sini.'}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Table Footer / Pagination */}
-          <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 mt-auto">
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] font-semibold text-slate-500 font-sans">
-                {filteredApplications.length > 0
-                  ? `Menampilkan ${startEntry}–${endEntry} dari ${filteredApplications.length} permohonan`
-                  : 'Tidak ada data'}
-              </span>
-              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 shadow-3xs">
-                {[10, 20, 50].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => {
-                      setItemsPerPage(n);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerPage === n
-                      ? 'bg-[#00a389] text-white shadow-3xs'
-                      : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-                <span className="text-[10px] text-slate-400 font-semibold pl-0.5">/hal</span>
-              </div>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
-                  .reduce((acc: (number | string)[], page, idx, arr) => {
-                    if (idx > 0 && (page as number) - (arr[idx - 1] as number) > 1) acc.push('...');
-                    acc.push(page);
-                    return acc;
-                  }, [])
-                  .map((page, idx) =>
-                    page === '...' ? (
-                      <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
-                    ) : (
-                      <button
-                        key={page}
-                        type="button"
-                        onClick={() => setCurrentPage(page as number)}
-                        className={`w-7 h-7 rounded-md text-xs font-bold transition-all cursor-pointer ${currentPage === page
-                          ? 'bg-[#00a389] text-white font-extrabold shadow-3xs scale-105 z-10'
-                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  )}
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
+      {/* 3. MAIN CONTENT: GOOGLE DRIVE STYLE TABLE OR GRID */}
+      {filteredApplications.length === 0 ? (
+        <div className="py-16 flex flex-col items-center justify-center">
+          <EmptyDataAnimation
+            title={searchQuery ? "Tidak ada permohonan yang sesuai" : "Belum ada permohonan dalam bundle ini"}
+            description={searchQuery ? "Coba ubah kata kunci pencarian." : "Data permohonan dalam bundle akan muncul di sini."}
+          />
         </div>
-      </div>
+      ) : viewMode === "list" ? (
+        /* ==================== 3A. GOOGLE DRIVE LIST VIEW TABLE ==================== */
+        <div className="w-full overflow-x-auto select-none mt-1">
+          <table className="w-full text-left border-collapse font-sans">
+            <thead>
+              <tr className="border-b border-slate-200 text-[13px] font-normal text-slate-600 select-none whitespace-nowrap">
+                <th className="py-2.5 px-3 min-w-[180px] font-normal text-slate-600 whitespace-nowrap">No. Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600 text-center whitespace-nowrap">Jenis Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600 whitespace-nowrap">Tgl. Permohonan</th>
+                <th className="py-2.5 px-3 min-w-[140px] font-normal text-slate-600 whitespace-nowrap">Tgl. Selesai</th>
+                <th className="py-2.5 px-3 min-w-[180px] font-normal text-slate-600 whitespace-nowrap">Nama Pemohon</th>
+                <th className="py-2.5 px-3 min-w-[130px] font-normal text-slate-600 whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 w-12 text-center font-normal text-slate-600 whitespace-nowrap"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200/80 text-[13px] font-normal text-slate-700">
+              {filteredApplications.map((item: any) => (
+                <tr
+                  key={item.uniqueRowKey || item.id}
+                  onClick={() => setSelectedDetailsItem(item.original || item)}
+                  className="group hover:bg-slate-100/80 transition-colors cursor-pointer"
+                >
+                  {/* No. Permohonan Column (Green Google Sheet Icon + Application Number) */}
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.2]" />
+                      </div>
+                      <span className="font-normal text-slate-700 font-mono tracking-tight text-[13px]">
+                        {item.applicationNumber}
+                      </span>
+                    </div>
+                  </td>
 
-      {/* Embedded Details Modal for Application */}
-      {selectedApplication && (
+                  {/* Jenis Layanan Column (Center Aligned) */}
+                  <td className="py-3 px-3 text-center">
+                    <div className="flex items-center justify-center">
+                      {getJenisPermohonanBadge(item.applicationType || item.jenisPermohonan)}
+                    </div>
+                  </td>
+
+                  {/* Tgl. Permohonan Column */}
+                  <td className="py-3 px-3 text-slate-700 text-[13px] font-normal">
+                    <span>{formatDateDisplay(item.serviceNumberDate)}</span>
+                  </td>
+
+                  {/* Tgl. Selesai Column */}
+                  <td className="py-3 px-3 text-slate-700 text-[13px] font-normal">
+                    <span>{formatDateDisplay(item.completionDate)}</span>
+                  </td>
+
+                  {/* Nama Pemohon Column */}
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-700 font-normal text-[13px] truncate max-w-[220px] capitalize">
+                        {toTitleCase(item.ownerName)}
+                      </span>
+                      {item.isPecahanRow && (
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                          {item.pecahanInfo}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Status Column */}
+                  <td className="py-3 px-3">
+                    <div className="flex items-center">
+                      {getStatusBadge(item.status)}
+                    </div>
+                  </td>
+
+                  {/* Action Column (Three Dots Menu) */}
+                  <td className="py-3 px-3 text-center">
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenMenu(e, item)}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${activeMenuItem?.uniqueRowKey === item.uniqueRowKey
+                        ? "bg-slate-200 text-slate-800"
+                        : "text-slate-400 hover:text-slate-800 hover:bg-slate-200/60"
+                        }`}
+                      title="Menu Aksi"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* ==================== 3B. GOOGLE DRIVE KISI / GRID VIEW ==================== */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3.5 mt-1">
+          {filteredApplications.map((item: any) => (
+            <div
+              key={item.uniqueRowKey || item.id}
+              onClick={() => setSelectedDetailsItem(item.original || item)}
+              className="group bg-white border border-slate-200/90 hover:border-slate-300 rounded-md p-4 shadow-3xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3.5 relative overflow-hidden min-h-[120px]"
+            >
+              {/* Tile Header: Top Left = No. Permohonan, Top Right = Three Dots Menu */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[13px] font-normal font-mono text-slate-700 truncate tracking-tight" title={item.applicationNumber}>
+                    {item.applicationNumber}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenMenu(e, item)}
+                  className={`p-1 rounded-full transition-colors cursor-pointer shrink-0 ${activeMenuItem?.uniqueRowKey === item.uniqueRowKey
+                    ? "bg-slate-200 text-slate-800"
+                    : "text-slate-400 hover:text-slate-800 hover:bg-slate-100"
+                    }`}
+                  title="Menu Aksi"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Tile Sub-Header: Jenis Layanan Badge */}
+              <div className="flex items-center gap-1.5">
+                {getJenisPermohonanBadge(item.applicationType || item.jenisPermohonan)}
+              </div>
+
+              {/* Tile Body: Nama Pemohon */}
+              <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium truncate">
+                <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate capitalize" title={toTitleCase(item.ownerName)}>{toTitleCase(item.ownerName)}</span>
+                {item.isPecahanRow && (
+                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                    {item.pecahanInfo}
+                  </span>
+                )}
+              </div>
+
+              {/* Tile Footer: Tgl Permohonan & Status Badge */}
+              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                <div className="flex items-center gap-1 truncate">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>{formatDateDisplay(item.serviceNumberDate)}</span>
+                </div>
+                {getStatusBadge(item.status)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 4. DETAILS MODAL INTEGRATION */}
+      {selectedDetailsItem && (
         <DetailsModal
-          isOpen={Boolean(selectedApplication)}
-          selectedRequest={selectedApplication}
-          onClose={() => setSelectedApplication(null)}
+          isOpen={Boolean(selectedDetailsItem)}
+          selectedRequest={selectedDetailsItem}
+          onClose={() => setSelectedDetailsItem(null)}
         />
       )}
 
-      {/* Application Snapshot / Version Drawer */}
-      {selectedSnapshotApplication && (
+      {/* 5. CONTEXTUAL THREE-DOTS DROPDOWN MENU */}
+      {activeMenuItem && menuPos && typeof window !== "undefined" && createPortal(
+        <div
+          ref={dropdownMenuRef}
+          style={{
+            position: "fixed",
+            top: `${menuPos.top}px`,
+            left: `${menuPos.left}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-44 bg-white border border-slate-200/90 rounded-lg shadow-xl py-1 z-[9999] text-left font-sans animate-fadeIn select-none divide-y divide-slate-100"
+        >
+          <div className="py-0.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedSnapshotItem(activeMenuItem.original || activeMenuItem);
+                setActiveMenuItem(null);
+                setMenuPos(null);
+              }}
+              className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+            >
+              <BookCopy className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+              <span>Riwayat Versi</span>
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 6. APPLICATION SNAPSHOT / VERSION DRAWER */}
+      {selectedSnapshotItem && (
         <ApplicationSnapshotDrawer
-          isOpen={Boolean(selectedSnapshotApplication)}
-          onClose={() => setSelectedSnapshotApplication(null)}
-          application={selectedSnapshotApplication}
+          isOpen={Boolean(selectedSnapshotItem)}
+          onClose={() => setSelectedSnapshotItem(null)}
+          application={selectedSnapshotItem}
         />
       )}
     </div>

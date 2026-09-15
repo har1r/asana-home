@@ -1,40 +1,28 @@
 "use client";
 
 import React from "react";
-import { Calendar, MoreVertical } from "lucide-react";
+import { Calendar, MoreVertical, Minus, Loader2 } from "lucide-react";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
-
-const getAbbreviatedJenis = (jenis: string) => {
-  switch (jenis) {
-    case "OBJEK_PAJAK_BARU":
-      return "OPB";
-    case "MUTASI_SEBAGIAN":
-      return "MS";
-    case "MUTASI_HABIS_REGULER":
-      return "MHR";
-    case "MUTASI_HABIS_UPDATE":
-      return "MHU";
-    case "PEMBETULAN":
-      return "PBT";
-    case "PENGAKTIFAN":
-      return "AKT";
-    default:
-      return jenis?.replace(/_/g, " ") || "Umum";
-  }
-};
+import { getAbbreviatedJenis, formatJenisLayananLabel } from "@/components/workspaces/shared/constants";
 
 interface SenderInstalledBundlesProps {
   installedBundles: any[];
   selectedBundleInManifest: any | null;
+  manifestStatus?: string;
+  loading?: boolean;
   onSelectBundle: (bundle: any) => void;
   onOpenVersionDrawer: (bundle: any) => void;
+  onRemoveBundle?: (bundleId: string) => void;
 }
 
 export const SenderInstalledBundles: React.FC<SenderInstalledBundlesProps> = React.memo(({
   installedBundles,
   selectedBundleInManifest,
+  manifestStatus = "DRAFT",
+  loading = false,
   onSelectBundle,
   onOpenVersionDrawer,
+  onRemoveBundle,
 }) => {
   return (
     <div className="bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-3 h-[420px] font-sans">
@@ -58,12 +46,18 @@ export const SenderInstalledBundles: React.FC<SenderInstalledBundlesProps> = Rea
         ) : (
           installedBundles.map((b: any) => {
             const isSelectedBundle = selectedBundleInManifest?.id === b.id;
-            const bTotalPecahan = (b.permohonan || []).reduce((acc: number, p: any) => {
-              if (p.jenisPermohonan === "MUTASI_SEBAGIAN") {
-                return acc + (p.dataBaru?.length || 1);
+            const appsList = b.applications || b.permohonan || [];
+            const bTotalPecahan = appsList.reduce((acc: number, p: any) => {
+              const type = p.applicationType || p.jenisPermohonan;
+              if (type === "MUTASI_SEBAGIAN" || type === "PARTIAL_MUTATION") {
+                const targetList = p.targetData || p.dataBaru || [];
+                return acc + (targetList.length > 0 ? targetList.length : 1);
               }
               return acc + 1;
             }, 0);
+
+            const displayBundleNo = b.bundleNumber || b.nomorBundle || "—";
+            const displayJenis = b.applicationType || b.jenisPermohonan;
 
             return (
               <div
@@ -82,7 +76,7 @@ export const SenderInstalledBundles: React.FC<SenderInstalledBundlesProps> = Rea
 
                 <div className="flex items-center justify-between gap-3 w-full font-sans">
                   <span className="text-[13px] font-normal text-slate-800 font-mono tracking-tight truncate font-sans">
-                    {b.nomorBundle}
+                    {displayBundleNo}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <span
@@ -106,15 +100,39 @@ export const SenderInstalledBundles: React.FC<SenderInstalledBundlesProps> = Rea
                 </div>
 
                 <div className="flex items-center justify-between gap-3 w-full font-sans">
-                  <span className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans">
-                    {getAbbreviatedJenis(b.jenisPermohonan)}
+                  <span
+                    className="bg-emerald-50 text-[#008f78] text-[11px] font-normal px-2 py-0.5 rounded-md border border-emerald-200 capitalize leading-none shrink-0 font-sans cursor-help"
+                    title={formatJenisLayananLabel(displayJenis)}
+                  >
+                    {getAbbreviatedJenis(displayJenis)}
                   </span>
-                  <span className="text-slate-500 font-normal text-[12px] flex items-center gap-1 shrink-0 font-sans">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    {b.updatedAt
-                      ? new Date(b.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
-                      : "—"}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0 font-sans">
+                    <span className="text-slate-500 font-normal text-[12px] flex items-center gap-1 shrink-0 font-sans">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      {b.updatedAt
+                        ? new Date(b.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+                        : "—"}
+                    </span>
+
+                    {manifestStatus === "DRAFT" && onRemoveBundle && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveBundle(b.id);
+                        }}
+                        disabled={loading}
+                        className="py-1 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-md transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-3xs shrink-0 capitalize disabled:opacity-50"
+                        title="Keluarkan bundle dari manifest"
+                      >
+                        {loading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                        ) : (
+                          <Minus className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

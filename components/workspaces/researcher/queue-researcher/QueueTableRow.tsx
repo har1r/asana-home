@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Star, Copy, Check, Eye, Plus, AlertTriangle, MoreVertical, RefreshCw } from "lucide-react";
+import { Star, Copy, Check, Plus, AlertTriangle, MoreVertical, RefreshCw, FolderMinus } from "lucide-react";
 import { formatNop, toTitleCase, getAbbreviatedJenis } from "@/components/workspaces/shared/constants";
 
 const STATUS_LABEL_MAP: Record<string, string> = {
@@ -79,6 +79,7 @@ export interface QueueTableRowProps {
   onAddToBundle?: (bundleId: string, permohonanId: string) => void;
   onRequestRevision?: (item: any) => void;
   onResubmitRevision?: (id: string) => void;
+  onRemoveFromBundle?: (item: any) => void;
   onCopy?: (e: React.MouseEvent, text: string) => void;
 }
 
@@ -92,6 +93,7 @@ export const QueueTableRow: React.FC<QueueTableRowProps> = React.memo(({
   onAddToBundle,
   onRequestRevision,
   onResubmitRevision,
+  onRemoveFromBundle,
   onCopy,
 }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -345,18 +347,20 @@ export const QueueTableRow: React.FC<QueueTableRowProps> = React.memo(({
               className="w-48 bg-white border border-slate-200/90 rounded-lg shadow-xl py-1 z-[9999] text-left font-sans animate-fadeIn select-none divide-y divide-slate-100"
             >
               <div className="py-0.5">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(false);
-                    onViewDetails(item);
-                  }}
-                  className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
-                >
-                  <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
-                  <span>Lihat Detail</span>
-                </button>
+                {onRemoveFromBundle && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      onRemoveFromBundle(item);
+                    }}
+                    className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-100 flex items-center gap-2.5 transition-colors cursor-pointer font-normal group"
+                  >
+                    <FolderMinus className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+                    <span>Keluarkan dari Bundle</span>
+                  </button>
+                )}
 
                 {item.status === 'REVISION' && onResubmitRevision && (
                   <button
@@ -366,27 +370,48 @@ export const QueueTableRow: React.FC<QueueTableRowProps> = React.memo(({
                       setIsMenuOpen(false);
                       onResubmitRevision(item.id);
                     }}
-                    className="w-full px-3 py-2 text-[12px] text-emerald-700 hover:bg-emerald-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+                    className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-100 flex items-center gap-2.5 transition-colors cursor-pointer font-normal group"
                   >
-                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-700 transition-colors" />
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
                     <span>Resubmit ke Antrean</span>
                   </button>
                 )}
 
-                {selectedBundle && selectedBundle.status === 'DRAFT' && onAddToBundle && item.status !== 'REVISION' && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMenuOpen(false);
-                      onAddToBundle(selectedBundle.id, item.id);
-                    }}
-                    className="w-full px-3 py-2 text-[12px] text-emerald-700 hover:bg-emerald-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-700 transition-colors" />
-                    <span>Masukkan ke Bundle</span>
-                  </button>
-                )}
+                {selectedBundle && selectedBundle.status === 'DRAFT' && onAddToBundle && item.status !== 'REVISION' && (() => {
+                  const bundleAppsCount = selectedBundle.applications?.length || selectedBundle.permohonan?.length || 0;
+                  const bundleType = selectedBundle.applicationType || selectedBundle.jenisPermohonan;
+                  const norm = (t?: string) => {
+                    if (!t) return '';
+                    const s = t.trim().toUpperCase();
+                    if (s === 'PARTIAL_MUTATION') return 'MUTASI_SEBAGIAN';
+                    if (s === 'MERGER_MUTATION') return 'MUTASI_PENGGABUNGAN';
+                    if (s === 'EXPIRED_UPDATE') return 'MUTASI_HABIS_UPDATE';
+                    if (s === 'EXPIRED_REGULAR') return 'MUTASI_HABIS_REGULER';
+                    if (s === 'NEW_TAX_OBJECT') return 'OBJEK_PAJAK_BARU';
+                    if (s === 'CORRECTION') return 'PEMBETULAN';
+                    if (s === 'REACTIVATION') return 'PENGAKTIFAN';
+                    return s;
+                  };
+                  const isTypeMismatch = bundleAppsCount > 0 && bundleType && norm(bundleType) !== norm(item.applicationType);
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        onAddToBundle(selectedBundle.id, item.id);
+                      }}
+                      className={`w-full px-3 py-2 text-[12px] flex items-center gap-2.5 transition-colors cursor-pointer font-normal group ${
+                        isTypeMismatch ? 'text-amber-700 bg-amber-50/50 hover:bg-amber-100/60' : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                      title={isTypeMismatch ? `Bundle ini khusus untuk ${getAbbreviatedJenis(bundleType)}. Jenis permohonan ini (${getAbbreviatedJenis(item.applicationType)}) berbeda.` : 'Masukkan permohonan ini ke dalam Bundle'}
+                    >
+                      <Plus className={`w-3.5 h-3.5 ${isTypeMismatch ? 'text-amber-600' : 'text-slate-400 group-hover:text-slate-700'} transition-colors`} />
+                      <span>Masukkan ke Bundle</span>
+                    </button>
+                  );
+                })()}
 
                 {onRequestRevision && item.status !== 'REVISION' && (
                   <button
@@ -396,9 +421,9 @@ export const QueueTableRow: React.FC<QueueTableRowProps> = React.memo(({
                       setIsMenuOpen(false);
                       onRequestRevision(item);
                     }}
-                    className="w-full px-3 py-2 text-[12px] text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+                    className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-100 flex items-center gap-2.5 transition-colors cursor-pointer font-normal group"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 group-hover:text-amber-700 transition-colors" />
+                    <AlertTriangle className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
                     <span>Minta Revisi</span>
                   </button>
                 )}

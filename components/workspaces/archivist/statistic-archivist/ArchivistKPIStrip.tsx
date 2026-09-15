@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { TrendingUp, CheckCircle2, Clock, RotateCcw } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { ArchivistStatisticMetrics } from "./useArchivistStatistics";
 
 export interface ArchivistKPIStripProps {
@@ -11,14 +11,17 @@ export interface ArchivistKPIStripProps {
   onSwitchTab?: (mode: "bundle" | "arsip") => void;
 }
 
+const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
+
 // ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const width = 84;
   const height = 40;
   const maxVal = Math.max(...data, 1);
-  const barWidth = 7;
-  const gap = 5;
+  const isFourPoints = data.length === 4;
+  const barWidth = isFourPoints ? 13 : 7;
+  const gap = isFourPoints ? 8 : 5;
 
   return (
     <div className="relative group/chart">
@@ -48,7 +51,7 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
 
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
     </div>
@@ -111,9 +114,42 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
 
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg z-20 pointer-events-none whitespace-nowrap">
-          {data[hoveredIdx]} data
+          {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
         </div>
       )}
+    </div>
+  );
+};
+
+// Helper badge component for Week-over-Week growth
+const GrowthBadge: React.FC<{
+  growthPct: number;
+  subtext: string;
+  positiveColorClass?: string;
+  inverted?: boolean;
+}> = ({ growthPct, subtext, positiveColorClass = "text-emerald-600", inverted = false }) => {
+  const isPositive = growthPct > 0;
+  const isNegative = growthPct < 0;
+
+  let colorClass = "text-slate-500";
+  let Icon = TrendingUp;
+
+  if (isPositive) {
+    colorClass = inverted ? "text-rose-600" : positiveColorClass;
+    Icon = TrendingUp;
+  } else if (isNegative) {
+    colorClass = inverted ? "text-emerald-600" : "text-rose-600";
+    Icon = TrendingDown;
+  }
+
+  const formattedVal = isPositive ? `+${growthPct}%` : `${growthPct}%`;
+
+  return (
+    <div className={`flex items-center gap-1 text-[11px] font-medium ${colorClass}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>
+        {formattedVal} <span className="text-slate-400 font-normal">{subtext}</span>
+      </span>
     </div>
   );
 };
@@ -122,7 +158,7 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
   ({ metrics }) => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2 select-none font-sans">
-        {/* CARD 1: TOTAL PEMOHON / TARGET DATA (DISPLAY ONLY) */}
+        {/* CARD 1: TOTAL PEMOHON / TARGET DATA */}
         <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
           <div className="flex flex-col min-w-0 mb-3">
             <h3 className="text-sm font-bold text-slate-800 leading-tight">Total Pemohon</h3>
@@ -134,10 +170,11 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {metrics.totalPemohon.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>100% <span className="text-slate-400 font-normal">target data</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={metrics.totalGrowthPct ?? 0}
+                subtext="vs M lalu"
+                positiveColorClass="text-emerald-600"
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -146,7 +183,7 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
           </div>
         </div>
 
-        {/* CARD 2: DOKUMEN TER-UPLOAD (DISPLAY ONLY) */}
+        {/* CARD 2: DOKUMEN TER-UPLOAD */}
         <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
           <div className="flex flex-col min-w-0 mb-3">
             <h3 className="text-sm font-bold text-slate-800 leading-tight">Sudah Ter-upload</h3>
@@ -158,10 +195,11 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {metrics.sudahTerupload.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>{metrics.sudahTeruploadPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={metrics.uploadedGrowthPct ?? 0}
+                subtext={`vs M lalu (${metrics.sudahTeruploadPct})`}
+                positiveColorClass="text-emerald-600"
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -170,7 +208,7 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
           </div>
         </div>
 
-        {/* CARD 3: BELUM UPLOAD (DISPLAY ONLY) */}
+        {/* CARD 3: BELUM UPLOAD */}
         <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
           <div className="flex flex-col min-w-0 mb-3">
             <h3 className="text-sm font-bold text-slate-800 leading-tight">Belum Upload</h3>
@@ -182,10 +220,11 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {metrics.belumDiupload.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-sky-600">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>{metrics.belumDiuploadPct} <span className="text-slate-400 font-normal">dari total</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={metrics.pendingGrowthPct ?? 0}
+                subtext={`vs M lalu (${metrics.belumDiuploadPct})`}
+                positiveColorClass="text-sky-600"
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">
@@ -194,7 +233,7 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
           </div>
         </div>
 
-        {/* CARD 4: RE-UPLOAD / DIKEMBALIKAN (DISPLAY ONLY) */}
+        {/* CARD 4: RE-UPLOAD / DIKEMBALIKAN */}
         <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
           <div className="flex flex-col min-w-0 mb-3">
             <h3 className="text-sm font-bold text-slate-800 leading-tight flex items-center gap-1.5">
@@ -208,10 +247,12 @@ export const ArchivistKPIStrip: React.FC<ArchivistKPIStripProps> = React.memo(
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
                 {metrics.perluReupload.toLocaleString("id-ID")}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>{metrics.perluReuploadPct} <span className="text-slate-400 font-normal">perlu revisi</span></span>
-              </div>
+              <GrowthBadge
+                growthPct={metrics.reuploadGrowthPct ?? 0}
+                subtext={`vs M lalu (${metrics.perluReuploadPct})`}
+                positiveColorClass="text-amber-600"
+                inverted={true}
+              />
             </div>
 
             <div className="shrink-0 pb-0.5">

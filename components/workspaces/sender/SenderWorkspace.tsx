@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { AlertTriangle, X, CheckCircle2, Boxes, RefreshCw } from "lucide-react";
 import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
-import { BundleVersionDrawer } from "@/components/workspaces/shared/BundleVersionDrawer";
+import { BundleSnapshotDrawer } from "@/components/workspaces/shared/BundleSnapshotDrawer";
 import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
+import { ActionStatusModal } from "@/components/workspaces/shared/ActionStatusModal";
 import { useDashboard } from "@/context/DashboardContext";
 import {
   getEligibleBundles,
@@ -24,6 +25,7 @@ import {
 
 // Sub-Domain Components & Hooks
 import { SenderKPIStrip } from "./statistic-sender/SenderKPIStrip";
+import { useSenderStatistics } from "./statistic-sender/useSenderStatistics";
 import { useSenderManifest } from "./manifest-sender/useSenderManifest";
 import { SenderManifestToolbar } from "./manifest-sender/SenderManifestToolbar";
 import { SenderManifestGrid } from "./manifest-sender/SenderManifestGrid";
@@ -37,6 +39,7 @@ import { SenderPermohonanTable } from "./queue-sender/SenderPermohonanTable";
 import { SenderQueueActionBar } from "./queue-sender/SenderQueueActionBar";
 
 import { SenderCorrectionModal } from "./modal-sender/SenderCorrectionModal";
+import { LockManifestConfirmationModal } from "./modal-sender/LockManifestConfirmationModal";
 import { PengirimManifestSkeleton, PengirimKelolaSkeleton } from "@/components/skeletons/SenderSkeleton";
 
 type WorkspaceTab = "daftar-manifest" | "kelola-pengiriman";
@@ -89,6 +92,8 @@ export default function PengirimWorkspace() {
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [correctionTarget, setCorrectionTarget] = useState<any | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
+  const [showLockManifestModal, setShowLockManifestModal] = useState(false);
+  const [manifestToLock, setManifestToLock] = useState<any | null>(null);
 
   // States for search and loaders
   const [loading, setLoading] = useState(false);
@@ -96,6 +101,23 @@ export default function PengirimWorkspace() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Action Status Modal State
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalStatus, setStatusModalStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [statusModalTitle, setStatusModalTitle] = useState('');
+  const [statusModalMessage, setStatusModalMessage] = useState('');
+
+  const showActionStatus = (
+    status: 'loading' | 'success' | 'error',
+    title: string,
+    message: string
+  ) => {
+    setStatusModalStatus(status);
+    setStatusModalTitle(title);
+    setStatusModalMessage(message);
+    setStatusModalOpen(true);
+  };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -110,7 +132,7 @@ export default function PengirimWorkspace() {
       setError("");
 
       try {
-        const manifestsRes = await getManifests();
+        const manifestsRes = await getManifests({ status: "ALL", limit: 100 });
         const bundlesRes = await getEligibleBundles();
 
         if (manifestsRes.success && "list" in manifestsRes) {
@@ -162,7 +184,7 @@ export default function PengirimWorkspace() {
           setSelectedManifest(res.manifest);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   // Create Manifest Handler
@@ -170,21 +192,22 @@ export default function PengirimWorkspace() {
     setLoading(true);
     setError("");
     setSuccess("");
+    showActionStatus("loading", "Membuat Manifest Baru", "Sedang menghasilkan nomor manifest dan menyiapkan draf pengiriman...");
     try {
       const res: any = await createManifest();
       if (res.success && res.manifest) {
-        setSuccess(`Manifest baru ${res.manifest?.nomorManifest} berhasil dibuat!`);
+        const createdNo = res.manifest.manifestNumber || res.manifest.nomorManifest || "";
+        showActionStatus("success", "Manifest Berhasil Dibuat", `Manifest baru ${createdNo} berhasil dibuat.`);
         await fetchInitialData(true);
         const detail = await getManifestDetails(res.manifest.id);
         if (detail.success && "manifest" in detail && detail.manifest) {
           setSelectedManifest(detail.manifest);
         }
-        setTimeout(() => setSuccess(""), 4000);
       } else {
-        setError(res.error || "Gagal membuat manifest baru.");
+        showActionStatus("error", "Gagal Membuat Manifest", res.error || "Gagal membuat manifest baru.");
       }
     } catch (err: any) {
-      setError(err.message || "Sistem error saat membuat manifest.");
+      showActionStatus("error", "Gagal Membuat Manifest", err.message || "Sistem error saat membuat manifest.");
     } finally {
       setLoading(false);
     }
@@ -197,6 +220,9 @@ export default function PengirimWorkspace() {
     handleCreateManifest
   );
 
+  // Sub-Domain Hook: Sender Statistics (WoW & 4-Week Sparklines)
+  const senderMetrics = useSenderStatistics({ manifestsList });
+
   // Add Bundle to Manifest
   const handleAddBundle = async (bundleId: string) => {
     if (!selectedManifest) return;
@@ -208,26 +234,28 @@ export default function PengirimWorkspace() {
 
     setEligibleBundlesList((prev) => prev.filter((b) => b.id !== bundleId));
 
-    const updatedBundles = [...(selectedManifest.bundle || []), targetBundle];
-    const updatedSelectedManifest = { ...selectedManifest, bundle: updatedBundles };
+    const currentBundles = selectedManifest.bundles || selectedManifest.bundle || [];
+    const updatedBundles = [...currentBundles, targetBundle];
+    const updatedSelectedManifest = { ...selectedManifest, bundles: updatedBundles, bundle: updatedBundles };
     setSelectedManifest(updatedSelectedManifest);
 
     setManifestsList((prev) =>
       prev.map((m) => (m.id === selectedManifest.id ? updatedSelectedManifest : m))
     );
 
+    showActionStatus("loading", "Menambahkan Bundle", "Sedang memasukkan map bundle ke dalam manifest...");
+
     try {
       const res: any = await addBundleToManifest(selectedManifest.id, bundleId);
       if (res.success) {
-        setSuccess("Bundle berhasil ditambahkan ke dalam manifest!");
+        showActionStatus("success", "Bundle Berhasil Ditambahkan", "Map bundle berhasil dimasukkan ke dalam manifest pengiriman.");
         await fetchInitialData(true);
-        setTimeout(() => setSuccess(""), 3000);
       } else {
-        setError(res.error || "Gagal menambahkan bundle.");
+        showActionStatus("error", "Gagal Menambahkan Bundle", res.error || "Gagal menambahkan bundle.");
         await fetchInitialData(true);
       }
     } catch (err: any) {
-      setError(err.message || "Sistem error saat menambahkan bundle.");
+      showActionStatus("error", "Gagal Menambahkan Bundle", err.message || "Sistem error saat menambahkan bundle.");
       await fetchInitialData(true);
     }
   };
@@ -238,10 +266,11 @@ export default function PengirimWorkspace() {
     setError("");
     setSuccess("");
 
-    const targetBundle = (selectedManifest.bundle || []).find((b: any) => b.id === bundleId);
+    const currentBundles = selectedManifest.bundles || selectedManifest.bundle || [];
+    const targetBundle = currentBundles.find((b: any) => b.id === bundleId);
 
-    const updatedBundles = (selectedManifest.bundle || []).filter((b: any) => b.id !== bundleId);
-    const updatedSelectedManifest = { ...selectedManifest, bundle: updatedBundles };
+    const updatedBundles = currentBundles.filter((b: any) => b.id !== bundleId);
+    const updatedSelectedManifest = { ...selectedManifest, bundles: updatedBundles, bundle: updatedBundles };
     setSelectedManifest(updatedSelectedManifest);
 
     if (queueState.selectedBundleInManifest?.id === bundleId) {
@@ -256,71 +285,86 @@ export default function PengirimWorkspace() {
       prev.map((m) => (m.id === selectedManifest.id ? updatedSelectedManifest : m))
     );
 
+    showActionStatus("loading", "Melepas Bundle", "Sedang mengeluarkan map bundle dari manifest...");
+
     try {
       const res: any = await removeBundleFromManifest(selectedManifest.id, bundleId);
       if (res.success) {
-        setSuccess("Bundle berhasil dilepas dari manifest!");
+        showActionStatus("success", "Bundle Berhasil Dilepas", "Map bundle berhasil dikeluarkan dari manifest.");
         await fetchInitialData(true);
-        setTimeout(() => setSuccess(""), 3000);
       } else {
-        setError(res.error || "Gagal melepas bundle.");
+        showActionStatus("error", "Gagal Melepas Bundle", res.error || "Gagal melepas bundle.");
         await fetchInitialData(true);
       }
     } catch (err: any) {
-      setError(err.message || "Sistem error saat melepas bundle.");
+      showActionStatus("error", "Gagal Melepas Bundle", err.message || "Sistem error saat melepas bundle.");
       await fetchInitialData(true);
     }
   };
 
-  // Lock Manifest
-  const handleLockManifest = () => {
-    if (!selectedManifest) return;
-    showConfirm({
-      title: "Konfirmasi Kunci Manifest",
-      message: `Apakah Anda yakin ingin MENGUNCI manifest ${selectedManifest.nomorManifest}? Setelah dikunci, daftar bundle tidak dapat diubah tanpa merevisi manifest kembali ke DRAFT.`,
-      onConfirm: async () => {
-        setLoading(true);
-        setError("");
-        setSuccess("");
-        try {
-          const res: any = await lockManifest(selectedManifest.id);
-          if (res.success) {
-            setSuccess(`Manifest ${selectedManifest.nomorManifest} berhasil dikunci!`);
-            await fetchInitialData(true);
-            setTimeout(() => setSuccess(""), 4000);
-          } else {
-            setError(res.error || "Gagal mengunci manifest.");
-          }
-        } catch (err: any) {
-          setError(err.message || "Sistem error saat mengunci.");
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
+  // Lock Manifest (Triggers Confirmation Modal matching Lock Bundle style)
+  const handleLockManifest = (target?: any) => {
+    // Ensure target is a valid manifest object with an id, not a React SyntheticEvent
+    const manifest =
+      target && typeof target === "object" && typeof target.id === "string"
+        ? target
+        : selectedManifest;
+    if (!manifest || !manifest.id) return;
+    setManifestToLock(manifest);
+    setShowLockManifestModal(true);
+  };
+
+  const executeLockManifest = async (manifestId: string) => {
+    const targetId = manifestId || manifestToLock?.id || selectedManifest?.id;
+    if (!targetId) {
+      showActionStatus("error", "Gagal Mengunci Manifest", "ID Manifest tidak valid.");
+      return;
+    }
+
+    const targetManifest = manifestsList.find((m) => m.id === targetId) || selectedManifest;
+    const mNo = targetManifest?.nomorManifest || targetManifest?.manifestNumber || "";
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    showActionStatus("loading", "Mengunci Manifest", `Sedang mengunci manifest ${mNo}...`);
+    try {
+      const res: any = await lockManifest(targetId);
+      if (res.success) {
+        showActionStatus("success", "Manifest Berhasil Dikunci", `Manifest ${mNo} berhasil dikunci dan siap untuk pengiriman kargo.`);
+        await fetchInitialData(true);
+      } else {
+        showActionStatus("error", "Gagal Mengunci Manifest", res.error || "Gagal mengunci manifest.");
+      }
+    } catch (err: any) {
+      showActionStatus("error", "Gagal Mengunci Manifest", err.message || "Sistem error saat mengunci.");
+    } finally {
+      setLoading(false);
+      setManifestToLock(null);
+    }
   };
 
   // Revert Lock to Draft (Revisi Manifest)
   const handleRevisiManifest = () => {
     if (!selectedManifest) return;
+    const mNo = selectedManifest.nomorManifest || selectedManifest.manifestNumber || "";
     showConfirm({
       title: "Konfirmasi Revisi Manifest",
-      message: `Apakah Anda yakin ingin MEREVISI manifest ${selectedManifest.nomorManifest}? Ini akan mengembalikan status menjadi DRAFT agar Anda dapat mengubah daftar bundle didalamnya.`,
+      message: `Apakah Anda yakin ingin MEREVISI manifest ${mNo}? Ini akan mengembalikan status menjadi DRAFT agar Anda dapat mengubah daftar bundle didalamnya.`,
       onConfirm: async () => {
         setLoading(true);
         setError("");
         setSuccess("");
+        showActionStatus("loading", "Merevisi Manifest", `Sedang mengembalikan status manifest ${mNo} ke DRAFT...`);
         try {
           const res: any = await revisiManifest(selectedManifest.id);
           if (res.success) {
-            setSuccess(`Manifest ${selectedManifest.nomorManifest} berhasil dikembalikan ke DRAFT.`);
+            showActionStatus("success", "Manifest Berhasil Direvisi", `Manifest ${mNo} berhasil dikembalikan ke status DRAFT.`);
             await fetchInitialData(true);
-            setTimeout(() => setSuccess(""), 4000);
           } else {
-            setError(res.error || "Gagal merevisi manifest.");
+            showActionStatus("error", "Gagal Merevisi Manifest", res.error || "Gagal merevisi manifest.");
           }
         } catch (err: any) {
-          setError(err.message || "Sistem error.");
+          showActionStatus("error", "Gagal Merevisi Manifest", err.message || "Sistem error.");
         } finally {
           setLoading(false);
         }
@@ -336,19 +380,20 @@ export default function PengirimWorkspace() {
 
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
     if (!allowedTypes.includes(file.type)) {
-      setError("File bukti tanda terima harus berupa PDF, JPG, atau PNG.");
+      showActionStatus("error", "Format File Tidak Sesuai", "File bukti tanda terima harus berupa PDF, JPG, atau PNG.");
       return;
     }
 
     const MAX_SIZE = 20 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      setError("Ukuran file tidak boleh melebihi 20 MB.");
+      showActionStatus("error", "Ukuran File Melebihi Batas", "Ukuran file tidak boleh melebihi 20 MB.");
       return;
     }
 
     setLoading(true);
     setError("");
     setSuccess("");
+    showActionStatus("loading", "Mengunggah Bukti Resi", "Sedang memproses berkas bukti tanda terima...");
 
     try {
       const formData = new FormData();
@@ -356,15 +401,14 @@ export default function PengirimWorkspace() {
 
       const res: any = await uploadBuktiTandaTerima(selectedManifest.id, formData);
       if (res.success) {
-        setSuccess("Bukti tanda terima diunggah! Manifest berhasil dikirim (SENT) dan wajib pajak telah dinotifikasi.");
+        showActionStatus("success", "Pengiriman Selesai", "Bukti tanda terima berhasil diunggah! Manifest resmi dikirim (SENT).");
         await fetchInitialData(true);
         if (fileInputRef.current) fileInputRef.current.value = "";
-        setTimeout(() => setSuccess(""), 5000);
       } else {
-        setError(res.error || "Gagal menyelesaikan pengiriman manifest.");
+        showActionStatus("error", "Gagal Mengunggah Bukti", res.error || "Gagal menyelesaikan pengiriman manifest.");
       }
     } catch (err: any) {
-      setError(err.message || "Sistem error saat mengunggah berkas.");
+      showActionStatus("error", "Gagal Mengunggah Bukti", err.message || "Sistem error saat mengunggah berkas.");
     } finally {
       setLoading(false);
     }
@@ -379,17 +423,17 @@ export default function PengirimWorkspace() {
         setLoading(true);
         setError("");
         setSuccess("");
+        showActionStatus("loading", "Melaporkan Bundle Hilang", `Sedang memproses laporan bundle ${nomorBundle}...`);
         try {
           const res: any = await laporkanBundleHilang(bundleId);
           if (res.success) {
-            setSuccess(`Bundle ${nomorBundle} berhasil dilaporkan hilang dan dikeluarkan dari manifest.`);
+            showActionStatus("success", "Bundle Dilaporkan Hilang", `Bundle ${nomorBundle} berhasil dilaporkan hilang dan dikeluarkan dari manifest.`);
             await fetchInitialData(true);
-            setTimeout(() => setSuccess(""), 5000);
           } else {
-            setError(res.error || "Gagal melaporkan bundle hilang.");
+            showActionStatus("error", "Gagal Melaporkan Bundle", res.error || "Gagal melaporkan bundle hilang.");
           }
         } catch (err: any) {
-          setError(err.message || "Sistem error.");
+          showActionStatus("error", "Gagal Melaporkan Bundle", err.message || "Sistem error.");
         } finally {
           setLoading(false);
         }
@@ -405,21 +449,21 @@ export default function PengirimWorkspace() {
     setLoading(true);
     setError("");
     setSuccess("");
+    showActionStatus("loading", "Mengajukan Pengembalian", "Sedang memproses permintaan pengembalian ke Pengarsip...");
 
     try {
       const res: any = await ajukanKembalikanKePengarsip(correctionTarget.id, correctionReason);
       if (res.success) {
-        setSuccess("Permintaan koreksi 'Kembalikan ke Pengarsip' berhasil diajukan dan sedang menunggu keputusan Supervisor.");
+        showActionStatus("success", "Pengembalian Diajukan", "Permintaan pengembalian ke Pengarsip berhasil diajukan.");
         setShowCorrectionModal(false);
         setCorrectionTarget(null);
         setCorrectionReason("");
         await fetchInitialData(true);
-        setTimeout(() => setSuccess(""), 5000);
       } else {
-        setError(res.error || "Gagal mengajukan permintaan koreksi.");
+        showActionStatus("error", "Gagal Mengajukan Pengembalian", res.error || "Gagal mengajukan permintaan koreksi.");
       }
     } catch (err: any) {
-      setError(err.message || "Sistem error.");
+      showActionStatus("error", "Gagal Mengajukan Pengembalian", err.message || "Sistem error.");
     } finally {
       setLoading(false);
     }
@@ -451,25 +495,23 @@ export default function PengirimWorkspace() {
               <button
                 type="button"
                 onClick={() => handleSwitchTab("daftar-manifest")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-                  workspaceTab === "daftar-manifest"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                }`}
+                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "daftar-manifest"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
               >
-                <span>Pilih Manifest Pengiriman</span>
+                <span>Buat Manifest</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSwitchTab("kelola-pengiriman")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-                  workspaceTab === "kelola-pengiriman"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                }`}
+                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "kelola-pengiriman"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
               >
-                <span>Kelola Pengiriman</span>
+                <span>Kelola Bundle</span>
               </button>
             </div>
 
@@ -499,27 +541,7 @@ export default function PengirimWorkspace() {
         />
 
         {/* TIER 1: UNIFIED KPI STATS STRIP (PERSIS PENELITI/RESEARCHER) */}
-        <SenderKPIStrip
-          manifestStatusCounts={manifestState.manifestStatusCounts}
-          totalManifests={manifestsList.length}
-          filterManifestStatus={manifestState.filterManifestStatus}
-          onSelectAll={() => {
-            manifestState.setFilterManifestStatus("ALL");
-            handleSwitchTab("daftar-manifest");
-          }}
-          onSelectDraft={() => {
-            manifestState.setFilterManifestStatus("DRAFT");
-            handleSwitchTab("daftar-manifest");
-          }}
-          onSelectLocked={() => {
-            manifestState.setFilterManifestStatus("LOCKED");
-            handleSwitchTab("daftar-manifest");
-          }}
-          onSelectSent={() => {
-            manifestState.setFilterManifestStatus("SENT");
-            handleSwitchTab("daftar-manifest");
-          }}
-        />
+        <SenderKPIStrip metrics={senderMetrics} />
 
         {/* THIN DIVIDER LINE BELOW KPI STRIP (PERSIS PENELITI & PENGARSIP) */}
         <div className="w-full border-b border-slate-200/80 my-0.5" />
@@ -565,12 +587,32 @@ export default function PengirimWorkspace() {
               loading={loading}
               manifestsList={manifestsList}
               filteredManifests={manifestState.filteredManifests}
-              visibleManifests={manifestState.visibleManifests}
+              paginatedManifests={manifestState.paginatedManifests}
               selectedManifest={selectedManifest}
               searchQuery={manifestState.searchQuery}
-              hasMore={manifestState.hasMore}
-              onLoadMore={manifestState.loadMore}
+              currentPage={manifestState.currentPage}
+              totalPages={manifestState.totalPages}
+              itemsPerPage={manifestState.itemsPerPage}
+              onPageChange={manifestState.setCurrentPage}
+              onItemsPerPageChange={(n) => {
+                manifestState.setItemsPerPage(n);
+                manifestState.setCurrentPage(1);
+              }}
               onSelectManifest={handleSelectManifest}
+              onLockManifest={(id) => {
+                const target = manifestsList.find((m) => m.id === id);
+                if (target) setSelectedManifest(target);
+                handleLockManifest(target);
+              }}
+              onRevisiManifest={(id) => {
+                const target = manifestsList.find((m) => m.id === id);
+                if (target) setSelectedManifest(target);
+                handleRevisiManifest();
+              }}
+              onManageManifest={(m) => {
+                handleSelectManifest(m);
+                handleSwitchTab("kelola-pengiriman");
+              }}
             />
           </div>
         )}
@@ -608,9 +650,16 @@ export default function PengirimWorkspace() {
               </div>
             ) : (
               /* Master-Detail Split Panel Layout */
-              <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[500px]">
-                {/* Header Bar */}
-                <SenderQueueHeader selectedManifest={selectedManifest} />
+              <div className="flex flex-col gap-4 w-full min-h-[500px] font-sans">
+                {/* Header Bar dengan Tombol Aksi Sisi Kanan (Sejajar Judul) */}
+                <SenderQueueHeader
+                  selectedManifest={selectedManifest}
+                  loading={loading}
+                  fileInputRef={fileInputRef}
+                  onLockManifest={handleLockManifest}
+                  onRevisiManifest={handleRevisiManifest}
+                  onUploadReceipt={handleUploadReceipt}
+                />
 
                 {/* Grid 2 Columns: Antrean Bundle & Bundle Terpasang */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch font-sans">
@@ -623,10 +672,13 @@ export default function PengirimWorkspace() {
                   />
 
                   <SenderInstalledBundles
-                    installedBundles={selectedManifest.bundle || []}
+                    installedBundles={selectedManifest.bundles || selectedManifest.bundle || []}
                     selectedBundleInManifest={queueState.selectedBundleInManifest}
+                    manifestStatus={selectedManifest.status}
+                    loading={loading}
                     onSelectBundle={queueState.setSelectedBundleInManifest}
                     onOpenVersionDrawer={setVersionDrawerBundle}
+                    onRemoveBundle={handleRemoveBundle}
                   />
                 </div>
 
@@ -635,6 +687,7 @@ export default function PengirimWorkspace() {
                   <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
                     <SenderPermohonanToolbar
                       selectedBundleInManifest={queueState.selectedBundleInManifest}
+                      selectedManifest={selectedManifest}
                       manifestStatus={selectedManifest.status}
                       bundleDisplayMode={queueState.bundleDisplayMode}
                       onDisplayModeChange={queueState.setBundleDisplayMode}
@@ -664,21 +717,26 @@ export default function PengirimWorkspace() {
                     />
                   </div>
                 </div>
-
-                {/* Action Bar Footer */}
-                <SenderQueueActionBar
-                  selectedManifest={selectedManifest}
-                  loading={loading}
-                  fileInputRef={fileInputRef}
-                  onLockManifest={handleLockManifest}
-                  onRevisiManifest={handleRevisiManifest}
-                  onUploadReceipt={handleUploadReceipt}
-                />
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Modal: Konfirmasi Kunci Manifest */}
+      <LockManifestConfirmationModal
+        isOpen={showLockManifestModal}
+        manifest={manifestToLock || selectedManifest}
+        onClose={() => {
+          setShowLockManifestModal(false);
+          setManifestToLock(null);
+        }}
+        onConfirm={(manifestId) => {
+          setShowLockManifestModal(false);
+          executeLockManifest(manifestId);
+        }}
+        isLoading={loading}
+      />
 
       {/* Modal: Ajukan Kembalikan ke Pengarsip */}
       <SenderCorrectionModal
@@ -701,14 +759,26 @@ export default function PengirimWorkspace() {
         onClose={() => setSelectedPermohonanForDetails(null)}
       />
 
-      {/* Drawer Riwayat Versi Bundle */}
+      {/* Drawer Riwayat Snapshot Bundle */}
       {versionDrawerBundle && (
-        <BundleVersionDrawer
+        <BundleSnapshotDrawer
           isOpen={!!versionDrawerBundle}
           onClose={() => setVersionDrawerBundle(null)}
           bundle={versionDrawerBundle}
         />
       )}
+
+      {/* Action Status Modal Overlay */}
+      <ActionStatusModal
+        isOpen={statusModalOpen}
+        status={statusModalStatus}
+        title={statusModalTitle}
+        message={statusModalMessage}
+        onClose={() => {
+          setStatusModalOpen(false);
+          setStatusModalStatus("idle");
+        }}
+      />
     </div>
   );
 }

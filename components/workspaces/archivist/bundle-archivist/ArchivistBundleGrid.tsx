@@ -46,7 +46,7 @@ export const ArchivistBundleGrid: React.FC<ArchivistBundleGridProps> = React.mem
     return (
       <div className="flex flex-col gap-4 min-h-[300px] font-sans select-none">
         {/* Bundle Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="col-span-full py-20 flex items-center justify-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />

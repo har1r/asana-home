@@ -55,6 +55,10 @@ const ArchivistHistory = dynamic(() => import('@/components/workspaces/archivist
   ssr: false,
   loading: () => <MascotLoadingSpinner />
 });
+const SenderHistory = dynamic(() => import('@/components/workspaces/sender-history/SenderHistory'), {
+  ssr: false,
+  loading: () => <MascotLoadingSpinner />
+});
 const ResearcherWorkspace = dynamic(() => import('@/components/workspaces/researcher/ResearcherWorkspace'), {
   ssr: false,
   loading: () => <MascotLoadingSpinner />
@@ -696,6 +700,10 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
 
           {activeTab === 'archivist-history' && (
             <ArchivistHistory />
+          )}
+
+          {(activeTab === 'sender-history' || activeTab === 'manifest-history') && (
+            <SenderHistory />
           )}
 
           {activeTab === 'penginput' && (

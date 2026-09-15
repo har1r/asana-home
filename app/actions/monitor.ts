@@ -18,7 +18,7 @@ export async function getMonitoringPermohonan() {
   try {
     const list = await prisma.application.findMany({
       where: {
-        status: { in: ["ARCHIVED", "COMPLETED", "DELIVERED", "MANIFESTED", "SUBMITTED"] }
+        status: { in: ["BUNDLED", "ARCHIVED", "COMPLETED", "DELIVERED", "MANIFESTED", "SUBMITTED"] }
       },
       include: {
         currentBundle: true
@@ -59,6 +59,29 @@ export async function completePermohonan(permohonanId: string) {
 }
 
 /**
+ * Action: Mark multiple permohonans as completed (Batch action for Bundle)
+ */
+export async function completePermohonans(permohonanIds: string[]) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["MONITOR", "SUPERVISOR", "PEMANTAU"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    await prisma.application.updateMany({
+      where: { id: { in: permohonanIds } },
+      data: { status: "COMPLETED" }
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    console.error("[ACTION-COMPLETE-PERMOHONANS-ERR]", error);
+    return { success: false, error: error.message || "Gagal menyelesaikan seluruh permohonan." };
+  }
+}
+
+/**
  * Action: Request Batal Selesai
  */
 export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
@@ -81,19 +104,89 @@ export async function ajukanBatalSelesai(permohonanId: string, alasan: string) {
   }
 }
 
-export async function toggleVerifyDataBaru(permohonanId: string, targetDataId?: any) {
+export async function toggleVerifyDataBaru(permohonanId: string, targetDataId?: string, isChecked?: boolean) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["MONITOR", "SUPERVISOR", "PEMANTAU"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
   try {
-    return { success: true };
+    let app = await prisma.application.findUnique({
+      where: { id: permohonanId }
+    });
+
+    if (!app && targetDataId) {
+      app = await prisma.application.findFirst({
+        where: {
+          targetData: {
+            some: {
+              idTargetData: targetDataId
+            }
+          }
+        }
+      });
+    }
+
+    if (!app) {
+      return { success: false, error: "Permohonan tidak ditemukan." };
+    }
+
+    const updatedTargetData = (app.targetData || []).map((td: any, idx: number) => {
+      const tdId = td.idTargetData || td.id || `pecahan_${idx}`;
+      if (!targetDataId || tdId === targetDataId || td.idTargetData === targetDataId) {
+        const nextVal = typeof isChecked === "boolean" ? isChecked : !td.isVerified;
+        return { ...td, isVerified: nextVal };
+      }
+      return td;
+    });
+
+    const updated = await prisma.application.update({
+      where: { id: app.id },
+      data: {
+        targetData: updatedTargetData
+      }
+    });
+
+    revalidatePath("/");
+    return { success: true, permohonan: updated };
   } catch (e: any) {
-    return { success: false, error: e.message };
+    console.error("[TOGGLE-VERIFY-DATA-BARU-ERR]", e);
+    return { success: false, error: e.message || "Gagal mengubah status verifikasi data target." };
   }
 }
 
 export async function verifyAllDataBaru(permohonanId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["MONITOR", "SUPERVISOR", "PEMANTAU"].includes((session.user as any).role)) {
+    throw new Error("Unauthorized");
+  }
+
   try {
-    return { success: true };
+    const app = await prisma.application.findUnique({
+      where: { id: permohonanId }
+    });
+
+    if (!app) {
+      return { success: false, error: "Permohonan tidak ditemukan." };
+    }
+
+    const updatedTargetData = (app.targetData || []).map((td: any) => ({
+      ...td,
+      isVerified: true
+    }));
+
+    const updated = await prisma.application.update({
+      where: { id: app.id },
+      data: {
+        targetData: updatedTargetData
+      }
+    });
+
+    revalidatePath("/");
+    return { success: true, permohonan: updated };
   } catch (e: any) {
-    return { success: false, error: e.message };
+    console.error("[VERIFY-ALL-DATA-BARU-ERR]", e);
+    return { success: false, error: e.message || "Gagal memverifikasi seluruh data target." };
   }
 }
 

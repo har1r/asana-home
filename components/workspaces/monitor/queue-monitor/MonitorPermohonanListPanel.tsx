@@ -115,13 +115,38 @@ export const MonitorPermohonanListPanel: React.FC<MonitorPermohonanListPanelProp
                   badgeBorder: "border-sky-200",
                 };
 
-            const pTotalPecahan = p.dataBaru?.length || 1;
+            const prev = Array.isArray(p.previousData) && p.previousData.length > 0 ? p.previousData[0] : (Array.isArray(p.dataLama) && p.dataLama.length > 0 ? p.dataLama[0] : null);
+            const targ = Array.isArray(p.targetData) && p.targetData.length > 0 ? p.targetData[0] : (Array.isArray(p.dataBaru) && p.dataBaru.length > 0 ? p.dataBaru[0] : null);
+
+            const targetDataList = Array.isArray(p.targetData) && p.targetData.length > 0
+              ? p.targetData
+              : (Array.isArray(p.dataBaru) ? p.dataBaru : []);
+
+            const pTotalPecahan = targetDataList.length > 0 ? targetDataList.length : 1;
             let pVerifiedPecahan = 0;
             if (p.status === "COMPLETED") {
               pVerifiedPecahan = pTotalPecahan;
-            } else if (p.dataBaru && p.dataBaru.length > 0) {
-              pVerifiedPecahan = p.dataBaru.filter((db: any) => db.isVerified).length;
+            } else if (targetDataList.length > 0) {
+              pVerifiedPecahan = targetDataList.filter((db: any) => db.isVerified).length;
             }
+
+            const nopVal =
+              p.nop ||
+              prev?.nop ||
+              targ?.nopFinal ||
+              targ?.nopTemporary ||
+              "";
+
+            const namaWpVal =
+              p.namaWajibPajak ||
+              prev?.ownerName ||
+              prev?.namaPemilikLama ||
+              targ?.ownerName ||
+              p.applicantName ||
+              "Nama Wajib Pajak";
+
+            const displayNop = nopVal ? formatNop(nopVal) : (p.nomorPelayanan || p.applicationNumber || "—");
+            const jenisLayananStr = p.jenisPermohonan || p.applicationType || selectedBundle?.jenisPermohonan || "";
 
             return (
               <div
@@ -137,7 +162,7 @@ export const MonitorPermohonanListPanel: React.FC<MonitorPermohonanListPanelProp
 
                 <div className="flex items-center justify-between gap-2 pl-1 font-sans">
                   <span className="text-[13px] font-normal text-slate-800 font-mono truncate">
-                    {formatNop(p.nop)}
+                    {displayNop}
                   </span>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none shrink-0 ${sc.badgeBg} ${sc.badgeText} ${sc.badgeBorder}`}
@@ -149,12 +174,12 @@ export const MonitorPermohonanListPanel: React.FC<MonitorPermohonanListPanelProp
                 <div className="flex items-center justify-between gap-2 pl-1 text-[13px] font-sans">
                   <span
                     className="text-[13px] font-normal text-slate-600 capitalize truncate max-w-md font-sans"
-                    title={p.namaWajibPajak}
+                    title={namaWpVal}
                   >
-                    {p.namaWajibPajak?.toLowerCase()}
+                    {namaWpVal.toLowerCase()}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0 font-sans">
-                    {p.jenisPermohonan === "MUTASI_SEBAGIAN" && (
+                    {jenisLayananStr === "MUTASI_SEBAGIAN" && (
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none ${
                           pVerifiedPecahan === pTotalPecahan
@@ -168,7 +193,7 @@ export const MonitorPermohonanListPanel: React.FC<MonitorPermohonanListPanelProp
                       </span>
                     )}
                     <span className="inline-flex px-2 py-0.5 rounded-md text-[13px] font-normal capitalize border leading-none bg-emerald-50 text-[#008f78] border-emerald-200">
-                      {getAbbreviatedJenis(p.jenisPermohonan || selectedBundle.jenisPermohonan)}
+                      {getAbbreviatedJenis(jenisLayananStr)}
                     </span>
                   </div>
                 </div>

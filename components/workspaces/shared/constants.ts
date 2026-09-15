@@ -322,3 +322,70 @@ export const formatBundleNumber = (rawNum?: string | null, createdAt?: string | 
   return `973/${seqStr}-UPT.PD.WIL.IV/${year}`;
 };
 
+/**
+ * Helper function to format jenis permohonan / applicationType into Indonesian Title Case label
+ */
+export const formatJenisLayananLabel = (jenis?: string | null): string => {
+  if (!jenis) return "-";
+  const j = jenis.trim().toUpperCase();
+  switch (j) {
+    case "MUTASI_SEBAGIAN":
+    case "PARTIAL_MUTATION":
+      return "Mutasi Sebagian";
+    case "MUTASI_PENGGABUNGAN":
+    case "MERGER_MUTATION":
+      return "Mutasi Penggabungan";
+    case "MUTASI_HABIS_UPDATE":
+    case "EXPIRED_UPDATE":
+      return "Mutasi Habis Update";
+    case "MUTASI_HABIS_REGULER":
+    case "EXPIRED_REGULAR":
+      return "Mutasi Habis Reguler";
+    case "OBJEK_PAJAK_BARU":
+    case "NEW_TAX_OBJECT":
+      return "Objek Pajak Baru";
+    case "PEMBETULAN":
+    case "CORRECTION":
+      return "Pembetulan";
+    case "PENGAKTIFAN":
+    case "REACTIVATION":
+      return "Pengaktifan";
+    default:
+      return jenis.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+};
+
+/**
+ * Helper function to get badge styling classes for jenis permohonan / applicationType
+ */
+export const getJenisPermohonanBadgeStyle = (jenis?: string | null): string => {
+  if (!jenis) return "bg-slate-100 text-slate-600 border-slate-200/80";
+  const j = jenis.trim().toUpperCase();
+  switch (j) {
+    case "MUTASI_SEBAGIAN":
+    case "PARTIAL_MUTATION":
+      return "bg-indigo-50 text-indigo-700 border-indigo-200/80";
+    case "MUTASI_PENGGABUNGAN":
+    case "MERGER_MUTATION":
+      return "bg-teal-50 text-teal-700 border-teal-200/80";
+    case "MUTASI_HABIS_UPDATE":
+    case "EXPIRED_UPDATE":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200/80";
+    case "MUTASI_HABIS_REGULER":
+    case "EXPIRED_REGULAR":
+      return "bg-pink-50 text-pink-700 border-pink-200/80";
+    case "OBJEK_PAJAK_BARU":
+    case "NEW_TAX_OBJECT":
+      return "bg-amber-50 text-amber-700 border-amber-200/80";
+    case "PEMBETULAN":
+    case "CORRECTION":
+      return "bg-purple-50 text-purple-700 border-purple-200/80";
+    case "PENGAKTIFAN":
+    case "REACTIVATION":
+      return "bg-sky-50 text-sky-700 border-sky-200/80";
+    default:
+      return "bg-slate-100 text-slate-700 border-slate-200/80";
+  }
+};
+
+

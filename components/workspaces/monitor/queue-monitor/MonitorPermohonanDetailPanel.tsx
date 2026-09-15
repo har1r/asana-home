@@ -148,10 +148,63 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
   const isAllCompleted = selectedPermohonan.status === "COMPLETED";
   const activeIndex = isAllCompleted ? 5 : 4;
 
-  const totalPecahanCount = selectedPermohonan.dataBaru?.length || 0;
+  const previousDataList: any[] = Array.isArray(selectedPermohonan.previousData) && selectedPermohonan.previousData.length > 0
+    ? selectedPermohonan.previousData
+    : (Array.isArray(selectedPermohonan.dataLama) ? selectedPermohonan.dataLama : []);
+
+  const targetDataList: any[] = Array.isArray(selectedPermohonan.targetData) && selectedPermohonan.targetData.length > 0
+    ? selectedPermohonan.targetData
+    : (Array.isArray(selectedPermohonan.dataBaru) ? selectedPermohonan.dataBaru : []);
+
+  const primaryPrev = previousDataList[0] || null;
+  const primaryTarget = targetDataList[0] || null;
+
+  const nopVal =
+    selectedPermohonan.nop ||
+    primaryPrev?.nop ||
+    primaryTarget?.nopFinal ||
+    primaryTarget?.nopTemporary ||
+    "";
+
+  const namaWpVal =
+    selectedPermohonan.namaWajibPajak ||
+    primaryPrev?.ownerName ||
+    primaryPrev?.namaPemilikLama ||
+    primaryTarget?.ownerName ||
+    selectedPermohonan.applicantName ||
+    "—";
+
+  const alamatWpVal =
+    selectedPermohonan.alamat ||
+    primaryPrev?.ownerAddress ||
+    primaryPrev?.objectAddress ||
+    primaryPrev?.alamatPemilikLama ||
+    primaryTarget?.ownerAddress ||
+    primaryTarget?.objectAddress ||
+    "—";
+
+  const noWhatsappVal =
+    selectedPermohonan.noWhatsapp ||
+    selectedPermohonan.whatsappNumber ||
+    primaryPrev?.whatsappNumber ||
+    primaryTarget?.whatsappNumber ||
+    "—";
+
+  const jenisPermohonanVal =
+    selectedPermohonan.jenisPermohonan ||
+    selectedPermohonan.applicationType ||
+    "";
+
+  const totalPecahanCount = targetDataList.length;
   const verifiedCount = Object.values(checkedPecahanMap).filter(Boolean).length;
   const isAllPecahanVerified = totalPecahanCount <= 1 || verifiedCount >= totalPecahanCount;
-  const isMutasiSebagian = selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN";
+  const isMutasiSebagian = jenisPermohonanVal === "MUTASI_SEBAGIAN";
+
+  const nomorPermohonanStr =
+    selectedPermohonan.nomorPermohonan ||
+    selectedPermohonan.applicationNumber ||
+    selectedPermohonan.nomorPelayanan ||
+    selectedPermohonan.id;
 
   return (
     <div className="flex-1 min-w-0 w-full bg-white border border-slate-200/90 rounded-md p-5 shadow-3xs flex flex-col gap-5 relative font-sans">
@@ -232,32 +285,94 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
         {/* Row Top: Data Utama Permohonan & Data Objek Lama Berjejer (Side by Side) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full items-start font-sans">
           {/* Card 1: Data Utama Permohonan */}
-          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full">
+          <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full font-sans">
             <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
               <span>Data Utama</span>
             </h5>
             <div className="grid grid-cols-[120px_8px_1fr] gap-y-2 text-[13px] font-normal items-baseline bg-white p-3.5 rounded-md border border-slate-200/60 shadow-3xs">
               <span className="text-slate-500 font-normal">NOP</span>
               <span className="text-slate-400 font-normal">:</span>
-              <span className="text-slate-800 font-normal font-mono">{formatNop(selectedPermohonan.nop)}</span>
+              <span className="text-slate-800 font-normal font-mono">
+                {nopVal ? formatNop(nopVal) : (selectedPermohonan.applicationNumber || selectedPermohonan.nomorPelayanan || "—")}
+              </span>
 
               <span className="text-slate-500 font-normal">Nama WP</span>
               <span className="text-slate-400 font-normal">:</span>
-              <span className="text-slate-800 font-normal uppercase">{selectedPermohonan.namaWajibPajak}</span>
+              <span className="text-slate-800 font-normal uppercase">{namaWpVal}</span>
 
               <span className="text-slate-500 font-normal">Alamat WP</span>
               <span className="text-slate-400 font-normal">:</span>
-              <span className="text-slate-700 font-normal">{selectedPermohonan.alamat}</span>
+              <span className="text-slate-700 font-normal">{alamatWpVal}</span>
 
               <span className="text-slate-500 font-normal">No. WhatsApp</span>
               <span className="text-slate-400 font-normal">:</span>
-              <span className="text-slate-700 font-normal">{selectedPermohonan.noWhatsapp}</span>
+              <span className="text-slate-700 font-normal">{noWhatsappVal}</span>
             </div>
           </div>
 
           {/* Card 2: Data Objek Lama (Berjejer dengan Data Utama) */}
-          {selectedPermohonan.namaPemilikLama && (
-            <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full">
+          {previousDataList.length > 0 ? (
+            <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full font-sans">
+              <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5">
+                Data Lama (Asal)
+              </h5>
+              <div className="flex flex-col gap-3">
+                {previousDataList.map((prev: any, idx: number) => {
+                  const owner = prev.ownerName || prev.namaPemilikLama || "—";
+                  const land = prev.landArea ?? prev.luasTanahLama;
+                  const bldg = prev.buildingArea ?? prev.luasBangunanLama;
+                  const cert = prev.certificate || prev.sertifikatLama;
+                  const nopPrev = prev.nop ? formatNop(prev.nop) : null;
+
+                  return (
+                    <div key={prev.id || idx} className="grid grid-cols-[120px_8px_1fr] gap-y-2 text-[13px] font-normal items-baseline bg-white p-3.5 rounded-md border border-slate-200/70 shadow-3xs">
+                      {previousDataList.length > 1 && (
+                        <div className="col-span-3 font-semibold text-slate-700 border-b border-slate-100 pb-1 text-xs">
+                          Objek Asal #{idx + 1}
+                        </div>
+                      )}
+                      {nopPrev && (
+                        <>
+                          <span className="text-slate-500 font-normal">NOP Asal</span>
+                          <span className="text-slate-400 font-normal">:</span>
+                          <span className="text-slate-800 font-mono">{nopPrev}</span>
+                        </>
+                      )}
+
+                      <span className="text-slate-500 font-normal">Pemilik Lama</span>
+                      <span className="text-slate-400 font-normal">:</span>
+                      <span className="text-slate-700 font-normal uppercase">{owner}</span>
+
+                      {land !== undefined && land !== null && (
+                        <>
+                          <span className="text-slate-500 font-normal">Luas Tanah</span>
+                          <span className="text-slate-400 font-normal">:</span>
+                          <span className="text-slate-700 font-normal">{land} m²</span>
+                        </>
+                      )}
+
+                      {bldg !== undefined && bldg !== null && (
+                        <>
+                          <span className="text-slate-500 font-normal">Luas Bangunan</span>
+                          <span className="text-slate-400 font-normal">:</span>
+                          <span className="text-slate-700 font-normal">{bldg} m²</span>
+                        </>
+                      )}
+
+                      {cert && (
+                        <>
+                          <span className="text-slate-500 font-normal">Sertifikat</span>
+                          <span className="text-slate-400 font-normal">:</span>
+                          <span className="text-slate-700 font-normal uppercase">{cert}</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : selectedPermohonan.namaPemilikLama ? (
+            <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 flex flex-col gap-2.5 w-full font-sans">
               <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans border-b border-slate-200/60 pb-1.5">
                 Data Lama (Asal)
               </h5>
@@ -291,24 +406,26 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Section Data Objek Baru (Kondisional Pecahan vs Objek Baru) */}
-        {selectedPermohonan.dataBaru && selectedPermohonan.dataBaru.length > 0 && (
+        {targetDataList.length > 0 && (
           <div className="bg-slate-50/80 p-4 rounded-md border border-slate-200/70 select-none flex flex-col gap-3 font-sans w-full">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2 font-sans">
               <h5 className="text-[13px] font-normal text-slate-700 capitalize font-sans flex items-center gap-1.5">
                 Data Baru{" "}
-                {selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN" && selectedPermohonan.dataBaru.length > 1
-                  ? `(${selectedPermohonan.dataBaru.length} Pecahan)`
+                {isMutasiSebagian && targetDataList.length > 1
+                  ? `(${targetDataList.length} Pecahan)`
+                  : targetDataList.length > 1
+                  ? `(${targetDataList.length} Objek Baru)`
                   : ""}
               </h5>
 
-              {selectedPermohonan.dataBaru.length > 1 && selectedPermohonan.status !== "COMPLETED" && (
+              {targetDataList.length > 1 && selectedPermohonan.status !== "COMPLETED" && (
                 <div className="flex items-center gap-2 font-sans">
                   <span className="text-[13px] font-normal text-[#008f78] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    {Object.values(checkedPecahanMap).filter(Boolean).length}/{selectedPermohonan.dataBaru.length}{" "}
+                    {Object.values(checkedPecahanMap).filter(Boolean).length}/{targetDataList.length}{" "}
                     Terverifikasi
                   </span>
                   <button
@@ -324,10 +441,16 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
 
             {/* Grid Objek Baru / Pecahan Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start font-sans">
-              {selectedPermohonan.dataBaru.map((db: any, idx: number) => {
-                const itemKey = db.id || `pecahan_${idx}`;
+              {targetDataList.map((db: any, idx: number) => {
+                const itemKey = db.idTargetData || db.id || `pecahan_${idx}`;
                 const isChecked = selectedPermohonan.status === "COMPLETED" || !!checkedPecahanMap[itemKey];
-                const isMutasiSebagian = selectedPermohonan.jenisPermohonan === "MUTASI_SEBAGIAN";
+
+                const ownerBaru = db.ownerName || db.namaPemilikBaru || "—";
+                const alamatBaru = db.ownerAddress || db.objectAddress || db.alamatPemilikBaru;
+                const landBaru = db.landArea ?? db.luasTanahBaru;
+                const bldgBaru = db.buildingArea ?? db.luasBangunanBaru;
+                const certBaru = db.certificate || db.sertifikatBaru;
+                const nopBaru = db.nopFinal || db.nopTemporary || db.nop;
 
                 return (
                   <div
@@ -347,7 +470,7 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
                         )}
                         {isMutasiSebagian
                           ? `Pecahan Objek #${idx + 1}`
-                          : selectedPermohonan.dataBaru.length > 1
+                          : targetDataList.length > 1
                           ? `Objek Baru #${idx + 1}`
                           : "Data Objek Baru"}
                       </span>
@@ -357,7 +480,7 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
                           <input
                             type="checkbox"
                             checked={!!checkedPecahanMap[itemKey]}
-                            onChange={(e) => onTogglePecahanVerified(db.id, itemKey, e.target.checked)}
+                            onChange={(e) => onTogglePecahanVerified(db.idTargetData || db.id, itemKey, e.target.checked)}
                             className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                           />
                           <span
@@ -375,39 +498,47 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
                       )}
                     </div>
 
+                    {nopBaru && (
+                      <>
+                        <span className="text-slate-500 font-normal">NOP Baru</span>
+                        <span className="text-slate-400 font-normal">:</span>
+                        <span className="text-slate-800 font-mono">{formatNop(nopBaru)}</span>
+                      </>
+                    )}
+
                     <span className="text-slate-500 font-normal">Pemilik Baru</span>
                     <span className="text-slate-400 font-normal">:</span>
-                    <span className="text-slate-800 font-normal uppercase">{db.namaPemilikBaru}</span>
+                    <span className="text-slate-800 font-normal uppercase">{ownerBaru}</span>
 
-                    {db.alamatPemilikBaru && (
+                    {alamatBaru && (
                       <>
                         <span className="text-slate-500 font-normal">Alamat</span>
                         <span className="text-slate-400 font-normal">:</span>
-                        <span className="text-slate-700 font-normal">{db.alamatPemilikBaru}</span>
+                        <span className="text-slate-700 font-normal">{alamatBaru}</span>
                       </>
                     )}
 
-                    {db.luasTanahBaru !== undefined && db.luasTanahBaru !== null && (
+                    {landBaru !== undefined && landBaru !== null && (
                       <>
                         <span className="text-slate-500 font-normal">Luas Tanah</span>
                         <span className="text-slate-400 font-normal">:</span>
-                        <span className="text-slate-700 font-normal">{db.luasTanahBaru} m²</span>
+                        <span className="text-slate-700 font-normal">{landBaru} m²</span>
                       </>
                     )}
 
-                    {db.luasBangunanBaru !== undefined && db.luasBangunanBaru !== null && (
+                    {bldgBaru !== undefined && bldgBaru !== null && (
                       <>
                         <span className="text-slate-500 font-normal">Luas Bangunan</span>
                         <span className="text-slate-400 font-normal">:</span>
-                        <span className="text-slate-700 font-normal">{db.luasBangunanBaru} m²</span>
+                        <span className="text-slate-700 font-normal">{bldgBaru} m²</span>
                       </>
                     )}
 
-                    {db.sertifikatBaru && (
+                    {certBaru && (
                       <>
                         <span className="text-slate-500 font-normal">Sertifikat</span>
                         <span className="text-slate-400 font-normal">:</span>
-                        <span className="text-slate-700 font-normal uppercase">{db.sertifikatBaru}</span>
+                        <span className="text-slate-700 font-normal uppercase">{certBaru}</span>
                       </>
                     )}
                   </div>
@@ -439,7 +570,7 @@ export const MonitorPermohonanDetailPanel: React.FC<MonitorPermohonanDetailPanel
           <div className="flex items-center gap-2 justify-end shrink-0 font-sans">
             {selectedPermohonan.status === "ARCHIVED" && (
               <button
-                onClick={() => onComplete(selectedPermohonan.id, selectedPermohonan.nomorPermohonan)}
+                onClick={() => onComplete(selectedPermohonan.id, nomorPermohonanStr)}
                 disabled={loading || selectedPermohonan.permintaanKoreksi?.length > 0 || !isAllPecahanVerified}
                 className="flex items-center gap-1.5 py-2.5 px-4 text-[13px] font-normal text-white bg-[#00a389] hover:bg-[#008f78] active:scale-95 rounded-md shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-sans"
                 title={

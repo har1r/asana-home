@@ -106,6 +106,7 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   createdBundles     Bundle[]
+  createdManifests   Manifest[]
   auditLogs          AuditLog[]
   applicationSnapshots          ApplicationSnapshot[]
   bundleSnapshots    BundleSnapshot[]
@@ -221,15 +222,18 @@ model Manifest {
   manifestNumber    String          @unique
   signedReceiptUrl  String?         
   status            ManifestStatus  @default(DRAFT)
+  createdById       String?         @db.ObjectId
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  createdBy         User?           @relation(fields: [createdById], references: [id])
   manifestDocuments DocumentContainer[] 
   bundles           Bundle[]       
   returnRequests    ReturnRequest[] 
   bundleHistory     ManifestBundleHistory[]
   snapshots         ManifestSnapshot[]
-  // ✅ auditLogs dihapus karena AuditLog menggunakan entityType & entityId (Polymorphic)
+
+  @@index([createdAt])
 }
 
 type DocumentContainer {

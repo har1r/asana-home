@@ -14,10 +14,12 @@ export interface ArchivistArsipTableProps {
   arsipDisplayMode: "berkas" | "pemohon";
   copiedText: string | null;
   loading: boolean;
+  uploadingTargetId?: string | null;
   onSelectRequest: (item: any) => void;
   onToggleFavorite: (id: string) => void;
   onCopy: (e: React.MouseEvent, text: string) => void;
-  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string) => void;
+  onUploadFile: (permohonanId: string, e: React.ChangeEvent<HTMLInputElement>, dataBaruId?: string, uploadMode?: "REPLACE" | "APPEND") => void;
+  onToggleArchiveStatus?: (permohonanId: string, archiveId: string, newStatus: "ACTIVE" | "SUPERSEDED", targetDataId?: string | null) => Promise<void>;
   triggerFileInput: (permohonanId: string) => void;
   fileInputRefs: React.MutableRefObject<{ [key: string]: HTMLInputElement | null }>;
   checkPermohonanNeedsReupload: (p: any, targetId?: string | null) => boolean;
@@ -37,10 +39,12 @@ export const ArchivistArsipTable: React.FC<ArchivistArsipTableProps> = React.mem
     arsipDisplayMode,
     copiedText,
     loading,
+    uploadingTargetId,
     onSelectRequest,
     onToggleFavorite,
     onCopy,
     onUploadFile,
+    onToggleArchiveStatus,
     triggerFileInput,
     fileInputRefs,
     checkPermohonanNeedsReupload,
@@ -89,7 +93,7 @@ export const ArchivistArsipTable: React.FC<ArchivistArsipTableProps> = React.mem
                   <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
                 </th>
                 <th className="py-3 px-4 min-w-[150px] relative font-normal text-slate-600">
-                  <span>No. Pelayanan</span>
+                  <span>No. Permohonan</span>
                   <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[1px] bg-slate-300/80 pointer-events-none" />
                 </th>
                 <th className="py-3 px-4 min-w-[210px] whitespace-nowrap relative font-normal text-slate-600">
@@ -142,11 +146,13 @@ export const ArchivistArsipTable: React.FC<ArchivistArsipTableProps> = React.mem
                       selectedBundle={selectedBundle}
                       copiedText={copiedText}
                       loading={loading}
+                      uploadingTargetId={uploadingTargetId}
                       arsipDisplayMode={arsipDisplayMode}
                       onSelect={onSelectRequest}
                       onToggleFavorite={onToggleFavorite}
                       onCopy={onCopy}
                       onUploadFile={onUploadFile}
+                      onToggleArchiveStatus={onToggleArchiveStatus}
                       triggerFileInput={triggerFileInput}
                       fileInputRefs={fileInputRefs}
                       checkPermohonanNeedsReupload={checkPermohonanNeedsReupload}

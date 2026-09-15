@@ -141,7 +141,7 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
   return (
     <div
       onClick={() => onSelect(b)}
-      className={`p-3 rounded-md border flex flex-col justify-between gap-2 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
+      className={`p-3 sm:p-3.5 rounded-md border flex flex-col justify-between gap-2.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none ${
         isSelected
           ? 'bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20'
           : `bg-white border-slate-200/90 hover:border-slate-350 hover:shadow-md ${statusCfg.shadow}`
@@ -168,33 +168,37 @@ export const BundleCard: React.FC<BundleCardProps> = React.memo(({
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200/90 rounded-md shadow-lg z-30 py-1 text-xs font-sans animate-fadeIn">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  if (onOpenVersionDrawer) onOpenVersionDrawer(b);
-                }}
-                className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 hover:text-[#00a389] flex items-center gap-2 transition-colors cursor-pointer font-sans"
-              >
-                <Layers className="w-3.5 h-3.5 text-[#00a389]" />
-                <span>Riwayat Versi Bundle</span>
-              </button>
-
-              {status === 'DRAFT' && onLock && (
+            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200/90 rounded-lg shadow-xl py-1 z-30 text-left font-sans animate-fadeIn select-none divide-y divide-slate-100">
+              <div className="py-0.5">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
-                    onLock(b.id);
+                    if (onOpenVersionDrawer) onOpenVersionDrawer(b);
                   }}
-                  className="w-full px-3 py-2 text-left text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 transition-colors cursor-pointer border-t border-slate-100 font-sans"
+                  className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
                 >
-                  <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Kunci Bundle</span>
+                  <Layers className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+                  <span>Riwayat Versi Bundle</span>
                 </button>
+              </div>
+
+              {status === 'DRAFT' && onLock && (
+                <div className="py-0.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onLock(b.id);
+                    }}
+                    className="w-full px-3 py-2 text-[12px] text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer font-medium group"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+                    <span>Kunci Bundle</span>
+                  </button>
+                </div>
               )}
             </div>
           )}
