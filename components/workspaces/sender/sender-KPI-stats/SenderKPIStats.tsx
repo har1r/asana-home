@@ -2,19 +2,18 @@
 
 import React, { useState } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { ManifestStatusCounts, SenderStatisticMetrics } from "./useSenderStatistics";
+import { ManifestStatusCounts, SenderKPIStatsMetrics } from "./useSenderKPIStats";
 
-export type { ManifestStatusCounts, SenderStatisticMetrics };
+export type { ManifestStatusCounts, SenderKPIStatsMetrics };
 
 export interface SenderKPIStripProps {
-  metrics?: SenderStatisticMetrics;
+  metrics?: SenderKPIStatsMetrics;
   totalManifests?: number;
   manifestStatusCounts?: ManifestStatusCounts;
 }
 
 const weekLabels = ["M4 Lalu", "M3 Lalu", "M Lalu", "M Ini"];
 
-// ==================== DYNAMIC SVG BAR SPARKLINE ====================
 const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const width = 84;
@@ -50,7 +49,6 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
         })}
       </svg>
 
-      {/* Tooltip on hover */}
       {hoveredIdx !== null && (
         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded-md shadow-lg z-20 pointer-events-none whitespace-nowrap">
           {weekLabels[hoveredIdx] || `Minggu ${hoveredIdx + 1}`}: {data[hoveredIdx]} data
@@ -60,7 +58,6 @@ const SparklineBarChart: React.FC<{ data: number[]; color: string }> = ({ data, 
   );
 };
 
-// ==================== DYNAMIC SVG SMOOTH AREA SPARKLINE ====================
 const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }> = ({ data, color, id }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const width = 90;
@@ -75,7 +72,6 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
     return { x, y, val };
   });
 
-  // Build smooth Bezier path
   let pathD = `M ${points[0].x},${points[0].y}`;
   for (let i = 0; i < points.length - 1; i++) {
     const curr = points[i];
@@ -96,13 +92,10 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
           </linearGradient>
         </defs>
 
-        {/* Gradient fill beneath curve */}
         <path d={areaD} fill={`url(#gradient-sender-${id})`} />
 
-        {/* Curve Line */}
         <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Data points */}
         {points.map((pt, idx) => (
           <circle
             key={idx}
@@ -129,7 +122,6 @@ const SparklineAreaChart: React.FC<{ data: number[]; color: string; id: string }
   );
 };
 
-// Helper badge component for dynamic Week-over-Week growth rendering
 const GrowthBadge: React.FC<{
   growthPct: number;
   subtext: string;
@@ -162,7 +154,7 @@ const GrowthBadge: React.FC<{
   );
 };
 
-export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
+export const SenderKPIStats: React.FC<SenderKPIStripProps> = React.memo(({
   metrics,
   totalManifests: propTotalManifests,
   manifestStatusCounts: propManifestStatusCounts,
@@ -172,18 +164,15 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
   const lockedCount = metrics?.manifestStatusCounts?.LOCKED ?? propManifestStatusCounts?.LOCKED ?? 0;
   const sentCount = metrics?.manifestStatusCounts?.SENT ?? propManifestStatusCounts?.SENT ?? 0;
 
-  // Percentage calculations
   const draftPct = totalManifests > 0 ? `${((draftCount / totalManifests) * 100).toFixed(0)}%` : "0%";
   const lockedPct = totalManifests > 0 ? `${((lockedCount / totalManifests) * 100).toFixed(0)}%` : "0%";
   const sentPct = totalManifests > 0 ? `${((sentCount / totalManifests) * 100).toFixed(0)}%` : "0%";
 
-  // 4-week timeline trend data (from metrics or fallbacks)
   const totalTrend = metrics?.totalTrend || [Math.ceil(totalManifests * 0.2), Math.ceil(totalManifests * 0.5), Math.ceil(totalManifests * 0.8), totalManifests];
   const draftTrend = metrics?.draftTrend || [Math.ceil(draftCount * 0.3), Math.ceil(draftCount * 0.6), Math.ceil(draftCount * 0.8), draftCount];
   const lockedTrend = metrics?.lockedTrend || [Math.ceil(lockedCount * 0.2), Math.ceil(lockedCount * 0.5), Math.ceil(lockedCount * 0.8), lockedCount];
   const sentTrend = metrics?.sentTrend || [Math.ceil(sentCount * 0.2), Math.ceil(sentCount * 0.6), Math.ceil(sentCount * 0.8), sentCount];
 
-  // Growth percentages (WoW)
   const totalGrowth = metrics?.totalGrowthPct ?? 0;
   const draftGrowth = metrics?.draftGrowthPct ?? 0;
   const lockedGrowth = metrics?.lockedGrowthPct ?? 0;
@@ -191,11 +180,10 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-1 select-none font-sans">
-      {/* CARD 1: TOTAL MANIFEST */}
       <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Total Manifest</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah seluruh manifest pengiriman</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah seluruh manifest yang dibuat</p>
         </div>
 
         <div className="flex items-end justify-between gap-2 mt-1">
@@ -216,11 +204,10 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
         </div>
       </div>
 
-      {/* CARD 2: MANIFEST DRAF */}
       <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Draf</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Manifest dalam penyusunan draf</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah Manifest yang dalam penyusunan</p>
         </div>
 
         <div className="flex items-end justify-between gap-2 mt-1">
@@ -241,11 +228,10 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
         </div>
       </div>
 
-      {/* CARD 3: MANIFEST TERKUNCI */}
       <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Terkunci</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Manifest selesai dan dikunci</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah Manifest yang sudah dikunci</p>
         </div>
 
         <div className="flex items-end justify-between gap-2 mt-1">
@@ -270,7 +256,7 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
       <div className="bg-white rounded-md p-4 border border-slate-100/90 shadow-2xs flex flex-col justify-between">
         <div className="flex flex-col min-w-0 mb-3 font-sans">
           <h3 className="text-sm font-bold text-slate-800 leading-tight">Dikirim</h3>
-          <p className="text-[11px] font-normal text-slate-500 truncate">Manifest telah dikirim (ber-resi)</p>
+          <p className="text-[11px] font-normal text-slate-500 truncate">Jumlah Manifest yang sudah dikirim</p>
         </div>
 
         <div className="flex items-end justify-between gap-2 mt-1">
@@ -294,4 +280,3 @@ export const SenderKPIStrip: React.FC<SenderKPIStripProps> = React.memo(({
   );
 });
 
-SenderKPIStrip.displayName = "SenderKPIStrip";

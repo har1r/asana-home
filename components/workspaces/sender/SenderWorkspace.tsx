@@ -10,6 +10,8 @@ import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
 import { ActionStatusModal } from "@/components/workspaces/shared/ActionStatusModal";
 import { useDashboard } from "@/context/DashboardContext";
 import {
+  getSenderKPIStats,
+
   getEligibleBundles,
   getManifests,
   getManifestDetails,
@@ -24,8 +26,9 @@ import {
 } from "@/app/actions/sender";
 
 // Sub-Domain Components & Hooks
-import { SenderKPIStrip } from "./statistic-sender/SenderKPIStrip";
-import { useSenderStatistics } from "./statistic-sender/useSenderStatistics";
+import { SenderKPIStats } from "./sender-KPI-stats/SenderKPIStats";
+import { useSenderKPIStats } from "./sender-KPI-stats/useSenderKPIStats";
+
 import { useSenderManifest } from "./manifest-sender/useSenderManifest";
 import { SenderManifestToolbar } from "./manifest-sender/SenderManifestToolbar";
 import { SenderManifestGrid } from "./manifest-sender/SenderManifestGrid";
@@ -86,6 +89,8 @@ export default function PengirimWorkspace() {
   const [eligibleBundlesList, setEligibleBundlesList] = useState<any[]>([]);
   const [selectedManifest, setSelectedManifest] = useState<any | null>(null);
 
+  const [senderKPIStats, setSenderKpiStats] = useState<any>(null);
+
   // Drawers & Modals
   const [versionDrawerBundle, setVersionDrawerBundle] = useState<any | null>(null);
   const [selectedPermohonanForDetails, setSelectedPermohonanForDetails] = useState<any | null>(null);
@@ -134,6 +139,11 @@ export default function PengirimWorkspace() {
       try {
         const manifestsRes = await getManifests({ status: "ALL", limit: 48 });
         const bundlesRes = await getEligibleBundles();
+        const senderKpiStatsRes = await getSenderKPIStats();
+
+        if (senderKpiStatsRes.success) {
+          setSenderKpiStats(senderKpiStatsRes.stats);
+        }
 
         if (manifestsRes.success && "list" in manifestsRes) {
           const fetchedManifests = manifestsRes.list || [];
@@ -220,8 +230,8 @@ export default function PengirimWorkspace() {
     handleCreateManifest
   );
 
-  // Sub-Domain Hook: Sender Statistics (WoW & 4-Week Sparklines)
-  const senderMetrics = useSenderStatistics({ manifestsList });
+
+  const senderKPIStatsMetrics = useSenderKPIStats({ senderKPIStats });
 
   // Add Bundle to Manifest
   const handleAddBundle = async (bundleId: string) => {
@@ -542,7 +552,7 @@ export default function PengirimWorkspace() {
           }}
         />
 
-        <SenderKPIStrip metrics={senderMetrics} />
+        <SenderKPIStats metrics={senderKPIStatsMetrics} />
 
         <div className="w-full border-b border-slate-200/80 my-0.5" />
 

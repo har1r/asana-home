@@ -730,47 +730,127 @@ export async function getPendingKoreksiForPermohonan(permohonanId: string) {
 }
 
 /**
- * Action: Retrieve statistics for the Pengirim dashboard.
+ * Action: Retrieve statistics for the sender dashboard.
  */
-export async function getPengirimStats() {
+export async function getSenderKPIStats() {
   const session = await getServerSession(authOptions);
-  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
+
+  if (!session || !["SENDER", "SUPERVISOR"].includes((session.user as any).role)) {
     throw new Error("Unauthorized");
   }
 
   try {
-    const totalManifest = await prisma.manifest.count();
-    const draftManifest = await prisma.manifest.count({ where: { status: "DRAFT" } });
-    const lockedManifest = await prisma.manifest.count({ where: { status: "LOCKED" } });
-    const sentManifest = await prisma.manifest.count({ where: { status: "SENT" } });
+    const now = new Date();
+    const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const d14 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const d21 = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
+    const d28 = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
 
-    const list = await prisma.bundle.findMany({
-      where: {
-        status: "LOCKED",
-        currentManifestId: null
-      },
-      include: {
-        applications: true
-      }
-    });
+    const [
+      rawManifestStats, eligibleBundles,
+    ] = await Promise.all([
+      prisma.manifest.aggregateRaw({
+        pipeline: [
+          {
+            $facet: {
+              statusCounts: [
+                {
+                  $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                  }
+                }
+              ],
+              trends: [
+                {
+                  $group: {
+                    _id: null,
+                    totalAll: { $sum: 1 },
 
-    const eligibleBundles = list.filter((b: any) => {
-      const apps = b.applications || b.permohonan || [];
-      return checkAllApplicationsArchived(apps) || apps.length > 0;
-    }).length;
+                    thisWeekTotal: { $sum: { $cond: [{ $gte: ["$createdAt", { $date: d7.toISOString() }] }, 1, 0] } },
+                    lastWeekTotal: { $sum: { $cond: [{ $and: [{ $gte: ["$createdAt", { $date: d14.toISOString() }] }, { $lt: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    w3Total: { $sum: { $cond: [{ $and: [{ $gte: ["$createdAt", { $date: d21.toISOString() }] }, { $lt: ["$createdAt", { $date: d14.toISOString() }] }] }, 1, 0] } },
+                    w4Total: { $sum: { $cond: [{ $and: [{ $gte: ["$createdAt", { $date: d28.toISOString() }] }, { $lt: ["$createdAt", { $date: d21.toISOString() }] }] }, 1, 0] } },
+
+                    thisWeekDraft: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "DRAFT"] }, { $gte: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    lastWeekDraft: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "DRAFT"] }, { $gte: ["$createdAt", { $date: d14.toISOString() }] }, { $lt: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    w3Draft: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "DRAFT"] }, { $gte: ["$createdAt", { $date: d21.toISOString() }] }, { $lt: ["$createdAt", { $date: d14.toISOString() }] }] }, 1, 0] } },
+                    w4Draft: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "DRAFT"] }, { $gte: ["$createdAt", { $date: d28.toISOString() }] }, { $lt: ["$createdAt", { $date: d21.toISOString() }] }] }, 1, 0] } },
+
+                    thisWeekLocked: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "LOCKED"] }, { $gte: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    lastWeekLocked: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "LOCKED"] }, { $gte: ["$createdAt", { $date: d14.toISOString() }] }, { $lt: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    w3Locked: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "LOCKED"] }, { $gte: ["$createdAt", { $date: d21.toISOString() }] }, { $lt: ["$createdAt", { $date: d14.toISOString() }] }] }, 1, 0] } },
+                    w4Locked: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "LOCKED"] }, { $gte: ["$createdAt", { $date: d28.toISOString() }] }, { $lt: ["$createdAt", { $date: d21.toISOString() }] }] }, 1, 0] } },
+
+                    thisWeekSent: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "SENT"] }, { $gte: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    lastWeekSent: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "SENT"] }, { $gte: ["$createdAt", { $date: d14.toISOString() }] }, { $lt: ["$createdAt", { $date: d7.toISOString() }] }] }, 1, 0] } },
+                    w3Sent: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "SENT"] }, { $gte: ["$createdAt", { $date: d21.toISOString() }] }, { $lt: ["$createdAt", { $date: d14.toISOString() }] }] }, 1, 0] } },
+                    w4Sent: { $sum: { $cond: [{ $and: [{ $eq: ["$status", "SENT"] }, { $gte: ["$createdAt", { $date: d28.toISOString() }] }, { $lt: ["$createdAt", { $date: d21.toISOString() }] }] }, 1, 0] } },
+
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }),
+
+      prisma.bundle.count({
+        where: {
+          status: "LOCKED",
+          OR: [
+            { currentManifestId: null },
+            { currentManifestId: { isSet: false } }
+          ],
+          applications: {
+            some: {},
+            none: {
+              status: { not: "ARCHIVED" }
+            }
+          }
+        }
+      })
+    ]);
+
+    const manifestData = (rawManifestStats as any)[0];
+    const statusArray = manifestData?.statusCounts || [];
+    const trendData = manifestData?.trends[0] || {
+      totalAll: 0, thisWeekTotal: 0, lastWeekTotal: 0, w3Total: 0, w4Total: 0,
+      thisWeekDraft: 0, lastWeekDraft: 0, w3Draft: 0, w4Draft: 0,
+      thisWeekLocked: 0, lastWeekLocked: 0, w3Locked: 0, w4Locked: 0,
+      thisWeekSent: 0, lastWeekSent: 0, w3Sent: 0, w4Sent: 0
+    };
+
+    const getCountByStatus = (status: string) => statusArray.find((s: any) => s._id === status)?.count || 0;
+
+    const calcWoWGrowth = (thisWeek: number, lastWeek: number) => {
+      if (lastWeek === 0) return thisWeek > 0 ? 100 : 0;
+      return Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
+    };
 
     return {
       success: true,
       stats: {
-        totalManifest,
-        draftManifest,
-        lockedManifest,
-        sentManifest,
-        eligibleBundles
+        totalAllManifest: trendData.totalAll,
+        totalDraftManifest: getCountByStatus("DRAFT"),
+        totalLockedManifest: getCountByStatus("LOCKED"),
+        totalSentManifest: getCountByStatus("SENT"),
+        eligibleBundles,
+
+        totalTrend: [trendData.w4Total, trendData.w3Total, trendData.lastWeekTotal, trendData.thisWeekTotal],
+        draftTrend: [trendData.w4Draft, trendData.w3Draft, trendData.lastWeekDraft, trendData.thisWeekDraft],
+        lockedTrend: [trendData.w4Locked, trendData.w3Locked, trendData.lastWeekLocked, trendData.thisWeekLocked],
+        sentTrend: [trendData.w4Sent, trendData.w3Sent, trendData.lastWeekSent, trendData.thisWeekSent],
+
+        totalGrowthPct: calcWoWGrowth(trendData.thisWeekTotal, trendData.lastWeekTotal),
+        draftGrowthPct: calcWoWGrowth(trendData.thisWeekDraft, trendData.lastWeekDraft),
+        lockedGrowthPct: calcWoWGrowth(trendData.thisWeekLocked, trendData.lastWeekLocked),
+        sentGrowthPct: calcWoWGrowth(trendData.thisWeekSent, trendData.lastWeekSent),
       }
     };
   } catch (error: any) {
-    console.error("[ACTION-GET-PENGIRIM-STATS-ERR]", error);
+    console.error("[ACTION-GET-SENDER-KPI-STATS-ERR]", error);
+
     return { success: false, stats: null, error: "Gagal mengambil statistik pengirim." };
   }
 }

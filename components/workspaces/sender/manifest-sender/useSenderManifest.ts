@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
-import { ManifestStatusCounts } from "../statistic-sender/useSenderStatistics";
+import { ManifestStatusCounts } from "../sender-KPI-stats/useSenderKPIStats";
 
 export function useSenderManifest(
   manifestsList: any[],
