@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { getSenderKPIStats } from "@/app/actions/sender";
 
 export interface ManifestStatusCounts {
   ALL?: number;
@@ -27,25 +28,24 @@ export interface SenderKPIStatsMetrics {
 }
 
 export interface UseSenderKPIStatsProps {
-  senderKPIStats?: {
-    totalAllManifest?: number;
-    totalDraftManifest?: number;
-    totalLockedManifest?: number;
-    totalSentManifest?: number;
-    eligibleBundles?: number;
-    totalTrend?: number[];
-    draftTrend?: number[];
-    lockedTrend?: number[];
-    sentTrend?: number[];
-    totalGrowthPct?: number;
-    draftGrowthPct?: number;
-    lockedGrowthPct?: number;
-    sentGrowthPct?: number;
-  } | null;
+  senderKPIStats?: any;
 }
 
-export function useSenderKPIStats({ senderKPIStats }: UseSenderKPIStatsProps): SenderKPIStatsMetrics {
-  return useMemo(() => {
+export function useSenderKPIStats(initialProps?: UseSenderKPIStatsProps) {
+  const [senderKPIStats, setSenderKPIStats] = useState<any>(initialProps?.senderKPIStats || null);
+
+  const fetchKPIStats = useCallback(async () => {
+    try {
+      const res = await getSenderKPIStats();
+      if (res.success) {
+        setSenderKPIStats(res.stats);
+      }
+    } catch (err) {
+      console.error("Gagal mengambil data KPI stats pengirim:", err);
+    }
+  }, []);
+
+  const metrics = useMemo<SenderKPIStatsMetrics>(() => {
     return {
       totalManifests: senderKPIStats?.totalAllManifest ?? 0,
       manifestStatusCounts: {
@@ -66,4 +66,11 @@ export function useSenderKPIStats({ senderKPIStats }: UseSenderKPIStatsProps): S
       sentGrowthPct: senderKPIStats?.sentGrowthPct ?? 0,
     };
   }, [senderKPIStats]);
+
+  return {
+    senderKPIStats,
+    setSenderKPIStats,
+    fetchKPIStats,
+    metrics,
+  };
 }

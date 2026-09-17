@@ -3,8 +3,8 @@
 import React from "react";
 import { SkeletonBox, SkeletonText } from "@/components/skeletons/SkeletonBase";
 
-/** Skeleton dasar Header & KPI Strip untuk PengirimWorkspace */
-export function PengirimBaseHeaderSkeleton() {
+/** Base Header & KPI Strip Skeleton for SenderWorkspace */
+export function SenderBaseHeaderSkeleton() {
   return (
     <>
       {/* TIER 1: TOP BANNER & SWITCHER TABS */}
@@ -41,11 +41,11 @@ export function PengirimBaseHeaderSkeleton() {
   );
 }
 
-/** Skeleton presisi untuk Tab 1: Daftar Manifest */
-export function PengirimManifestSkeleton() {
+/** Precision Skeleton for Tab 1: Manage Manifest */
+export function SenderManifestSkeleton() {
   return (
     <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
-      <PengirimBaseHeaderSkeleton />
+      <SenderBaseHeaderSkeleton />
 
       {/* CARD CONTENT: MANIFEST GRID VIEW */}
       <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[300px]">
@@ -88,11 +88,11 @@ export function PengirimManifestSkeleton() {
   );
 }
 
-/** Skeleton presisi untuk Tab 2: Kelola Pengiriman */
-export function PengirimKelolaSkeleton() {
+/** Precision Skeleton for Tab 2: Manage Shipping */
+export function SenderShippingSkeleton() {
   return (
     <div className="w-full font-sans select-none flex flex-col gap-4 animate-fadeIn">
-      <PengirimBaseHeaderSkeleton />
+      <SenderBaseHeaderSkeleton />
 
       <div className="bg-white border border-slate-200/90 rounded-md p-5 sm:p-6 shadow-3xs flex flex-col gap-6 min-h-[500px]">
         <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -123,3 +123,4 @@ export function PengirimKelolaSkeleton() {
     </div>
   );
 }
+

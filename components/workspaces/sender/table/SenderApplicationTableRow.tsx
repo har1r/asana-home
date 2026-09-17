@@ -32,22 +32,22 @@ const isOverdue = (tanggalPenyelesaian?: string | null, status?: string) => {
   return target < now;
 };
 
-interface SenderPermohonanTableRowProps {
-  permohonan: any;
+interface SenderApplicationTableRowProps {
+  application: any;
   itemNumber: number;
   selectedBundleInManifest: any;
   selectedManifestStatus: string;
   copiedText: string | null;
   loading: boolean;
   onCopy: (e: React.MouseEvent, text?: string | null) => void;
-  onToggleFavorite: (permohonanId: string) => void;
-  onSelectDetails: (permohonan: any) => void;
-  onOpenCorrectionModal: (permohonan: any) => void;
+  onToggleFavorite: (applicationId: string) => void;
+  onSelectDetails: (application: any) => void;
+  onOpenCorrectionModal: (application: any) => void;
   onReportBundleLost: (bundleId: string, nomorBundle: string) => void;
 }
 
-export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> = React.memo(({
-  permohonan: p,
+export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps> = React.memo(({
+  application: p,
   itemNumber,
   selectedBundleInManifest,
   selectedManifestStatus,
@@ -284,4 +284,4 @@ export const SenderPermohonanTableRow: React.FC<SenderPermohonanTableRowProps> =
   );
 });
 
-SenderPermohonanTableRow.displayName = "SenderPermohonanTableRow";
+SenderApplicationTableRow.displayName = "SenderApplicationTableRow";

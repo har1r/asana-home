@@ -3,15 +3,15 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
-import { SenderPermohonanTableRow } from "./SenderPermohonanTableRow";
+import { SenderApplicationTableRow } from "./SenderApplicationTableRow";
 
-interface SenderPermohonanTableProps {
+interface SenderApplicationsTableProps {
   selectedBundleInManifest: any | null;
   selectedManifestStatus: string;
   bundleDisplayMode: "berkas" | "pemohon";
   searchQuery: string;
-  filteredBundlePermohonanList: any[];
-  paginatedBundlePermohonanList: any[];
+  filteredApplicationList: any[];
+  paginatedApplicationList: any[];
   copiedText: string | null;
   loading: boolean;
   activePage: number;
@@ -20,19 +20,19 @@ interface SenderPermohonanTableProps {
   onPageChange: (page: number) => void;
   onItemsPerPageChange: (size: number) => void;
   onCopy: (e: React.MouseEvent, text?: string | null) => void;
-  onToggleFavorite: (permohonanId: string) => void;
-  onSelectDetails: (permohonan: any) => void;
-  onOpenCorrectionModal: (permohonan: any) => void;
+  onToggleFavorite: (applicationId: string) => void;
+  onSelectDetails: (application: any) => void;
+  onOpenCorrectionModal: (application: any) => void;
   onReportBundleLost: (bundleId: string, nomorBundle: string) => void;
 }
 
-export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React.memo(({
+export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = React.memo(({
   selectedBundleInManifest,
   selectedManifestStatus,
   bundleDisplayMode,
   searchQuery,
-  filteredBundlePermohonanList,
-  paginatedBundlePermohonanList,
+  filteredApplicationList,
+  paginatedApplicationList,
   copiedText,
   loading,
   activePage,
@@ -113,7 +113,7 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white text-[12px] font-normal text-slate-600 font-sans">
-            {paginatedBundlePermohonanList.length === 0 ? (
+            {paginatedApplicationList.length === 0 ? (
               <tr>
                 <td colSpan={12} className="py-10 text-center select-none font-sans">
                   <EmptyDataAnimation
@@ -127,12 +127,12 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
                 </td>
               </tr>
             ) : (
-              paginatedBundlePermohonanList.map((p: any, index: number) => {
+              paginatedApplicationList.map((p: any, index: number) => {
                 const itemNumber = (activePage - 1) * itemsPerPage + index + 1;
                 return (
-                  <SenderPermohonanTableRow
-                    key={p.uniqueRowKey || p.id || `permohonan-row-${index}`}
-                    permohonan={p}
+                  <SenderApplicationTableRow
+                    key={p.uniqueRowKey || p.id || `application-row-${index}`}
+                    application={p}
                     itemNumber={itemNumber}
                     selectedBundleInManifest={selectedBundleInManifest}
                     selectedManifestStatus={selectedManifestStatus}
@@ -155,11 +155,11 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
       <div className="border-t border-slate-200/90 bg-slate-50/80 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] font-normal text-slate-600 select-none font-sans">
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start font-sans">
           <span className="text-slate-500 font-sans">
-            {filteredBundlePermohonanList.length > 0
+            {filteredApplicationList.length > 0
               ? `Menampilkan ${(activePage - 1) * itemsPerPage + 1} - ${Math.min(
                   activePage * itemsPerPage,
-                  filteredBundlePermohonanList.length
-                )} dari ${filteredBundlePermohonanList.length} ${
+                  filteredApplicationList.length
+                )} dari ${filteredApplicationList.length} ${
                   bundleDisplayMode === "pemohon" ? "entri pemohon" : "permohonan"
                 }`
               : "Tidak ada data"}
@@ -223,4 +223,4 @@ export const SenderPermohonanTable: React.FC<SenderPermohonanTableProps> = React
   );
 });
 
-SenderPermohonanTable.displayName = "SenderPermohonanTable";
+SenderApplicationsTable.displayName = "SenderApplicationsTable";

@@ -113,6 +113,7 @@ export async function getManifests(params?: {
   status?: string;
   page?: number;
   limit?: number;
+  search?: string;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -120,7 +121,7 @@ export async function getManifests(params?: {
     throw new Error("Unauthorized");
   }
 
-  const { status = "DRAFT", page = 1, limit = 48 } = params || {};
+  const { status = "DRAFT", page = 1, limit = 48, search = "" } = params || {};
 
   try {
     const whereClause: any = {};
@@ -128,9 +129,25 @@ export async function getManifests(params?: {
       whereClause.status = status as any;
     }
 
+    if (search.trim() !== "") {
+      const matchedUsers = await prisma.user.findMany({
+        where: {
+          name: { contains: search, mode: "insensitive" }
+        },
+        select: {
+          id: true,
+        }
+      });
+      const matchedUserIds = matchedUsers.map((user) => user.id);
+      whereClause.OR = [
+        { manifestNumber: { contains: search, mode: "insensitive" } },
+        { createdById: { in: matchedUserIds } },
+      ]
+    }
+
     const skip = (page - 1) * limit;
 
-    const [list, total] = await Promise.all([
+    const [rawList, total] = await Promise.all([
       prisma.manifest.findMany({
         where: whereClause,
         take: limit,
@@ -139,7 +156,6 @@ export async function getManifests(params?: {
           id: true,
           manifestNumber: true,
           status: true,
-          signedReceiptUrl: true,
           createdBy: {
             select: {
               name: true,
@@ -160,6 +176,36 @@ export async function getManifests(params?: {
       }),
       prisma.manifest.count({ where: whereClause })
     ]);
+
+    const list = rawList.map((m) => {
+      const bundles = m.bundles || [];
+      const bundleCount = bundles.length;
+
+      const applicantCount = bundles.reduce((bAcc, b) => {
+        const apps = b.applications || [];
+        return bAcc + apps.reduce((pAcc, p) => {
+          if (!p.targetData) {
+            return pAcc + 1;
+          }
+
+          if (Array.isArray(p.targetData)) {
+            const count = p.targetData.length === 0 ? 1 : p.targetData.length;
+            return pAcc + count;
+          }
+          return pAcc + 1;
+        }, 0)
+      }, 0);
+
+      return {
+        id: m.id,
+        manifestNumber: m.manifestNumber,
+        status: m.status,
+        createdBy: m.createdBy,
+        createdAt: m.createdAt,
+        bundleCount,
+        applicantCount,
+      };
+    });
 
     return {
       success: true,
@@ -234,17 +280,43 @@ export async function getEligibleBundles() {
  */
 export async function getManifestDetails(manifestId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
+
+  if (!session || !["SENDER", "SUPERVISOR"].includes((session.user as any).role)) {
     throw new Error("Unauthorized");
   }
 
   try {
     const manifest = await prisma.manifest.findUnique({
       where: { id: manifestId },
-      include: {
+      select: {
+        id: true,
+        manifestNumber: true,
+        status: true,
+        createdAt: true,
+        createdBy: {
+          select: { name: true }
+        },
         bundles: {
-          include: {
-            applications: true
+          select: {
+            id: true,
+            bundleNumber: true,
+            applicationType: true,
+            status: true,
+            createdAt: true,
+            applications: {
+              select: {
+                id: true,
+                applicationType: true,
+                applicationNumber: true,
+                serviceNumberDate: true,
+                completionDate: true,
+                status: true,
+                isFavorite: true,
+                createdAt: true,
+                previousData: true,
+                targetData: true,
+              }
+            }
           }
         }
       }
@@ -257,6 +329,7 @@ export async function getManifestDetails(manifestId: string) {
     return { success: true, manifest };
   } catch (error: any) {
     console.error("[ACTION-GET-MANIFEST-DETAILS-ERR]", error);
+
     return { success: false, error: "Gagal mengambil detail manifest." };
   }
 }

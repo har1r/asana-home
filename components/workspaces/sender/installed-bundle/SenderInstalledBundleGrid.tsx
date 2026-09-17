@@ -1,96 +1,104 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
-import { SenderManifestCard } from "./SenderManifestCard";
+import { SenderInstalledBundleCard } from "./SenderInstalledBundleCard";
 
-interface SenderManifestGridProps {
+export interface SenderInstalledBundleGridProps {
   loading: boolean;
-  manifestsList: any[];
-  filteredManifests: any[];
-  paginatedManifests: any[];
-  selectedManifest: any | null;
-  searchQuery: string;
-  currentPage: number;
-  totalPages: number;
-  itemsPerPage: number;
-  onPageChange: (page: number) => void;
-  onItemsPerPageChange: (itemsPerPage: number) => void;
-  onSelectManifest: (manifest: any) => void;
-  onLockManifest?: (manifestId: string) => void;
-  onRevisiManifest?: (manifestId: string) => void;
-  onManageManifest?: (manifest: any) => void;
+  installedBundles: any[];
+  selectedBundleInManifest: any | null;
+  manifestStatus: string;
+  searchQuery?: string;
+  onSelectBundle: (bundle: any) => void;
+  onRemoveBundle?: (bundleId: string) => void;
+  onOpenVersionDrawer: (bundle: any) => void;
 }
 
-export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(({
+export const SenderInstalledBundleGrid: React.FC<SenderInstalledBundleGridProps> = React.memo(({
   loading,
-  manifestsList,
-  filteredManifests,
-  paginatedManifests,
-  selectedManifest,
-  searchQuery,
-  currentPage,
-  totalPages,
-  itemsPerPage,
-  onPageChange,
-  onItemsPerPageChange,
-  onSelectManifest,
-  onLockManifest,
-  onRevisiManifest,
-  onManageManifest,
+  installedBundles = [],
+  selectedBundleInManifest,
+  manifestStatus = "DRAFT",
+  searchQuery = "",
+  onSelectBundle,
+  onRemoveBundle,
+  onOpenVersionDrawer,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
+  const filteredBundles = useMemo(() => {
+    if (!searchQuery || !searchQuery.trim()) return installedBundles;
+    const q = searchQuery.toLowerCase().trim();
+    return installedBundles.filter((b) => {
+      const bNo = (b.bundleNumber || b.nomorBundle || "").toLowerCase();
+      return bNo.includes(q);
+    });
+  }, [installedBundles, searchQuery]);
+
+  const totalPages = Math.ceil(filteredBundles.length / itemsPerPage) || 1;
+
+  const paginatedBundles = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredBundles.slice(start, start + itemsPerPage);
+  }, [filteredBundles, currentPage, itemsPerPage]);
+
   return (
     <div className="flex flex-col gap-4 min-h-[300px] font-sans">
-      {/* Manifest Cards Grid 4 Kolom */}
+      {/* Installed Bundle Cards Grid 4 Kolom */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 font-sans">
-        {loading && manifestsList.length === 0 ? (
+        {loading && installedBundles.length === 0 ? (
           <div className="col-span-full py-20 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />
             <span className="text-[13px] font-normal text-slate-500 font-sans">Memuat data...</span>
           </div>
-        ) : filteredManifests.length === 0 ? (
+        ) : filteredBundles.length === 0 ? (
           <div className="col-span-full py-10 text-center select-none font-sans">
             <EmptyDataAnimation
-              title={searchQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Manifest"}
+              title={searchQuery ? "Hasil Pencarian Tidak Ditemukan" : "Belum Ada Bundle Terpasang"}
               description={
                 searchQuery
-                  ? "Tidak ada manifest yang sesuai dengan kata kunci pencarian."
-                  : "Daftar manifest pengiriman kosong saat ini."
+                  ? "Tidak ada nomor bundle terpasang yang sesuai dengan kata kunci pencarian."
+                  : "Belum ada map bundle yang terpasang dalam manifest ini."
               }
             />
           </div>
         ) : (
-          paginatedManifests.map((m) => (
-            <SenderManifestCard
-              key={m.id}
-              manifest={m}
-              isSelected={selectedManifest?.id === m.id}
+          paginatedBundles.map((b) => (
+            <SenderInstalledBundleCard
+              key={b.id}
+              bundle={b}
+              isSelected={selectedBundleInManifest?.id === b.id}
+              manifestStatus={manifestStatus}
               searchQuery={searchQuery}
-              loading={loading && selectedManifest?.id === m.id}
-              onSelect={onSelectManifest}
-              onLockManifest={onLockManifest}
-              onRevisiManifest={onRevisiManifest}
-              onManageManifest={onManageManifest}
+              loading={loading}
+              onSelectBundle={onSelectBundle}
+              onRemoveBundle={onRemoveBundle}
+              onOpenVersionDrawer={onOpenVersionDrawer}
             />
           ))
         )}
       </div>
 
       {/* Table / Grid Footer Pagination */}
-      {filteredManifests.length > 0 && (
+      {filteredBundles.length > 0 && (
         <div className="px-4 py-3.5 border-t border-slate-200/80 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 mt-auto font-sans rounded-b-md">
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-semibold text-slate-500 font-sans">
-              Menampilkan {((currentPage - 1) * itemsPerPage) + 1}–
-              {Math.min(currentPage * itemsPerPage, filteredManifests.length)} dari{" "}
-              {filteredManifests.length} Manifest
+              {((currentPage - 1) * itemsPerPage) + 1}–
+              {Math.min(currentPage * itemsPerPage, filteredBundles.length)} dari{" "}
+              {filteredBundles.length} Bundle Terpasang
             </span>
             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 shadow-3xs">
               {[12, 24, 48].map((n) => (
                 <button
                   key={n}
-                  onClick={() => onItemsPerPageChange(n)}
+                  onClick={() => {
+                    setItemsPerPage(n);
+                    setCurrentPage(1);
+                  }}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                     itemsPerPage === n
                       ? "bg-[#00a389] text-white shadow-3xs"
@@ -107,7 +115,7 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
           {totalPages > 1 && (
             <div className="flex items-center gap-1">
               <button
-                onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
                 className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs"
               >
@@ -125,7 +133,7 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
                   typeof item === "number" ? (
                     <button
                       key={idx}
-                      onClick={() => onPageChange(item)}
+                      onClick={() => setCurrentPage(item)}
                       className={`w-7 h-7 rounded-md text-xs font-bold transition-all cursor-pointer ${
                         currentPage === item
                           ? "bg-[#00a389] text-white shadow-3xs scale-105"
@@ -142,7 +150,7 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
                 )}
 
               <button
-                onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
                 className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-all cursor-pointer shadow-3xs"
               >
@@ -156,4 +164,4 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
   );
 });
 
-SenderManifestGrid.displayName = "SenderManifestGrid";
+SenderInstalledBundleGrid.displayName = "SenderInstalledBundleGrid";
