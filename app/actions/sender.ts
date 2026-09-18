@@ -156,6 +156,7 @@ export async function getManifests(params?: {
           id: true,
           manifestNumber: true,
           status: true,
+          signedReceiptUrl: true,
           createdBy: {
             select: {
               name: true,
@@ -200,6 +201,8 @@ export async function getManifests(params?: {
         id: m.id,
         manifestNumber: m.manifestNumber,
         status: m.status,
+        signedReceiptUrl: m.signedReceiptUrl,
+        buktiTandaTerima: m.signedReceiptUrl || null,
         createdBy: m.createdBy,
         createdAt: m.createdAt,
         bundleCount,
@@ -292,6 +295,7 @@ export async function getManifestDetails(manifestId: string) {
         id: true,
         manifestNumber: true,
         status: true,
+        signedReceiptUrl: true,
         createdAt: true,
         createdBy: {
           select: { name: true }
@@ -326,7 +330,13 @@ export async function getManifestDetails(manifestId: string) {
       return { success: false, error: "Manifest tidak ditemukan." };
     }
 
-    return { success: true, manifest };
+    return {
+      success: true,
+      manifest: {
+        ...manifest,
+        buktiTandaTerima: manifest.signedReceiptUrl || null
+      }
+    };
   } catch (error: any) {
     console.error("[ACTION-GET-MANIFEST-DETAILS-ERR]", error);
 
@@ -542,7 +552,7 @@ export async function revisiManifest(manifestId: string) {
 }
 
 /**
- * Action: Complete shipment by uploading receipt proof (LOCKED -> SENT).
+ * Action: Upload receipt proof without automatically marking manifest SENT.
  */
 export async function uploadBuktiTandaTerima(manifestId: string, formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -606,6 +616,51 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
 
     return await prisma.$transaction(async (tx) => {
       const manifest = await tx.manifest.findUnique({
+        where: { id: manifestId }
+      });
+
+      if (!manifest) {
+        throw new Error("Manifest tidak ditemukan.");
+      }
+
+      const updated = await tx.manifest.update({
+        where: { id: manifestId },
+        data: {
+          signedReceiptUrl: buktiTandaTerima
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "MANIFEST",
+          entityId: manifestId,
+          action: "UPLOAD_DOCUMENT",
+          actorId: session.user.id,
+          metadata: { signedReceiptUrl: buktiTandaTerima }
+        }
+      });
+
+      revalidatePath("/");
+      return { success: true, manifest: updated, buktiTandaTerima };
+    });
+  } catch (error: any) {
+    console.error("[ACTION-UPLOAD-RECEIPT-ERR]", error);
+    return { success: false, error: error.message || "Gagal mengunggah bukti tanda terima." };
+  }
+}
+
+/**
+ * Action: Mark manifest status SENT and applications status DELIVERED upon explicit submit.
+ */
+export async function kirimManifest(manifestId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const manifest = await tx.manifest.findUnique({
         where: { id: manifestId },
         include: {
           bundles: {
@@ -621,14 +676,13 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
       }
 
       if (manifest.status !== "LOCKED") {
-        throw new Error("Hanya manifest berstatus LOCKED yang dapat diselesaikan pengirimannya.");
+        throw new Error("Hanya manifest berstatus LOCKED yang dapat dikirim.");
       }
 
       const updated = await tx.manifest.update({
         where: { id: manifestId },
         data: {
-          status: "SENT",
-          signedReceiptUrl: buktiTandaTerima
+          status: "SENT"
         }
       });
 
@@ -650,7 +704,7 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
       }
 
       const notifTitle = "Manifest Baru Terkirim";
-      const notifPesan = `Manifest ${manifest.manifestNumber} telah dikirim dan bukti tanda terima telah diunggah. Siap dipantau.`;
+      const notifPesan = `Manifest ${manifest.manifestNumber} telah resmi dikirim. Siap dipantau.`;
       await notifyAllUsersOfRole(UserRole.MONITOR, notifTitle, notifPesan, { manifestId });
 
       await tx.auditLog.create({
@@ -659,15 +713,16 @@ export async function uploadBuktiTandaTerima(manifestId: string, formData: FormD
           entityId: manifestId,
           action: "SEND_MANIFEST",
           actorId: session.user.id,
-          metadata: { signedReceiptUrl: buktiTandaTerima, totalApplicationsDelivered: applicationIds.length }
+          metadata: { signedReceiptUrl: manifest.signedReceiptUrl, totalApplicationsDelivered: applicationIds.length }
         }
       });
 
+      revalidatePath("/");
       return { success: true, manifest: updated };
     });
   } catch (error: any) {
-    console.error("[ACTION-UPLOAD-RECEIPT-ERR]", error);
-    return { success: false, error: error.message || "Gagal menyelesaikan manifest pengiriman." };
+    console.error("[ACTION-KIRIM-MANIFEST-ERR]", error);
+    return { success: false, error: error.message || "Gagal mengirim manifest." };
   }
 }
 

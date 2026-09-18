@@ -1,19 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
-import { SenderApplicationTableRow } from "./SenderApplicationTableRow";
+import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
+import { SenderApplicationTableRowHistory } from "./SenderApplicationTableRowHistory";
 
-interface SenderApplicationsTableProps {
-  selectedBundleInManifest: any | null;
-  selectedManifestStatus: string;
+interface SenderApplicationsTableHistoryProps {
+  selectedBundle: any | null;
   bundleDisplayMode: "berkas" | "pemohon";
   searchQuery: string;
   filteredApplicationList: any[];
   paginatedApplicationList: any[];
   copiedText: string | null;
-  loading: boolean;
+  loading?: boolean;
   activePage: number;
   itemsPerPage: number;
   totalPages: number;
@@ -21,20 +21,16 @@ interface SenderApplicationsTableProps {
   onItemsPerPageChange: (size: number) => void;
   onCopy: (e: React.MouseEvent, text?: string | null) => void;
   onToggleFavorite: (applicationId: string) => void;
-  onSelectDetails: (application: any) => void;
-  onOpenCorrectionModal: (application: any) => void;
-  onReportBundleLost: (bundleId: string, nomorBundle: string) => void;
 }
 
-export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = React.memo(({
-  selectedBundleInManifest,
-  selectedManifestStatus,
+export const SenderApplicationsTableHistory: React.FC<SenderApplicationsTableHistoryProps> = React.memo(({
+  selectedBundle,
   bundleDisplayMode,
   searchQuery,
   filteredApplicationList,
   paginatedApplicationList,
   copiedText,
-  loading,
+  loading = false,
   activePage,
   itemsPerPage,
   totalPages,
@@ -42,11 +38,10 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
   onItemsPerPageChange,
   onCopy,
   onToggleFavorite,
-  onSelectDetails,
-  onOpenCorrectionModal,
-  onReportBundleLost,
 }) => {
-  if (!selectedBundleInManifest) {
+  const [selectedRequestForDetails, setSelectedRequestForDetails] = useState<any | null>(null);
+
+  if (!selectedBundle) {
     return (
       <div className="py-6 px-4 flex flex-col items-center justify-center text-center select-none font-sans animate-fadeIn">
         <EmptyDataAnimation
@@ -130,19 +125,15 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
               paginatedApplicationList.map((p: any, index: number) => {
                 const itemNumber = (activePage - 1) * itemsPerPage + index + 1;
                 return (
-                  <SenderApplicationTableRow
+                  <SenderApplicationTableRowHistory
                     key={p.uniqueRowKey || p.id || `application-row-${index}`}
                     application={p}
                     itemNumber={itemNumber}
-                    selectedBundleInManifest={selectedBundleInManifest}
-                    selectedManifestStatus={selectedManifestStatus}
+                    selectedBundle={selectedBundle}
                     copiedText={copiedText}
-                    loading={loading}
                     onCopy={onCopy}
                     onToggleFavorite={onToggleFavorite}
-                    onSelectDetails={onSelectDetails}
-                    onOpenCorrectionModal={onOpenCorrectionModal}
-                    onReportBundleLost={onReportBundleLost}
+                    onSelectDetails={(app) => setSelectedRequestForDetails(app)}
                   />
                 );
               })
@@ -157,10 +148,11 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
           <span className="text-slate-500 font-sans">
             {filteredApplicationList.length > 0
               ? `Menampilkan ${(activePage - 1) * itemsPerPage + 1} - ${Math.min(
-                activePage * itemsPerPage,
-                filteredApplicationList.length
-              )} dari ${filteredApplicationList.length} ${bundleDisplayMode === "pemohon" ? "entri pemohon" : "permohonan"
-              }`
+                  activePage * itemsPerPage,
+                  filteredApplicationList.length
+                )} dari ${filteredApplicationList.length} ${
+                  bundleDisplayMode === "pemohon" ? "entri pemohon" : "permohonan"
+                }`
               : "Tidak ada data"}
           </span>
           {/* Items per page switcher */}
@@ -170,10 +162,11 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
                 key={size}
                 type="button"
                 onClick={() => onItemsPerPageChange(size)}
-                className={`px-2 py-0.5 rounded-md text-[11px] font-normal transition-all cursor-pointer font-sans ${itemsPerPage === size
-                  ? "bg-[#00a389] text-white font-semibold shadow-3xs"
-                  : "text-slate-500 hover:text-slate-700"
-                  }`}
+                className={`px-2 py-0.5 rounded-md text-[11px] font-normal transition-all cursor-pointer font-sans ${
+                  itemsPerPage === size
+                    ? "bg-[#00a389] text-white font-semibold shadow-3xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
               >
                 {size}
               </button>
@@ -197,10 +190,11 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
                 type="button"
                 key={page}
                 onClick={() => onPageChange(page)}
-                className={`w-7 h-7 flex items-center justify-center rounded-md text-[12px] font-normal transition-all cursor-pointer font-sans ${activePage === page
-                  ? "bg-[#00a389] text-white font-semibold shadow-3xs scale-105"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs"
-                  }`}
+                className={`w-7 h-7 flex items-center justify-center rounded-md text-[12px] font-normal transition-all cursor-pointer font-sans ${
+                  activePage === page
+                    ? "bg-[#00a389] text-white font-semibold shadow-3xs scale-105"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs"
+                }`}
               >
                 {page}
               </button>
@@ -216,8 +210,15 @@ export const SenderApplicationsTable: React.FC<SenderApplicationsTableProps> = R
           </div>
         )}
       </div>
+
+      {/* Details Modal Overlay */}
+      <DetailsModal
+        isOpen={!!selectedRequestForDetails}
+        selectedRequest={selectedRequestForDetails}
+        onClose={() => setSelectedRequestForDetails(null)}
+      />
     </div>
   );
 });
 
-SenderApplicationsTable.displayName = "SenderApplicationsTable";
+SenderApplicationsTableHistory.displayName = "SenderApplicationsTableHistory";

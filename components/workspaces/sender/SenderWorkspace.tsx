@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { AlertTriangle, X, CheckCircle2, Boxes, RefreshCw } from "lucide-react";
 import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
 import { BundleSnapshotDrawer } from "@/components/workspaces/shared/BundleSnapshotDrawer";
@@ -38,7 +37,7 @@ import { SenderCorrectionModal } from "./modals/SenderCorrectionModal";
 import { LockManifestConfirmationModal } from "./modals/LockManifestConfirmationModal";
 import { SenderManifestSkeleton, SenderShippingSkeleton } from "@/components/skeletons/SenderSkeleton";
 
-type WorkspaceTab = "manage-manifest" | "manage-shipping" | "lock-manifest";
+type WorkspaceTab = "create-manifest" | "manage-shipping" | "lock-manifest";
 
 export default function SenderWorkspace() {
   const { showConfirm } = useDashboard();
@@ -49,7 +48,7 @@ export default function SenderWorkspace() {
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => {
     if (viewParam === "manage-shipping") return "manage-shipping";
     if (viewParam === "lock-manifest") return "lock-manifest";
-    return "manage-manifest";
+    return "create-manifest";
   });
 
   useEffect(() => {
@@ -58,7 +57,7 @@ export default function SenderWorkspace() {
     } else if (viewParam === "lock-manifest") {
       setWorkspaceTab("lock-manifest");
     } else {
-      setWorkspaceTab("manage-manifest");
+      setWorkspaceTab("create-manifest");
     }
   }, [viewParam]);
 
@@ -160,7 +159,7 @@ export default function SenderWorkspace() {
 
   return (
     <div id="pengirim-board-root" className="w-full font-sans select-none animate-fadeIn flex flex-col gap-4">
-      {listLoading && workspaceTab === "manage-manifest" && <SenderManifestSkeleton />}
+      {listLoading && workspaceTab === "create-manifest" && <SenderManifestSkeleton />}
       {listLoading && (workspaceTab === "manage-shipping" || workspaceTab === "lock-manifest") && <SenderShippingSkeleton />}
 
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
@@ -169,14 +168,16 @@ export default function SenderWorkspace() {
             <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md flex items-center gap-1 shadow-2xs font-sans select-none">
               <button
                 type="button"
-                onClick={() => handleSwitchTab("manage-manifest")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "manage-manifest"
+                onClick={() => handleSwitchTab("create-manifest")}
+                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "create-manifest"
                   ? "bg-white text-black shadow-2xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
               >
-                <span>Kelola Manifest</span>
+                <span>Buat Manifest</span>
               </button>
+
+              <div className="w-px h-4 bg-slate-300/80" />
 
               <button
                 type="button"
@@ -189,6 +190,8 @@ export default function SenderWorkspace() {
                 <span>Kelola Pengiriman</span>
               </button>
 
+              <div className="w-px h-4 bg-slate-300/80" />
+
               <button
                 type="button"
                 onClick={() => handleSwitchTab("lock-manifest")}
@@ -197,7 +200,7 @@ export default function SenderWorkspace() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
               >
-                <span>Detail & Kunci</span>
+                <span>Kunci Manifest</span>
               </button>
             </div>
 
@@ -222,7 +225,7 @@ export default function SenderWorkspace() {
           actionLabel="Lihat Draf Manifest"
           onAction={() => {
             manifestState.setFilterManifestStatus("DRAFT");
-            handleSwitchTab("manage-manifest");
+            handleSwitchTab("create-manifest");
           }}
         />
 
@@ -250,7 +253,7 @@ export default function SenderWorkspace() {
           </div>
         )}
 
-        {workspaceTab === "manage-manifest" && (
+        {workspaceTab === "create-manifest" && (
           <div className="flex flex-col gap-4 min-h-[300px] font-sans">
             <div className="flex items-center justify-between">
               <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Manifest</span>
@@ -308,6 +311,9 @@ export default function SenderWorkspace() {
         {/* TAB 2: KELOLA PENGIRIMAN (Full-width Modular Bundle Grid & Toolbar) */}
         {workspaceTab === "manage-shipping" && (
           <div className="flex flex-col gap-4 w-full min-h-[500px] font-sans">
+            <div className="flex items-center justify-between">
+              <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Bundel Draf</span>
+            </div>
 
             <SenderBundleToolbar
               searchQuery={bundleState.searchQuery}
@@ -354,6 +360,9 @@ export default function SenderWorkspace() {
             <div className="flex flex-col gap-6 w-full font-sans">
               {/* 1. Map Bundle Terpasang dalam Manifest Ini (Modular Grid Card & Toolbar) */}
               <div className="flex flex-col gap-4 w-full font-sans">
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Bundel Terpasang</span>
+                </div>
                 <SenderInstalledBundleToolbar
                   searchQuery={queueState.searchQuery}
                   onSearchChange={queueState.setSearchQuery}
@@ -392,7 +401,10 @@ export default function SenderWorkspace() {
               </div>
 
               {/* 2. Toolbar & Tabel Detail Berkas Aplikasi Permohonan */}
-              <div className="bg-[#f8fafc] rounded-md border border-slate-200/90 p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
+              <div className="p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Permohonan Bundle Terpasang</span>
+                </div>
                 <SenderApplicationsToolbar
                   selectedBundleInManifest={queueState.selectedBundleInManifest}
                   selectedManifest={manifestState.selectedManifest}
