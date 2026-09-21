@@ -16,6 +16,7 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   DRAFT: "Draf",
   VOID: "Dibatalkan",
   SENT: "Dikirim",
+  DELIVERED: "Terkirim",
 };
 
 const getStatusLabel = (status: string) => {

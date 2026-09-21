@@ -124,3 +124,6 @@ export function SenderShippingSkeleton() {
   );
 }
 
+export { SenderHistorySkeleton } from "./SenderHistorySkeleton";
+
+

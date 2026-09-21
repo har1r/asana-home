@@ -79,7 +79,7 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
 
       {/* Table / Grid Footer Pagination */}
       {filteredManifests.length > 0 && (
-        <div className="px-4 py-3.5 border-t border-slate-200/80 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 mt-auto font-sans rounded-b-md">
+        <div className="px-4 py-3.5 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 select-none shrink-0 mt-auto font-sans rounded-b-md">
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-semibold text-slate-500 font-sans">
               {((currentPage - 1) * itemsPerPage) + 1}–
@@ -92,8 +92,8 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
                   key={n}
                   onClick={() => onItemsPerPageChange(n)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${itemsPerPage === n
-                      ? "bg-[#00a389] text-white shadow-3xs"
-                      : "text-slate-500 hover:text-slate-700"
+                    ? "bg-[#00a389] text-white shadow-3xs"
+                    : "text-slate-500 hover:text-slate-700"
                     }`}
                 >
                   {n}
@@ -126,8 +126,8 @@ export const SenderManifestGrid: React.FC<SenderManifestGridProps> = React.memo(
                       key={idx}
                       onClick={() => onPageChange(item)}
                       className={`w-7 h-7 rounded-md text-xs font-bold transition-all cursor-pointer ${currentPage === item
-                          ? "bg-[#00a389] text-white shadow-3xs scale-105"
-                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs"
+                        ? "bg-[#00a389] text-white shadow-3xs scale-105"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-3xs"
                         }`}
                     >
                       {item}

@@ -12,7 +12,12 @@ import { useSenderTableHistory } from "./table/useSenderTableHistory";
 import { SenderApplicationsToolbarHistory } from "./table/SenderApplicationsToolbarHistory";
 import { SenderApplicationsTableHistory } from "./table/SenderApplicationsTableHistory";
 import { ActionStatusModal } from "@/components/workspaces/shared/ActionStatusModal";
-import { revisiManifest, uploadBuktiTandaTerima, kirimManifest } from "@/app/actions/sender";
+import { SenderHistorySkeleton } from "@/components/skeletons/SenderHistorySkeleton";
+import { SenderCancelShippingModal } from "./modals/SenderCancelShippingModal";
+import { revisiManifest, uploadBuktiTandaTerima, kirimManifest, cancelManifestDelivery } from "@/app/actions/sender";
+
+
+
 
 export default function SenderHistory() {
   // 1. Hook for History Manifest State & Data
@@ -124,6 +129,34 @@ export default function SenderHistory() {
     }
   };
 
+  // Cancel Shipping Modal State
+  const [isCancelShippingModalOpen, setIsCancelShippingModalOpen] = useState(false);
+  const [cancelShippingReason, setCancelShippingReason] = useState("");
+
+  // Cancel Manifest Delivery Handler
+  const handleCancelManifestDelivery = async (manifestId: string, reason: string) => {
+    setIsCancelShippingModalOpen(false);
+    showActionStatus("loading", "Membatalkan Pengiriman", "Sedang memperbarui status manifest ke Terkunci...");
+    try {
+      const res: any = await cancelManifestDelivery(manifestId, reason);
+      if (res.success) {
+        showActionStatus(
+          "success",
+          "Pengiriman Dibatalkan",
+          "Manifest berhasil dikembalikan ke status TERKUNCI (LOCKED) dan permohonan dapat dikelola kembali."
+        );
+        if (currentManifest) {
+          manifestHistoryState.handleSelectManifest(currentManifest);
+        }
+        await manifestHistoryState.refreshData();
+      } else {
+        showActionStatus("error", "Gagal Membatalkan Pengiriman", res.error || "Gagal membatalkan pengiriman manifest.");
+      }
+    } catch (err: any) {
+      showActionStatus("error", "Gagal Membatalkan Pengiriman", err.message || "Sistem error saat membatalkan pengiriman.");
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && currentManifest) {
@@ -137,66 +170,15 @@ export default function SenderHistory() {
 
     return (
       <div className="w-full flex flex-col gap-5 font-sans select-none animate-fadeIn">
-        {/* Top Back Navigation Bar & Action Buttons */}
+        {/* Top Back Navigation Bar */}
         <div className="flex items-center justify-between gap-3 font-sans">
           <button
-            onClick={() => manifestHistoryState.setSelectedManifest(null)}
+            onClick={() => manifestHistoryState.handleSelectManifest(null)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-3xs cursor-pointer active:scale-95"
           >
             <ChevronLeft className="w-4 h-4 text-slate-500" />
             <span>Kembali</span>
           </button>
-        </div>
-
-        <div className="flex flex-col gap-2 mb-6 font-sans">
-          <span className="text-base font-bold text-slate-700 tracking-tight">
-            Unggah Resi Tanda Terima
-          </span>
-          <div className="flex items-center justify-start gap-3 w-full">
-            {/* Input File Tersembunyi */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*,application/pdf"
-              className="hidden"
-            />
-
-            {/* KOTAK 1: Lihat Hasil Upload */}
-            <a
-              href={buktiUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`w-[200px] h-9 px-3 bg-emerald-50 border border-emerald-200 text-[#008f78] rounded-lg font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap hover:bg-emerald-100/70 ${!buktiUrl ? "opacity-40 pointer-events-none border-gray-200 bg-gray-50 text-gray-400" : ""
-                }`}
-            >
-              <FileCheck className={`w-4 h-4 ${buktiUrl ? "text-[#00a389]" : "text-gray-400"}`} />
-              <span>Lihat Bukti</span>
-            </a>
-
-            {/* KOTAK 2: Field Input Mengunggah Bukti Resi (Memanjang & Minimalis) */}
-            <div
-              onClick={() => !isUploading && fileInputRef.current?.click()}
-              className={`flex-[0.8] h-9 px-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg flex items-center gap-2 cursor-pointer transition-all ${isUploading ? "opacity-50 cursor-not-allowed bg-gray-100 select-none" : ""
-                }`}
-            >
-              <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="text-xs text-gray-500 truncate select-none">
-                {isUploading ? "Sedang mengunggah file..." : "Pilih atau unggah bukti resi..."}
-              </span>
-            </div>
-
-            {/* KOTAK 3: Klik Terkirim */}
-            <button
-              type="button"
-              onClick={() => handleKirimManifest(currentManifest.id)}
-              disabled={manifestStatus === "SENT"}
-              className="h-9 px-4 bg-[#00a389] hover:bg-[#008f78] disabled:bg-gray-100 text-white disabled:text-gray-400 border border-transparent disabled:border-gray-200 rounded-lg font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
-            >
-              <span>{manifestStatus === "SENT" ? "Terkirim" : "Kirim Manifest"}</span>
-            </button>
-          </div>
-
         </div>
 
         {/* Section 1: Toolbar & Grid Bundle Terpasang */}
@@ -264,6 +246,88 @@ export default function SenderHistory() {
           />
         </div>
 
+        {/* Section 3: Unggah Resi Tanda Terima & Action Button (Di Paling Bawah Halaman) */}
+        <div className="flex flex-col gap-2.5 mt-4 font-sans shadow-3xs">
+          <span className="text-base font-bold text-slate-700 tracking-tight">
+            Unggah Resi Tanda Terima
+          </span>
+          <div className="flex items-center justify-start gap-3 w-full">
+            {/* Input File Tersembunyi */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*,application/pdf"
+              className="hidden"
+            />
+
+            {/* KOTAK 1: Lihat Hasil Upload */}
+            <a
+              href={buktiUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`w-[200px] h-9 px-3 bg-emerald-50 border border-emerald-200 text-[#008f78] rounded-lg font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap hover:bg-emerald-100/70 ${!buktiUrl ? "opacity-40 pointer-events-none border-gray-200 bg-gray-50 text-gray-400" : ""
+                }`}
+            >
+              <FileCheck className={`w-4 h-4 ${buktiUrl ? "text-[#00a389]" : "text-gray-400"}`} />
+              <span>Lihat Bukti</span>
+            </a>
+
+            {/* KOTAK 2: Field Input Mengunggah Bukti Resi (Memanjang & Minimalis) */}
+            <div
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              className={`flex-[0.8] h-9 px-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg flex items-center gap-2 cursor-pointer transition-all ${isUploading ? "opacity-50 cursor-not-allowed bg-gray-100 select-none" : ""
+                }`}
+            >
+              <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-500 truncate select-none">
+                {isUploading ? "Sedang mengunggah file..." : "Pilih atau unggah bukti resi..."}
+              </span>
+            </div>
+
+            {/* KOTAK 3: Kirim Manifest / Batal Terkirim Button */}
+            {manifestStatus === "SENT" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelShippingReason("");
+                  setIsCancelShippingModalOpen(true);
+                }}
+                className="h-9 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 hover:border-rose-300 rounded-lg font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap cursor-pointer active:scale-95"
+                title="Batalkan status pengiriman manifest ini kembali ke Terkunci"
+              >
+                <span>Batal Terkirim</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleKirimManifest(currentManifest.id)}
+                disabled={!buktiUrl}
+                className="h-9 px-4 bg-[#00a389] hover:bg-[#008f78] disabled:bg-slate-100 text-white disabled:text-slate-400 border border-transparent disabled:border-slate-200/90 rounded-lg font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+                title={!buktiUrl ? "Unggah bukti resi terlebih dahulu untuk mengirim manifest" : "Kirim manifest secara resmi"}
+              >
+                <span>Kirim Manifest</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Catatan Pembatalan Pengiriman */}
+        <SenderCancelShippingModal
+          isOpen={isCancelShippingModalOpen}
+          manifestNumber={rawManifestNumber}
+          reason={cancelShippingReason}
+          loading={false}
+          onReasonChange={setCancelShippingReason}
+          onClose={() => setIsCancelShippingModalOpen(false)}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (currentManifest && cancelShippingReason.trim()) {
+              handleCancelManifestDelivery(currentManifest.id, cancelShippingReason);
+            }
+          }}
+        />
+
         {/* Action Status Modal Overlay */}
         <ActionStatusModal
           isOpen={statusModalOpen}
@@ -280,7 +344,12 @@ export default function SenderHistory() {
   }
 
   // VIEW MODE B: MAIN GRID DAFTAR MANIFEST RIWAYAT
+  if (manifestHistoryState.loading && manifestHistoryState.manifestsList.length === 0) {
+    return <SenderHistorySkeleton />;
+  }
+
   return (
+
     <div className="w-full flex flex-col gap-4 animate-fadeIn font-sans select-none">
       <div className="flex items-center justify-between">
         <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Riwayat Manifest</span>

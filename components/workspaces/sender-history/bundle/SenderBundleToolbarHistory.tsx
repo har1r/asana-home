@@ -176,19 +176,27 @@ export const SenderBundleToolbarHistory: React.FC<SenderBundleToolbarHistoryProp
             </a>
           )}
 
-          {/* Tombol Buka Manifest (Tampil jika status LOCKED dan handler onUnlockManifest ada) */}
-          {manifestStatus === "LOCKED" && onUnlockManifest && (
+          {/* Tombol Buka Manifest (Disabled jika status SENT, Aktif jika status LOCKED) */}
+          {(manifestStatus === "LOCKED" || manifestStatus === "SENT") && (
             <button
               type="button"
-              onClick={onUnlockManifest}
-              disabled={loading}
-              className="px-3.5 h-10 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50 capitalize"
-              title="Buka kembali kunci manifest ke DRAFT untuk direvisi"
+              onClick={manifestStatus === "LOCKED" ? onUnlockManifest : undefined}
+              disabled={loading || manifestStatus === "SENT"}
+              className={`px-3.5 h-10 font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 shrink-0 capitalize ${
+                manifestStatus === "SENT"
+                  ? "bg-slate-100 border border-slate-200/90 text-slate-400 cursor-not-allowed select-none"
+                  : "bg-amber-600 hover:bg-amber-700 active:scale-95 text-white cursor-pointer disabled:opacity-50"
+              }`}
+              title={
+                manifestStatus === "SENT"
+                  ? "Manifest berstatus Terkirim (SENT). Lakukan 'Batal Terkirim' terlebih dahulu untuk membuka kunci manifest."
+                  : "Buka kembali kunci manifest ke DRAFT untuk direvisi"
+              }
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 text-white animate-spin" />
               ) : (
-                <Unlock className="w-4 h-4 text-white stroke-[2]" />
+                <Unlock className={`w-4 h-4 stroke-[2] ${manifestStatus === "SENT" ? "text-slate-400" : "text-white"}`} />
               )}
               <span>Buka Manifest</span>
             </button>

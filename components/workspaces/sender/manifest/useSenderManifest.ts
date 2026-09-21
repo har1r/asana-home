@@ -97,17 +97,30 @@ export function useSenderManifest(
     executeServerSearch();
   }, [activeSearchQuery]);
 
-  // Handle Select Manifest with background detail fetch
   const handleSelectManifest = useCallback((manifest: any) => {
     setSelectedManifest(manifest);
 
-    getManifestDetails(manifest.id)
-      .then((res) => {
-        if (res.success && "manifest" in res && res.manifest) {
-          setSelectedManifest(res.manifest);
-        }
-      })
-      .catch(() => {});
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (manifest) {
+        const rawNo = manifest.manifestNumber || manifest.id;
+        url.searchParams.set("manifest", rawNo);
+      } else {
+        url.searchParams.delete("manifest");
+        url.searchParams.delete("bundle");
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
+
+    if (manifest?.id) {
+      getManifestDetails(manifest.id)
+        .then((res) => {
+          if (res.success && "manifest" in res && res.manifest) {
+            setSelectedManifest(res.manifest);
+          }
+        })
+        .catch(() => { });
+    }
   }, []);
 
   // Handle Create Manifest

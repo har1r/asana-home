@@ -98,13 +98,32 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
   const [activeTab, setActiveTabState] = useState<string>(initialTab || 'beranda');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Setter yang juga mengupdate URL
+  // Setter tab yang sinkron secara instan (0ms) tanpa race condition + Performance console.log
   const setActiveTab = useCallback((tab: string) => {
+    const startTime = performance.now();
+    const prevTab = activeTab;
     setActiveTabState(tab);
-    const params = new URLSearchParams(window.location.search);
-    params.set('tab', tab);
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [router]);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      // Always clean sub-context query params when switching main tabs from sidebar/nav
+      params.delete('view');
+      params.delete('manifest');
+      params.delete('bundle');
+      window.history.replaceState(null, '', `?${params.toString()}`);
+    }
+    const duration = (performance.now() - startTime).toFixed(2);
+    console.log(
+      `%c[TAB NAV] %cSwitching: %c${prevTab}%c ➔ %c${tab}%c | URL & State update: %c${duration}ms`,
+      'color: #00a389; font-weight: bold;',
+      'color: #64748b;',
+      'color: #ef4444; font-weight: bold;',
+      'color: #64748b;',
+      'color: #10b981; font-weight: bold;',
+      'color: #64748b;',
+      'color: #f59e0b; font-weight: bold;'
+    );
+  }, [activeTab]);
 
   const handleDuplicateApplication = useCallback((appItem: any) => {
     setDuplicatedApplicationData(appItem);
@@ -136,7 +155,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const showConfirm = useCallback(({
@@ -231,14 +250,14 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
       // Prioritas: URL param → localStorage → default 'beranda'
       const urlTab = new URLSearchParams(window.location.search).get('tab');
       const localActiveTab = localStorage.getItem('architax_active_tab');
-      
+
       let resolvedTab = 'beranda';
       if (isValidTab(urlTab)) {
         resolvedTab = urlTab;
       } else if (isValidTab(localActiveTab)) {
         resolvedTab = localActiveTab;
       }
-      
+
       setActiveTabState(resolvedTab);
       // Pastikan URL selalu mencerminkan tab aktif
       if (!urlTab || !isValidTab(urlTab)) {
@@ -252,14 +271,17 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     }
   }, []);
 
-  // Sync state saat URL berubah dari luar (tombol back/forward browser)
+  // Sync state saat tombol Back/Forward browser ditekan
   useEffect(() => {
-    if (!isMounted.current) return;
-    const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && isValidTab(tabFromUrl) && tabFromUrl !== activeTab) {
-      setActiveTabState(tabFromUrl);
-    }
-  }, [searchParams]);
+    const handlePopState = () => {
+      const tabFromUrl = new URLSearchParams(window.location.search).get('tab');
+      if (tabFromUrl && isValidTab(tabFromUrl)) {
+        setActiveTabState(tabFromUrl);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Sync all persisted state to localStorage after initial hydration.
   // The custom hook skips the write until `isMounted.current` is true,
@@ -343,7 +365,7 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
       showConfirm({
         title: 'Informasi Tag Favorit',
         message: `Selected favorite "${title}" details. You can view tasks linked to this tag in the tasks list.`,
-        onConfirm: () => {},
+        onConfirm: () => { },
         confirmText: 'Mengerti',
         cancelText: 'Tutup'
       });

@@ -16,13 +16,32 @@ export function useSenderInstalledBundleHistory(initialBundles: any[] = []) {
     const list = initialBundles || [];
     setBundlesList(list);
     if (list.length > 0) {
-      setSelectedBundle((prev: any) => {
-        if (!prev) return list[0];
-        const exists = list.find((b: any) => b.id === prev.id);
-        return exists || list[0];
-      });
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const bundleParam = urlParams.get("bundle");
+        let matched = null;
+        if (bundleParam) {
+          matched = list.find(
+            (b: any) => b.bundleNumber === bundleParam || b.id === bundleParam
+          );
+        }
+        const target = matched || list[0];
+        setSelectedBundle(target);
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("view");
+        url.searchParams.set("bundle", target.bundleNumber || target.id);
+        window.history.replaceState(null, "", url.toString());
+      } else {
+        setSelectedBundle(list[0]);
+      }
     } else {
       setSelectedBundle(null);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("bundle");
+        window.history.replaceState(null, "", url.toString());
+      }
     }
   }, [bundleIdsKey]);
 
@@ -78,6 +97,18 @@ export function useSenderInstalledBundleHistory(initialBundles: any[] = []) {
 
   const handleSelectBundle = useCallback((bundle: any) => {
     setSelectedBundle(bundle);
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      if (bundle) {
+        const rawNo = bundle.bundleNumber || bundle.id;
+        url.searchParams.set("bundle", rawNo);
+      } else {
+        url.searchParams.delete("bundle");
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
   }, []);
 
   const filteredBundles = useMemo(() => {

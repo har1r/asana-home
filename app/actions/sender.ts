@@ -727,6 +727,92 @@ export async function kirimManifest(manifestId: string) {
 }
 
 /**
+ * Action: Cancel manifest delivery (revert status from SENT to LOCKED, applications to MANIFESTED).
+ */
+export async function cancelManifestDelivery(manifestId: string, reason: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !["SENDER", "SUPERVISOR", "PENGIRIM"].includes((session.user as any).role)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (!reason || !reason.trim()) {
+    return { success: false, error: "Catatan/alasan pembatalan pengiriman wajib diisi." };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const manifest = await tx.manifest.findUnique({
+        where: { id: manifestId },
+        include: {
+          bundles: {
+            include: {
+              applications: true
+            }
+          }
+        }
+      });
+
+      if (!manifest) {
+        throw new Error("Manifest tidak ditemukan.");
+      }
+
+      if (manifest.status !== "SENT") {
+        throw new Error("Hanya manifest berstatus Terkirim (SENT) yang dapat dibatalkan pengirimannya.");
+      }
+
+      const updated = await tx.manifest.update({
+        where: { id: manifestId },
+        data: {
+          status: "LOCKED"
+        }
+      });
+
+      // Update all applications inside all bundles back to MANIFESTED
+      const applicationIds: string[] = [];
+      manifest.bundles.forEach((b: any) => {
+        if (Array.isArray(b.applications)) {
+          b.applications.forEach((app: any) => {
+            if (app.id) applicationIds.push(app.id);
+          });
+        }
+      });
+
+      if (applicationIds.length > 0) {
+        await tx.application.updateMany({
+          where: { id: { in: applicationIds } },
+          data: { status: "MANIFESTED" }
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          entityType: "MANIFEST",
+          entityId: manifestId,
+          action: "UPDATE_STATUS",
+          actorId: session.user.id,
+          metadata: {
+            reason: reason.trim(),
+            totalApplicationsReverted: applicationIds.length,
+            previousStatus: "SENT",
+            newStatus: "LOCKED"
+          }
+        }
+      });
+
+      revalidatePath("/");
+      return { success: true, manifest: updated };
+    });
+  } catch (error: any) {
+    console.error("[ACTION-CANCEL-MANIFEST-DELIVERY-ERR]", error);
+    return { success: false, error: error.message || "Gagal membatalkan pengiriman manifest." };
+  }
+}
+
+/** Backward compatibility alias */
+export const batalKirimManifest = cancelManifestDelivery;
+
+
+/**
  * Action: Report bundle as lost during transit.
  */
 export async function laporkanBundleHilang(bundleId: string) {

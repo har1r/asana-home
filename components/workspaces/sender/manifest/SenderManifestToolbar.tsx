@@ -12,10 +12,6 @@ interface SenderManifestToolbarProps {
   onSearchFocus: () => void;
   onSearchBlur: () => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
-  onCreateManifest: () => void;
-  onRefresh: () => void;
-  loading: boolean;
-  isRefreshing: boolean;
   listLoading: boolean;
 }
 
@@ -28,10 +24,6 @@ export const SenderManifestToolbar: React.FC<SenderManifestToolbarProps> = React
   onSearchFocus,
   onSearchBlur,
   searchInputRef,
-  onCreateManifest,
-  onRefresh,
-  loading,
-  isRefreshing,
   listLoading,
 }) => {
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,22 +34,6 @@ export const SenderManifestToolbar: React.FC<SenderManifestToolbarProps> = React
   return (
     <div className="flex flex-col gap-3 font-sans select-none">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Right side controls: Buat Button */}
-        <div className="flex items-center justify-end gap-2 shrink-0 font-sans">
-          <button
-            onClick={onCreateManifest}
-            disabled={loading}
-            className="px-4 py-2 h-10 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
-            ) : (
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-            )}
-            <span>{loading ? "Membuat Manifest..." : "Buat Manifest"}</span>
-          </button>
-        </div>
-
         {/* Search Form with Enter & Submit Button */}
         <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-[340px] max-w-full font-sans">
@@ -105,5 +81,3 @@ export const SenderManifestToolbar: React.FC<SenderManifestToolbarProps> = React
     </div>
   );
 });
-
-SenderManifestToolbar.displayName = "SenderManifestToolbar";

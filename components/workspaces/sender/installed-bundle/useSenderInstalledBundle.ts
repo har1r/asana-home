@@ -32,18 +32,58 @@ export function useSenderInstalledBundle(selectedManifest: any | null) {
   const [correctionReason, setCorrectionReason] = useState("");
   const [queueLoading, setQueueLoading] = useState(false);
 
+  // Handle Select Installed Bundle with URL query param sync
+  const handleSelectBundle = useCallback((bundle: any) => {
+    setSelectedBundleInManifest(bundle);
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const view = url.searchParams.get("view");
+      if (view === "lock-manifest" && bundle) {
+        const rawNo = bundle.bundleNumber || bundle.id;
+        url.searchParams.set("bundle", rawNo);
+      } else {
+        url.searchParams.delete("bundle");
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, []);
+
   // Sync selectedBundleInManifest when selectedManifest changes
   useEffect(() => {
     const bundlesList = selectedManifest?.bundles || selectedManifest?.bundle || [];
     if (bundlesList.length > 0) {
-      const exists = bundlesList.find((b: any) => b.id === selectedBundleInManifest?.id);
-      if (exists) {
-        setSelectedBundleInManifest(exists);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        const view = url.searchParams.get("view");
+        const bundleParam = url.searchParams.get("bundle");
+
+        let matched = null;
+        if (view === "lock-manifest" && bundleParam) {
+          matched = bundlesList.find(
+            (b: any) => b.bundleNumber === bundleParam || b.id === bundleParam
+          );
+        }
+
+        const target = matched || bundlesList[0];
+        setSelectedBundleInManifest(target);
+
+        if (view === "lock-manifest" && target) {
+          url.searchParams.set("bundle", target.bundleNumber || target.id);
+        } else {
+          url.searchParams.delete("bundle");
+        }
+        window.history.replaceState(null, "", url.toString());
       } else {
         setSelectedBundleInManifest(bundlesList[0]);
       }
     } else {
       setSelectedBundleInManifest(null);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("bundle");
+        window.history.replaceState(null, "", url.toString());
+      }
     }
   }, [selectedManifest]);
 
@@ -283,6 +323,7 @@ export function useSenderInstalledBundle(selectedManifest: any | null) {
     queueLoading,
 
     // Installed Bundle Actions
+    handleSelectBundle,
     handleAddBundle,
     handleRemoveBundle,
     handleUploadReceipt,

@@ -146,10 +146,10 @@ export const SenderBundleCard: React.FC<SenderBundleCardProps> = React.memo(({
           <span>
             {bundle.createdAt
               ? new Date(bundle.createdAt).toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
               : "—"}
           </span>
         </div>

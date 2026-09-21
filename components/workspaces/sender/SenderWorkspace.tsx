@@ -37,6 +37,8 @@ import { SenderCorrectionModal } from "./modals/SenderCorrectionModal";
 import { LockManifestConfirmationModal } from "./modals/LockManifestConfirmationModal";
 import { SenderManifestSkeleton, SenderShippingSkeleton } from "@/components/skeletons/SenderSkeleton";
 
+import { Plus, Lock, Check, ChevronDown } from "lucide-react";
+
 type WorkspaceTab = "create-manifest" | "manage-shipping" | "lock-manifest";
 
 export default function SenderWorkspace() {
@@ -44,6 +46,7 @@ export default function SenderWorkspace() {
 
   const searchParams = useSearchParams();
   const viewParam = searchParams.get("view");
+  const manifestParam = searchParams.get("manifest");
 
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => {
     if (viewParam === "manage-shipping") return "manage-shipping";
@@ -60,18 +63,6 @@ export default function SenderWorkspace() {
       setWorkspaceTab("create-manifest");
     }
   }, [viewParam]);
-
-  const handleSwitchTab = useCallback(
-    (mode: WorkspaceTab) => {
-      setWorkspaceTab(mode);
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", mode);
-        window.history.replaceState(null, "", url.toString());
-      }
-    },
-    []
-  );
 
   const [listLoading, setListLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -96,6 +87,8 @@ export default function SenderWorkspace() {
   const [versionDrawerBundle, setVersionDrawerBundle] = useState<any | null>(null);
   const [selectedPermohonanForDetails, setSelectedPermohonanForDetails] = useState<any | null>(null);
 
+  const [isManifestDropdownOpen, setIsManifestDropdownOpen] = useState(false);
+
   const kpiState = useSenderKPIStats();
 
   const manifestState = useSenderManifest(
@@ -104,12 +97,34 @@ export default function SenderWorkspace() {
     () => fetchInitialData(true)
   );
 
+  const selectedManifestNumber = manifestState.selectedManifest?.manifestNumber || "";
+  const draftManifestsList = (manifestState.manifestsList || []).filter((m: any) => m.status === "DRAFT");
+
   const queueState = useSenderInstalledBundle(manifestState.selectedManifest);
   const bundleState = useSenderBundle(showActionStatus, () => fetchInitialData(true));
   const tableState = useSenderTable(queueState.selectedBundleInManifest);
 
+  const handleSwitchTab = useCallback(
+    (mode: WorkspaceTab) => {
+      setWorkspaceTab(mode);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("view", mode);
+        if (mode !== "lock-manifest") {
+          url.searchParams.delete("bundle");
+        } else if (queueState.selectedBundleInManifest) {
+          const rawNo = queueState.selectedBundleInManifest.bundleNumber || queueState.selectedBundleInManifest.id;
+          url.searchParams.set("bundle", rawNo);
+        }
+        window.history.replaceState(null, "", url.toString());
+      }
+    },
+    [queueState.selectedBundleInManifest]
+  );
+
   const fetchInitialData = useCallback(
     async (isManualRefresh = false) => {
+      const startTime = performance.now();
       if (isManualRefresh) setIsRefreshing(true);
       else setListLoading(true);
       setError("");
@@ -120,8 +135,17 @@ export default function SenderWorkspace() {
           const fetchedManifests = manifestsRes.list || [];
           manifestState.setManifestsList(fetchedManifests);
 
-          if (manifestState.selectedManifest) {
-            const detailRes = await getManifestDetails(manifestState.selectedManifest.id);
+          const targetManifest =
+            manifestState.selectedManifest ||
+            (manifestParam
+              ? fetchedManifests.find(
+                (m: any) =>
+                  m.manifestNumber === manifestParam ||
+                  m.id === manifestParam
+              )
+              : null);
+          if (targetManifest) {
+            const detailRes = await getManifestDetails(targetManifest.id);
             if (detailRes.success && "manifest" in detailRes && detailRes.manifest) {
               manifestState.setSelectedManifest(detailRes.manifest);
               if (queueState.selectedBundleInManifest) {
@@ -143,6 +167,13 @@ export default function SenderWorkspace() {
         }
 
         await kpiState.fetchKPIStats();
+        const duration = (performance.now() - startTime).toFixed(2);
+        console.log(
+          `%c[DATA LOAD] %cSenderWorkspace data loaded in %c${duration}ms`,
+          'color: #00a389; font-weight: bold;',
+          'color: #64748b;',
+          'color: #f59e0b; font-weight: bold;'
+        );
       } catch (err: any) {
         setError(err.message || "Kesalahan koneksi ke server.");
       } finally {
@@ -150,7 +181,7 @@ export default function SenderWorkspace() {
         setIsRefreshing(false);
       }
     },
-    [manifestState.selectedManifest, manifestState.activeSearchQuery, queueState.selectedBundleInManifest, kpiState.fetchKPIStats]
+    [manifestState.selectedManifest, manifestState.activeSearchQuery, queueState.selectedBundleInManifest, kpiState.fetchKPIStats, manifestParam]
   );
 
   useEffect(() => {
@@ -230,7 +261,7 @@ export default function SenderWorkspace() {
         />
 
         <div className="flex flex-col sm:flex-col gap-4">
-          <span className="text-base font-bold text-slate-700 tracking-tight">Statistik Manifest</span>
+          <span className="text-[18px] font-bold text-slate-900 tracking-tight">Statistik Manifest</span>
           <SenderKPIStats metrics={kpiState.metrics} />
         </div>
 
@@ -255,8 +286,18 @@ export default function SenderWorkspace() {
 
         {workspaceTab === "create-manifest" && (
           <div className="flex flex-col gap-4 min-h-[300px] font-sans">
-            <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Manifest</span>
+            <div className="flex justify-between items-center justify-between">
+              <span className="text-[18px] font-bold text-slate-900 tracking-tight">Daftar Manifest</span>
+              <div className="flex items-center justify-end gap-2 shrink-0 font-sans">
+                <button
+                  onClick={manifestState.handleCreateManifest}
+                  disabled={manifestState.loading}
+                  className="px-2 py-2 h-8 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Buat Manifest</span>
+                </button>
+              </div>
             </div>
             <SenderManifestToolbar
               searchQuery={manifestState.searchQuery}
@@ -267,10 +308,6 @@ export default function SenderWorkspace() {
               onSearchFocus={() => manifestState.setIsSearchFocused(true)}
               onSearchBlur={() => manifestState.setIsSearchFocused(false)}
               searchInputRef={manifestState.searchManifestInputRef}
-              onCreateManifest={manifestState.handleCreateManifest}
-              onRefresh={() => fetchInitialData(true)}
-              loading={manifestState.loading}
-              isRefreshing={isRefreshing}
               listLoading={manifestState.isGridLoading}
             />
 
@@ -312,7 +349,66 @@ export default function SenderWorkspace() {
         {workspaceTab === "manage-shipping" && (
           <div className="flex flex-col gap-4 w-full min-h-[500px] font-sans">
             <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Bundel Draf</span>
+              <span className="text-[18px] font-bold text-slate-900 tracking-tight">Daftar Bundel Draf</span>
+              <div className="relative shrink-0 flex items-center gap-2.5 flex-wrap font-sans">
+                {draftManifestsList.length > 0 ? (
+                  <div className="relative font-sans">
+                    <button
+                      type="button"
+                      onClick={() => setIsManifestDropdownOpen(!isManifestDropdownOpen)}
+                      className="h-8 px-2 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-1.5 text-xs font-semibold text-slate-800 transition-all cursor-pointer shadow-3xs font-sans"
+                      title="Pilih Target Manifest (Draf)"
+                    >
+                      <span className="font-mono text-slate-900 font-bold truncate max-w-[220px]">
+                        {selectedManifestNumber || "Pilih Target Manifest Draf"}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5 shrink-0" />
+                    </button>
+
+                    {isManifestDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-20"
+                          onClick={() => setIsManifestDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
+                          <div className="px-3 py-1.5 text-[11px] font-light text-slate-500 capitalize border-b border-slate-100 antialiased">
+                            Pilih Target Manifest
+                          </div>
+
+                          {draftManifestsList.map((m: any) => {
+                            const isSelected = manifestState.selectedManifest?.id === m.id;
+                            const rawNum = m.nomorManifest || m.manifestNumber || m.id || "—";
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  if (manifestState.handleSelectManifest) manifestState.handleSelectManifest(m);
+                                  setIsManifestDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${isSelected ? "bg-emerald-50 text-[#00a389] font-semibold" : "text-slate-700 hover:bg-slate-50"
+                                  }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <span className="font-mono truncate">{rawNum}</span>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-[#00a389] shrink-0 ml-2" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-8 px-2 py-2 bg-slate-100/80 border border-slate-200/80 rounded-md flex items-center gap-1.5 text-xs font-medium text-slate-500 shadow-3xs font-sans">
+                    <span className="font-mono text-slate-600 truncate max-w-[220px]">
+                      {selectedManifestNumber || "Belum Ada Manifest Draf"}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <SenderBundleToolbar
@@ -320,13 +416,7 @@ export default function SenderWorkspace() {
               onSearchChange={bundleState.setSearchQuery}
               onSearchSubmit={bundleState.handleSearchSubmit}
               onClearSearch={bundleState.handleClearSearch}
-              onRefresh={() => fetchInitialData(true)}
-              totalBundlesCount={bundleState.eligibleBundlesList.length}
               loading={manifestState.loading || queueState.queueLoading || bundleState.loading}
-              isRefreshing={isRefreshing}
-              selectedManifest={manifestState.selectedManifest}
-              manifestsList={manifestState.manifestsList}
-              onSelectManifest={manifestState.handleSelectManifest}
             />
 
             <SenderBundleGrid
@@ -358,24 +448,88 @@ export default function SenderWorkspace() {
         {workspaceTab === "lock-manifest" && (
           <div className="flex flex-col gap-6 font-sans">
             <div className="flex flex-col gap-6 w-full font-sans">
-              {/* 1. Map Bundle Terpasang dalam Manifest Ini (Modular Grid Card & Toolbar) */}
               <div className="flex flex-col gap-4 w-full font-sans">
                 <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Bundel Terpasang</span>
+                  <span className="text-[18px] font-bold text-slate-900 tracking-tight">Daftar Bundel Terpasang</span>
+                  <div className="flex gap-2">
+                    <div className="relative shrink-0 flex items-center gap-2.5 flex-wrap font-sans">
+                      {draftManifestsList.length > 0 ? (
+                        <div className="relative font-sans">
+                          <button
+                            type="button"
+                            onClick={() => setIsManifestDropdownOpen(!isManifestDropdownOpen)}
+                            className="h-8 px-2 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-1.5 text-xs font-semibold text-slate-800 transition-all cursor-pointer shadow-3xs font-sans"
+                            title="Pilih Target Manifest (Draf)"
+                          >
+                            <span className="font-mono text-slate-900 font-bold truncate max-w-[220px]">
+                              {selectedManifestNumber || "Pilih Target Manifest Draf"}
+                            </span>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5 shrink-0" />
+                          </button>
+
+                          {isManifestDropdownOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-20"
+                                onClick={() => setIsManifestDropdownOpen(false)}
+                              />
+                              <div className="absolute left-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
+                                <div className="px-3 py-1.5 text-[11px] font-light text-slate-500 capitalize border-b border-slate-100 antialiased">
+                                  Pilih Target Manifest
+                                </div>
+
+                                {draftManifestsList.map((m: any) => {
+                                  const isSelected = manifestState.selectedManifest?.id === m.id;
+                                  const rawNum = m.nomorManifest || m.manifestNumber || m.id || "—";
+                                  return (
+                                    <button
+                                      key={m.id}
+                                      type="button"
+                                      onClick={() => {
+                                        if (manifestState.handleSelectManifest) manifestState.handleSelectManifest(m);
+                                        setIsManifestDropdownOpen(false);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${isSelected ? "bg-emerald-50 text-[#00a389] font-semibold" : "text-slate-700 hover:bg-slate-50"
+                                        }`}
+                                    >
+                                      <div className="flex items-center gap-2 truncate">
+                                        <span className="font-mono truncate">{rawNum}</span>
+                                      </div>
+                                      {isSelected && <Check className="w-3.5 h-3.5 text-[#00a389] shrink-0 ml-2" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-8 px-2 py-2 bg-slate-100/80 border border-slate-200/80 rounded-md flex items-center gap-1.5 text-xs font-medium text-slate-500 shadow-3xs font-sans">
+                          <span className="font-mono text-slate-600 truncate max-w-[220px]">
+                            {selectedManifestNumber || "Belum Ada Manifest Draf"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={manifestState.handleLockManifest}
+                      disabled={manifestState.loading || manifestState.selectedManifest === 0}
+                      className="px-2 py-2 h-8 bg-[#00a389] hover:bg-[#008f78] active:scale-95 text-white font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50 capitalize"
+                      title="Kunci Manifest untuk siap dikirim"
+                    >
+                      <Lock className="w-4 h-4 text-white stroke-[2]" />
+                      <span>Kunci Manifest</span>
+                    </button>
+                  </div>
                 </div>
                 <SenderInstalledBundleToolbar
                   searchQuery={queueState.searchQuery}
                   onSearchChange={queueState.setSearchQuery}
                   onSearchSubmit={queueState.handleSearchSubmit}
                   onClearSearch={queueState.handleClearSearch}
-                  onRefresh={() => fetchInitialData(true)}
-                  installedBundlesCount={manifestState.selectedManifest ? (manifestState.selectedManifest.bundles || manifestState.selectedManifest.bundle || []).length : 0}
                   loading={manifestState.loading || queueState.queueLoading}
-                  isRefreshing={isRefreshing}
-                  selectedManifest={manifestState.selectedManifest}
-                  manifestsList={manifestState.manifestsList}
-                  onSelectManifest={manifestState.handleSelectManifest}
-                  onLockManifest={manifestState.selectedManifest ? () => manifestState.handleLockManifest(manifestState.selectedManifest) : undefined}
                 />
 
                 <SenderInstalledBundleGrid
@@ -384,7 +538,7 @@ export default function SenderWorkspace() {
                   manifestStatus={manifestState.selectedManifest?.status || "DRAFT"}
                   searchQuery={queueState.activeSearchQuery}
                   loading={manifestState.loading || queueState.queueLoading}
-                  onSelectBundle={queueState.setSelectedBundleInManifest}
+                  onSelectBundle={queueState.handleSelectBundle}
                   onOpenVersionDrawer={setVersionDrawerBundle}
                   onRemoveBundle={(id) =>
                     queueState.handleRemoveBundle(
@@ -401,9 +555,9 @@ export default function SenderWorkspace() {
               </div>
 
               {/* 2. Toolbar & Tabel Detail Berkas Aplikasi Permohonan */}
-              <div className="p-3.5 flex flex-col gap-3 shadow-3xs animate-fadeIn">
+              <div className="flex flex-col gap-3 shadow-3xs animate-fadeIn">
                 <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-slate-700 tracking-tight">Daftar Permohonan Bundle Terpasang</span>
+                  <span className="text-[18px] font-bold text-slate-900 tracking-tight">Daftar Permohonan Bundle Terpasang</span>
                 </div>
                 <SenderApplicationsToolbar
                   selectedBundleInManifest={queueState.selectedBundleInManifest}

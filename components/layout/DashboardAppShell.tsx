@@ -256,10 +256,22 @@ interface MyTasksTabProps {
 
 const MyTasksTab = React.memo(function MyTasksTab({ initialRole }: MyTasksTabProps) {
   const { data: session, status: sessionStatus } = useSession();
-  const resolvedRole = (session?.user as any)?.role || initialRole;
+  const rawRole = (session?.user as any)?.role || initialRole || '';
+  const normalizedRole = String(rawRole).toUpperCase();
 
-  if (resolvedRole && WORKSPACE_COMPONENTS[resolvedRole]) {
-    const WorkspaceComponent = WORKSPACE_COMPONENTS[resolvedRole];
+  useEffect(() => {
+    const startTime = performance.now();
+    console.log(`%c[TAB MOUNT] %cMyTasksTab mounted | Role: %c${rawRole || 'guest'}`, 'color: #3b82f6; font-weight: bold;', 'color: #64748b;', 'color: #8b5cf6; font-weight: bold;');
+    return () => {
+      const renderDuration = (performance.now() - startTime).toFixed(2);
+      console.log(`%c[TAB UNMOUNT] %cMyTasksTab unmounted | Active time: %c${renderDuration}ms`, 'color: #ef4444; font-weight: bold;', 'color: #64748b;', 'color: #f59e0b; font-weight: bold;');
+    };
+  }, [rawRole]);
+
+  const WorkspaceComponent =
+    WORKSPACE_COMPONENTS[normalizedRole] || WORKSPACE_COMPONENTS[rawRole];
+
+  if (WorkspaceComponent) {
     return <WorkspaceComponent />;
   }
 
@@ -268,13 +280,49 @@ const MyTasksTab = React.memo(function MyTasksTab({ initialRole }: MyTasksTabPro
       <div className="bg-white rounded-xl border border-gray-200/80 p-12 text-center shadow-sm select-none">
         <h3 className="text-sm font-bold text-gray-800 mb-1">Akses Ditolak</h3>
         <p className="text-xs text-gray-400 font-semibold max-w-sm mx-auto">
-          Role Anda tidak terdaftar dalam sistem operasional.
+          Role Anda ({rawRole || 'Tidak Diketahui'}) tidak terdaftar dalam sistem operasional.
         </p>
       </div>
     );
   }
 
   return <MascotLoadingSpinner />;
+});
+
+// --- 2b. HistoryTab ---
+const HISTORY_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  DATA_ENTRY: DataEntryHistory,
+  PENGINPUT: DataEntryHistory,
+  RESEARCHER: ResearcherHistory,
+  PENELITI: ResearcherHistory,
+  ARCHIVIST: ArchivistHistory,
+  PENGARSIP: ArchivistHistory,
+  SENDER: SenderHistory,
+  PENGIRIM: SenderHistory,
+};
+
+interface HistoryTabProps {
+  initialRole: string | null;
+}
+
+const HistoryTab = React.memo(function HistoryTab({ initialRole }: HistoryTabProps) {
+  const { data: session } = useSession();
+  const rawRole = (session?.user as any)?.role || initialRole || '';
+  const normalizedRole = String(rawRole).toUpperCase();
+
+  useEffect(() => {
+    const startTime = performance.now();
+    console.log(`%c[TAB MOUNT] %cHistoryTab mounted | Role: %c${rawRole || 'guest'}`, 'color: #3b82f6; font-weight: bold;', 'color: #64748b;', 'color: #8b5cf6; font-weight: bold;');
+    return () => {
+      const renderDuration = (performance.now() - startTime).toFixed(2);
+      console.log(`%c[TAB UNMOUNT] %cHistoryTab unmounted | Active time: %c${renderDuration}ms`, 'color: #ef4444; font-weight: bold;', 'color: #64748b;', 'color: #f59e0b; font-weight: bold;');
+    };
+  }, [rawRole]);
+
+  const HistoryComponent =
+    HISTORY_COMPONENTS[normalizedRole] || HISTORY_COMPONENTS[rawRole] || DataEntryHistory;
+
+  return <HistoryComponent />;
 });
 
 // --- 3. InboxTab ---
@@ -690,20 +738,14 @@ function DashboardContent({ initialRole }: { initialRole: string | null }) {
             <MyTasksTab initialRole={initialRole} />
           )}
 
-          {activeTab === 'submission-history' && (
-            <DataEntryHistory />
-          )}
-
-          {(activeTab === 'bundle-history' || activeTab === 'researcher-history') && (
-            <ResearcherHistory />
-          )}
-
-          {activeTab === 'archivist-history' && (
-            <ArchivistHistory />
-          )}
-
-          {(activeTab === 'sender-history' || activeTab === 'manifest-history') && (
-            <SenderHistory />
+          {(activeTab === 'history' ||
+            activeTab === 'submission-history' ||
+            activeTab === 'bundle-history' ||
+            activeTab === 'researcher-history' ||
+            activeTab === 'archivist-history' ||
+            activeTab === 'sender-history' ||
+            activeTab === 'manifest-history') && (
+            <HistoryTab initialRole={initialRole} />
           )}
 
           {activeTab === 'penginput' && (

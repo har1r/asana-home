@@ -205,20 +205,14 @@ export default function Sidebar() {
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'my-tasks', label: 'Tugas Saya', icon: CheckSquare },
     {
-      id: isResearcherRole
-        ? 'bundle-history'
-        : isArchivistRole
-        ? 'archivist-history'
-        : isSenderRole
-        ? 'sender-history'
-        : 'submission-history',
+      id: 'history',
       label: isResearcherRole
         ? 'Riwayat Bundle'
         : isArchivistRole
-        ? 'Riwayat Digitalisasi'
-        : isSenderRole
-        ? 'Riwayat Manifest'
-        : 'Riwayat Pengajuan',
+          ? 'Riwayat Digitalisasi'
+          : isSenderRole
+            ? 'Riwayat Manifest'
+            : 'Riwayat Pengajuan',
       icon: FileClock
     },
     { id: 'inbox', label: 'Kotak Masuk', icon: Inbox },
@@ -384,7 +378,18 @@ export default function Sidebar() {
               <nav className="flex flex-col gap-0.5">
                 {mainMenuItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeTab === item.id;
+                  const isActive =
+                    activeTab === item.id ||
+                    (item.id === 'history' &&
+                      [
+                        'history',
+                        'submission-history',
+                        'bundle-history',
+                        'researcher-history',
+                        'archivist-history',
+                        'sender-history',
+                        'manifest-history',
+                      ].includes(activeTab));
                   return (
                     <button
                       key={item.id}

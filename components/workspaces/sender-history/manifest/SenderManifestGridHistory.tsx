@@ -2,8 +2,10 @@
 
 import React from "react";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { SkeletonBox, SkeletonText, SkeletonBadge } from "@/components/skeletons/SkeletonBase";
 import { EmptyDataAnimation } from "@/components/workspaces/shared/EmptyDataAnimation";
 import { SenderManifestCardHistory } from "./SenderManifestCardHistory";
+
 
 interface SenderManifestGridHistoryProps {
   loading: boolean;
@@ -39,10 +41,34 @@ export const SenderManifestGridHistory: React.FC<SenderManifestGridHistoryProps>
       {/* Manifest Cards Grid 4 Kolom */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 font-sans">
         {loading && manifestsList.length === 0 ? (
-          <div className="col-span-full py-20 flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />
-            <span className="text-[13px] font-normal text-slate-500 font-sans">Memuat data...</span>
-          </div>
+          Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl border border-slate-200/90 bg-white shadow-3xs flex flex-col justify-between gap-4 min-h-[160px]"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <SkeletonBox width="w-28" height="h-4" rounded="rounded-sm" />
+                <SkeletonBadge width="w-16" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <SkeletonText width="w-20" height="h-3" />
+                  <SkeletonText width="w-24" height="h-3" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <SkeletonText width="w-24" height="h-3" />
+                  <SkeletonText width="w-16" height="h-3" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <SkeletonText width="w-16" height="h-3" />
+                  <SkeletonText width="w-12" height="h-3" />
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <SkeletonBox width="w-full" height="h-8" rounded="rounded-md" />
+              </div>
+            </div>
+          ))
         ) : filteredManifests.length === 0 ? (
           <div className="col-span-full py-10 text-center select-none font-sans">
             <EmptyDataAnimation

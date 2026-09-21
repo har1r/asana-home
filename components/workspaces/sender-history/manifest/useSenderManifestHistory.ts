@@ -43,18 +43,52 @@ export function useSenderManifestHistory(onSelectManifestCallback?: (manifest: a
   }, []);
 
   const fetchHistory = useCallback(async (isSilent = false) => {
+    const startTime = performance.now();
     if (!isSilent) setLoading(true);
     else setIsRefreshing(true);
     setError("");
 
     try {
       const res = await getManifests({ status: "ALL", limit: 100 });
+      const duration = (performance.now() - startTime).toFixed(2);
       if (res.success && Array.isArray(res.list)) {
-        // Filter history manifests: LOCKED or SENT
         const historyList = res.list.filter(
           (m: any) => m.status === "LOCKED" || m.status === "SENT"
         );
         setManifestsList(historyList);
+        console.log(
+          `%c[DATA LOAD] %cSender History loaded: %c${historyList.length} items %cin %c${duration}ms`,
+          'color: #00a389; font-weight: bold;',
+          'color: #64748b;',
+          'color: #10b981; font-weight: bold;',
+          'color: #64748b;',
+          'color: #f59e0b; font-weight: bold;'
+        );
+
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get("view")) {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("view");
+            window.history.replaceState(null, "", cleanUrl.toString());
+          }
+          const manifestParam = urlParams.get("manifest");
+          if (manifestParam) {
+            const matched = historyList.find(
+              (m: any) =>
+                m.manifestNumber === manifestParam ||
+                m.id === manifestParam
+            );
+            if (matched) {
+              setSelectedManifest(matched);
+              getManifestDetails(matched.id).then((detailRes) => {
+                if (detailRes.success && "manifest" in detailRes && detailRes.manifest) {
+                  setSelectedManifest(detailRes.manifest);
+                }
+              });
+            }
+          }
+        }
       } else {
         setError(res.error || "Gagal memuat riwayat manifest pengiriman.");
       }
@@ -96,13 +130,29 @@ export function useSenderManifestHistory(onSelectManifestCallback?: (manifest: a
         onSelectManifestCallback(manifest);
       }
 
-      getManifestDetails(manifest.id)
-        .then((res) => {
-          if (res.success && "manifest" in res && res.manifest) {
-            setSelectedManifest(res.manifest);
-          }
-        })
-        .catch(() => {});
+      // Update Query Param URL (?manifest=MNF-xxx)
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("view");
+        if (manifest) {
+          const rawNo = manifest.manifestNumber || manifest.id;
+          url.searchParams.set("manifest", rawNo);
+        } else {
+          url.searchParams.delete("manifest");
+          url.searchParams.delete("bundle");
+        }
+        window.history.replaceState(null, "", url.toString());
+      }
+
+      if (manifest?.id) {
+        getManifestDetails(manifest.id)
+          .then((res) => {
+            if (res.success && "manifest" in res && res.manifest) {
+              setSelectedManifest(res.manifest);
+            }
+          })
+          .catch(() => { });
+      }
     },
     [onSelectManifestCallback]
   );
