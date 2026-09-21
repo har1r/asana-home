@@ -131,11 +131,10 @@ export const SenderBundleToolbarHistory: React.FC<SenderBundleToolbarHistoryProp
                             if (onSelectManifest) onSelectManifest(m);
                             setIsManifestDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                            isSelected
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${isSelected
                               ? "bg-emerald-50 text-[#00a389] font-semibold"
                               : "text-slate-700 hover:bg-slate-50"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2 truncate">
                             <span className="font-mono truncate">{rawNum}</span>
@@ -182,11 +181,10 @@ export const SenderBundleToolbarHistory: React.FC<SenderBundleToolbarHistoryProp
               type="button"
               onClick={manifestStatus === "LOCKED" ? onUnlockManifest : undefined}
               disabled={loading || manifestStatus === "SENT"}
-              className={`px-3.5 h-10 font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 shrink-0 capitalize ${
-                manifestStatus === "SENT"
+              className={`px-3.5 h-10 font-normal text-[13px] font-sans rounded-md shadow-3xs transition-all flex items-center justify-center gap-1.5 shrink-0 capitalize ${manifestStatus === "SENT"
                   ? "bg-slate-100 border border-slate-200/90 text-slate-400 cursor-not-allowed select-none"
                   : "bg-amber-600 hover:bg-amber-700 active:scale-95 text-white cursor-pointer disabled:opacity-50"
-              }`}
+                }`}
               title={
                 manifestStatus === "SENT"
                   ? "Manifest berstatus Terkirim (SENT). Lakukan 'Batal Terkirim' terlebih dahulu untuk membuka kunci manifest."
@@ -205,7 +203,7 @@ export const SenderBundleToolbarHistory: React.FC<SenderBundleToolbarHistoryProp
       </div>
 
       {/* BARIS KEDUA: Form Search Input */}
-      <div className="flex items-center justify-end font-sans">
+      <div className="flex items-center justify-start font-sans">
         <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-[320px] max-w-full font-sans">
             <input

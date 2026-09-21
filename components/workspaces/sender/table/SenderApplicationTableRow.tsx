@@ -79,9 +79,8 @@ export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps>
   return (
     <tr
       onClick={() => onSelectDetails(p)}
-      className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans ${
-        p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : isFrozen ? "bg-amber-50/20" : ""
-      }`}
+      className={`hover:bg-slate-50 transition-colors duration-150 cursor-pointer group relative text-[12px] font-normal text-slate-600 font-sans ${p.isPecahanRow ? "border-l-3 border-l-[#00a389] bg-[#00a389]/5" : isFrozen ? "bg-amber-50/20" : ""
+        }`}
     >
       <td className="py-3 px-4 text-center text-[12px] font-normal text-slate-400 font-mono">
         {itemNumber}
@@ -100,11 +99,10 @@ export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps>
           title={p.isFavorite ? "Hapus dari Favorit" : "Tandai Favorit"}
         >
           <Star
-            className={`w-4 h-4 transition-all duration-200 ${
-              p.isFavorite
+            className={`w-4 h-4 transition-all duration-200 ${p.isFavorite
                 ? "text-amber-500 fill-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.55)]"
                 : "text-slate-300"
-            }`}
+              }`}
           />
         </button>
       </td>
@@ -134,9 +132,8 @@ export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps>
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             )}
             <span
-              className={`text-[12px] font-sans font-normal capitalize ${
-                isOverdue(rawPenyelesaianDate, p.status) ? "text-rose-600 font-normal" : "text-slate-600"
-              }`}
+              className={`text-[12px] font-sans font-normal capitalize ${isOverdue(rawPenyelesaianDate, p.status) ? "text-rose-600 font-normal" : "text-slate-600"
+                }`}
             >
               {penyelesaianDate}
             </span>
@@ -235,11 +232,10 @@ export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps>
             </span>
           ) : (
             <span
-              className={`inline-flex text-[12px] font-normal px-2.5 py-0.5 rounded-md border capitalize font-sans ${
-                p.status === "ARCHIVED"
+              className={`inline-flex text-[12px] font-normal px-2.5 py-0.5 rounded-md border capitalize font-sans ${p.status === "ARCHIVED"
                   ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                   : "bg-sky-100 text-sky-800 border-sky-200"
-              }`}
+                }`}
             >
               {getStatusLabel(p.status)}
             </span>
@@ -283,5 +279,3 @@ export const SenderApplicationTableRow: React.FC<SenderApplicationTableRowProps>
     </tr>
   );
 });
-
-SenderApplicationTableRow.displayName = "SenderApplicationTableRow";

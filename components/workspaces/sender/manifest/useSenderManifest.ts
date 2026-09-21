@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useRouter } from 'next/navigation';
 import { ManifestStatusCounts } from "../kpi/useSenderKPIStats";
 import {
   getManifests,
@@ -9,12 +10,15 @@ import {
   lockManifest,
   revisiManifest,
 } from "@/app/actions/sender";
+import { revalidatePath } from "next/cache";
 
 export function useSenderManifest(
   showActionStatus?: (status: 'loading' | 'success' | 'error', title: string, message: string) => void,
   showConfirm?: (params: { title: string; message: string; onConfirm: () => void }) => void,
   onRefreshWorkspace?: () => void
 ) {
+  const router = useRouter();
+
   const [manifestsList, setManifestsList] = useState<any[]>([]);
   const [selectedManifest, setSelectedManifest] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -184,6 +188,7 @@ export function useSenderManifest(
       if (res.success) {
         if (showActionStatus) showActionStatus("success", "Manifest Berhasil Dikunci", `Manifest ${mNo} berhasil dikunci dan siap untuk pengiriman kargo.`);
         if (onRefreshWorkspace) onRefreshWorkspace();
+        router.push('/?tab=history');
       } else {
         if (showActionStatus) showActionStatus("error", "Gagal Mengunci Manifest", res.error || "Gagal mengunci manifest.");
       }

@@ -46,7 +46,6 @@ export const SenderBundleCard: React.FC<SenderBundleCardProps> = React.memo(({
   loading = false,
   searchQuery = "",
   onAddBundle,
-  onOpenVersionDrawer,
 }) => {
   const appsList = bundle.applications || bundle.permohonan || [];
   const bTotalPecahan = appsList.reduce(
@@ -54,17 +53,10 @@ export const SenderBundleCard: React.FC<SenderBundleCardProps> = React.memo(({
     0
   );
 
-  const displayBundleNo = bundle.bundleNumber || bundle.nomorBundle || "—";
-  const displayJenis = bundle.applicationType || bundle.jenisPermohonan;
+  const displayBundleNo = bundle.bundleNumber || "—";
+  const displayJenis = bundle.applicationType || "";
 
-  const creatorName =
-    bundle.createdBy?.name ||
-    bundle.createdByUser?.name ||
-    bundle.peneliti?.name ||
-    bundle.user?.name ||
-    bundle.createdByName ||
-    (typeof bundle.createdBy === "string" ? bundle.createdBy : "") ||
-    "Peneliti";
+  const creatorName = bundle.createdBy?.name || "Peneliti";
 
   const initials = getInitials(creatorName);
 
@@ -92,7 +84,6 @@ export const SenderBundleCard: React.FC<SenderBundleCardProps> = React.memo(({
             ) : (
               <Plus className="w-3.5 h-3.5 text-white" />
             )}
-            <span>Masukkan</span>
           </button>
         )}
       </div>
@@ -135,9 +126,6 @@ export const SenderBundleCard: React.FC<SenderBundleCardProps> = React.memo(({
           <div className="w-4.5 h-4.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
             {initials}
           </div>
-          <span className="truncate text-slate-600 font-sans font-medium text-[11px]">
-            {creatorName}
-          </span>
         </div>
 
         {/* Right: Date dengan Ikon Kalender */}

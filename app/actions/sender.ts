@@ -259,6 +259,11 @@ export async function getEligibleBundles() {
         applicationType: true,
         status: true,
         createdAt: true,
+        createdBy: {
+          select: {
+            name: true,
+          }
+        },
         applications: {
           select: {
             id: true,
@@ -307,6 +312,9 @@ export async function getManifestDetails(manifestId: string) {
             applicationType: true,
             status: true,
             createdAt: true,
+            createdBy: {
+              select: { name: true }
+            },
             applications: {
               select: {
                 id: true,

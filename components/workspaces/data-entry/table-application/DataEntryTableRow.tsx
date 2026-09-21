@@ -2,66 +2,63 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Star, Copy, Check, FileText, Edit, RefreshCw, MoreVertical, History, BookCopy } from 'lucide-react';
-import { formatNop, toTitleCase } from '@/components/workspaces/shared/constants';
+import { Star, Copy, Check, FileText, Edit, RefreshCw, MoreVertical, History, BookCopy, FileSpreadsheet } from 'lucide-react';
+import { formatNop, toTitleCase, getAbbreviatedJenis, formatJenisLayananLabel } from '@/components/workspaces/shared/constants';
 
-const JENIS_ABBR_MAP: Record<string, string> = {
-  PARTIAL_MUTATION: 'MS',
-  MUTASI_SEBAGIAN: 'MS',
-  MERGER_MUTATION: 'MG',
-  MUTASI_PENGGABUNGAN: 'MG',
-  EXPIRED_UPDATE: 'MHU',
-  MUTASI_HABIS_UPDATE: 'MHU',
-  EXPIRED_REGULAR: 'MHR',
-  MUTASI_HABIS_REGULER: 'MHR',
-  CORRECTION: 'PBT',
-  PEMBETULAN: 'PBT',
-  REACTIVATION: 'AKT',
-  PENGAKTIFAN: 'AKT',
-  NEW_TAX_OBJECT: 'OPB',
-  OBJEK_PAJAK_BARU: 'OPB',
+// Helper for Jenis Permohonan Badge Styling (Singkatan Resmi, Warna Netral Clean, Center Aligned & Font Sans)
+const getJenisPermohonanBadge = (jenis?: string | null) => {
+  const abbr = getAbbreviatedJenis(jenis || "");
+  const fullName = formatJenisLayananLabel(jenis);
+  return (
+    <span
+      className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[11px] font-medium font-sans bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs whitespace-nowrap select-none text-center"
+      title={fullName}
+    >
+      {abbr}
+    </span>
+  );
 };
 
-const getAbbreviatedJenis = (jenis?: string | null) => {
-  if (!jenis) return '-';
-  return JENIS_ABBR_MAP[jenis] || jenis;
-};
+// Helper for Status Badge Styling (Tanpa Icon, Gunakan rounded-md)
+const getStatusBadge = (status: string) => {
+  const s = (status || "").toUpperCase();
+  let badgeClass = "bg-slate-100 text-slate-700 border-slate-200/80";
+  let label = status;
 
-const STATUS_LABEL_MAP: Record<string, string> = {
-  SUBMITTED: 'Diajukan',
-  REVISION: 'Revisi',
-  BUNDLED: 'Terbundel',
-  LOCKED: 'Terkunci',
-  IN_MANIFEST: 'Dimanifest',
-  ARCHIVED: 'Diarsipkan',
-  COMPLETED: 'Selesai',
-  REJECTED: 'Ditolak',
-  DRAFT: 'Draf',
-  VOID: 'Dibatalkan',
-  SENT: 'Dikirim',
-};
-
-const getStatusLabel = (status: string) => STATUS_LABEL_MAP[status] || status;
-
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case 'SUBMITTED':
-      return 'bg-amber-50 text-amber-700 border-amber-200/80';
-    case 'REVISION':
-      return 'bg-rose-50 text-rose-700 border-rose-200/80';
-    case 'BUNDLED':
-      return 'bg-blue-50 text-blue-700 border-blue-200/80';
-    case 'ARCHIVED':
-      return 'bg-indigo-50 text-indigo-700 border-indigo-200/80';
-    case 'COMPLETED':
-      return 'bg-[#e6f6f4] text-[#008f78] border-[#00a389]/30';
-    case 'REJECTED':
-      return 'bg-rose-50 text-rose-700 border-rose-200/80';
-    case 'DRAFT':
-      return 'bg-slate-100 text-slate-700 border-slate-200/80';
-    default:
-      return 'bg-slate-100 text-slate-700 border-slate-200/80';
+  if (s === "BUNDLED" || s === "TERBUNDEL") {
+    badgeClass = "bg-blue-50 text-blue-700 border-blue-200/80";
+    label = "Terbundel";
+  } else if (s === "LOCKED" || s === "TERKUNCI") {
+    badgeClass = "bg-slate-900 text-white border-slate-900";
+    label = "Terkunci";
+  } else if (s === "IN_MANIFEST" || s === "MANIFESTED") {
+    badgeClass = "bg-emerald-50 text-[#008f78] border-emerald-200/80";
+    label = "Dimanifest";
+  } else if (s === "ARCHIVED" || s === "DIARSIPKAN") {
+    badgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200/80";
+    label = "Diarsipkan";
+  } else if (s === "COMPLETED" || s === "DELIVERED" || s === "SELESAI") {
+    badgeClass = "bg-[#e6f6f4] text-[#008f78] border-[#00a389]/30";
+    label = "Selesai";
+  } else if (s === "SUBMITTED" || s === "DIAJUKAN") {
+    badgeClass = "bg-amber-50 text-amber-700 border-amber-200/80";
+    label = "Diajukan";
+  } else if (s === "REVISION" || s === "REVISI") {
+    badgeClass = "bg-rose-50 text-rose-700 border-rose-200/80";
+    label = "Revisi";
+  } else if (s === "REJECTED" || s === "DITOLAK") {
+    badgeClass = "bg-rose-50 text-rose-700 border-rose-200/80";
+    label = "Ditolak";
+  } else if (s === "DRAFT" || s === "DRAF") {
+    badgeClass = "bg-slate-100 text-slate-700 border-slate-200/80";
+    label = "Draf";
   }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-normal border shadow-3xs font-sans capitalize ${badgeClass}`}>
+      {label}
+    </span>
+  );
 };
 
 const highlightText = (text: string, search: string) => {
@@ -210,55 +207,35 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
   return (
     <tr
       onClick={() => onSelect(item)}
-      className={`hover:bg-slate-50/90 transition-colors group cursor-pointer h-11 ${item.isPecahanRow ? 'border-l-3 border-l-emerald-500 bg-emerald-50/20' : ''
+      className={`group hover:bg-slate-100/80 transition-colors cursor-pointer ${item.isPecahanRow ? 'border-l-3 border-l-emerald-500 bg-emerald-50/20' : ''
         }`}
     >
-      <td className="py-2.5 px-4 text-center font-normal text-slate-600 font-sans text-[12px]">
+      {/* No / Global Index Column */}
+      <td className="py-3 px-3 text-center w-12 min-w-[48px] font-normal text-slate-600 font-sans text-[13px]">
         {globalIndex}
       </td>
-      <td className="py-2.5 px-2 text-center">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(item.id);
-          }}
-          className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-          title={isFavorite ? "Hapus dari Favorit" : "Tambah ke Favorit"}
-        >
-          <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
-        </button>
-      </td>
-      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
-        {tglInputStr}
-      </td>
-      <td className="py-2.5 px-4 text-slate-600 text-[12px] font-normal font-sans whitespace-nowrap">
-        <div className="flex items-center gap-1.5 min-w-0" title={item.penginput?.name || sessionUserName || "Petugas Input"}>
-          <span className="truncate max-w-[140px] font-sans font-normal text-[12px]">{toTitleCase(item.penginput?.name || sessionUserName || "Petugas Input")}</span>
-        </div>
-      </td>
-      <td className="py-2.5 px-4 text-slate-600 font-sans text-[12px] font-normal whitespace-nowrap capitalize">
-        {tglNopelStr}
-      </td>
-      <td className="py-2.5 px-4 whitespace-nowrap font-sans">
-        {tglSelesaiStr ? (
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[12px] font-sans font-normal capitalize px-2 py-0.5 rounded ${isItemOverdue
-              ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-              : 'text-slate-600'
-              }`}>
-              {tglSelesaiStr}
-            </span>
-          </div>
-        ) : "-"}
-      </td>
-      <td className="py-2.5 px-4 min-w-[150px] group/cell relative font-sans">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[12px] font-normal font-sans text-slate-600 tracking-tight capitalize">
+
+      {/* No. Permohonan Column (Favorite Star + Green Spreadsheet Icon + Application Number) */}
+      <td className="py-3 px-3 min-w-[100px] group/cell relative font-sans">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(item.id);
+            }}
+            className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer shrink-0"
+            title={isFavorite ? "Hapus dari Favorit" : "Tambah ke Favorit"}
+          >
+            <Star className={`w-4 h-4 ${isFavorite ? 'text-amber-500 fill-amber-500' : ''}`} />
+          </button>
+          <span className="font-normal text-slate-700 font-mono tracking-tight text-[13px]">
             {highlightText(nomorVal, searchQuery)}
           </span>
           <button
+            type="button"
             onClick={(e) => onCopy(e, nomorVal)}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin Nomor"
           >
             {copiedText === nomorVal ? (
@@ -269,14 +246,35 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
           </button>
         </div>
       </td>
-      <td className="py-2.5 px-4 min-w-[210px] whitespace-nowrap group/cell relative font-sans">
+
+      {/* Tgl. Permohonan Column */}
+      <td className="py-3 px-3 min-w-[100px] text-slate-700 font-sans text-[13px] font-normal whitespace-nowrap capitalize">
+        {tglNopelStr}
+      </td>
+
+      {/* Tgl. Selesai Column */}
+      <td className="py-3 px-3 min-w-[120px] w-[12%] whitespace-nowrap font-sans text-[13px]">
+        {tglSelesaiStr ? (
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[13px] font-sans font-normal capitalize px-2 py-0.5 rounded ${isItemOverdue
+              ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
+              : 'text-slate-700'
+              }`}>
+              {tglSelesaiStr}
+            </span>
+          </div>
+        ) : "-"}
+      </td>
+
+      {/* NOP Column */}
+      <td className="py-3 px-3 min-w-[190px] w-[20%] whitespace-nowrap group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <span className="text-[12px] font-normal font-sans text-slate-600 whitespace-nowrap capitalize">
+          <span className="text-[13px] font-normal font-mono text-slate-700 tracking-tight whitespace-nowrap">
             {highlightText(formattedNop, searchQuery)}
           </span>
           <button
             onClick={(e) => onCopy(e, item.nop)}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin NOP"
           >
             {copiedText === item.nop ? (
@@ -287,9 +285,11 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
           </button>
         </div>
       </td>
-      <td className="py-2.5 px-4 group/cell relative font-sans">
+
+      {/* Nama Pemohon Column */}
+      <td className="py-3 px-3 min-w-[170px] w-[18%] group/cell relative font-sans">
         <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <span className="text-[12px] font-normal text-slate-600 whitespace-nowrap font-sans">
+          <span className="text-[13px] font-normal text-slate-700 whitespace-nowrap font-sans">
             {highlightText(toTitleCase(item.displayOwnerName || item.ownerName || '-'), searchQuery)}
           </span>
           {item.isPecahanRow && (
@@ -299,7 +299,7 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
           )}
           <button
             onClick={(e) => onCopy(e, item.displayOwnerName || item.ownerName || '-')}
-            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
+            className="p-1 rounded opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-[#00a389] transition-all cursor-pointer flex items-center justify-center w-5 h-5 select-none"
             title="Salin Nama Pemohon"
           >
             {copiedText === (item.displayOwnerName || item.ownerName) ? (
@@ -310,28 +310,31 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
           </button>
         </div>
       </td>
-      <td className="py-2.5 px-4 font-sans">
-        <span
-          className="text-[12px] font-normal text-slate-600 bg-slate-100 border border-slate-200/90 px-2 py-0.5 rounded capitalize font-sans"
-          title={(jenisVal || '').replace(/_/g, ' ')}
-        >
-          {abbreviatedJenis}
-        </span>
-      </td>
-      <td className="py-2.5 px-4 text-center font-sans">
-        <div className="flex items-center justify-center gap-1">
-          <span className={`px-2.5 py-0.5 text-[12px] font-normal rounded-md border capitalize font-sans ${getStatusBadgeClass(item.status)}`}>
-            {getStatusLabel(item.status)}
-          </span>
+
+      {/* Jenis Layanan Badge Column (Center Aligned) */}
+      <td className="py-3 px-3 text-center min-w-[110px] w-[10%] font-sans">
+        <div className="flex items-center justify-center">
+          {getJenisPermohonanBadge(jenisVal)}
         </div>
       </td>
-      <td className="py-2.5 px-4 text-center font-sans">
+
+      {/* Status Badge Column */}
+      <td className="py-3 px-3 text-center font-sans">
+        <div className="flex items-center justify-center">
+          {getStatusBadge(item.status)}
+        </div>
+      </td>
+
+      {/* Action Column (Three Dots Menu) */}
+      <td className="py-3 px-3 text-center font-sans">
         <div className="flex items-center justify-center">
           <button
             ref={buttonRef}
             type="button"
             onClick={toggleMenu}
-            className={`p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer ${isMenuOpen ? 'bg-slate-100 text-slate-700' : ''
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${isMenuOpen
+              ? 'bg-slate-200 text-slate-800'
+              : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200/60'
               }`}
             title="Menu Aksi"
           >
@@ -400,4 +403,3 @@ export const DataEntryTableRow: React.FC<DataEntryTableRowProps> = React.memo(({
   );
 });
 
-DataEntryTableRow.displayName = 'DataEntryTableRow';

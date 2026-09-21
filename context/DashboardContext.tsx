@@ -271,7 +271,14 @@ export function DashboardProvider({ children, initialTab }: { children: React.Re
     }
   }, []);
 
-  // Sync state saat tombol Back/Forward browser ditekan
+  // Sync state saat searchParams (URL query) atau tombol Back/Forward browser ditekan
+  const tabFromUrl = searchParams.get('tab');
+  useEffect(() => {
+    if (tabFromUrl && isValidTab(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTabState(tabFromUrl);
+    }
+  }, [tabFromUrl, activeTab]);
+
   useEffect(() => {
     const handlePopState = () => {
       const tabFromUrl = new URLSearchParams(window.location.search).get('tab');

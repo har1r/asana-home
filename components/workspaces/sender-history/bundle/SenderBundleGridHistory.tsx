@@ -56,8 +56,8 @@ export const SenderBundleGridHistory: React.FC<SenderBundleGridHistoryProps> = R
 
   return (
     <div className="flex flex-col gap-4 min-h-[220px] font-sans">
-      {/* Cards Grid 4 Kolom */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 font-sans">
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3.5 font-sans">
         {loading && installedBundles.length === 0 ? (
           <div className="col-span-full py-16 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-[#00a389]" />

@@ -50,34 +50,28 @@ export const SenderInstalledBundleCard: React.FC<SenderInstalledBundleCardProps>
   searchQuery = "",
   onSelectBundle,
   onRemoveBundle,
-  onOpenVersionDrawer,
 }) => {
-  const appsList = bundle.applications || bundle.permohonan || [];
+  const appsList = bundle.applications || [];
   const bTotalPecahan = appsList.reduce(
     (acc: number, p: any) => acc + (p.targetData?.length || p.dataBaru?.length || 1),
     0
   );
 
-  const displayBundleNo = bundle.bundleNumber || bundle.nomorBundle || "—";
-  const displayJenis = bundle.applicationType || bundle.jenisPermohonan;
+  const displayBundleNo = bundle.bundleNumber || "—";
+  const displayJenis = bundle.applicationType || "";
 
-  const creatorName =
-    bundle.createdBy?.name ||
-    bundle.createdByUser?.name ||
-    bundle.peneliti?.name ||
-    bundle.user?.name ||
-    bundle.createdByName ||
-    (typeof bundle.createdBy === "string" ? bundle.createdBy : "") ||
-    "Peneliti";
+  const creatorName = bundle.createdBy?.name || "Peneliti";
 
   const initials = getInitials(creatorName);
+
+  console.log(bundle);
 
   return (
     <div
       onClick={() => onSelectBundle(bundle)}
       className={`p-3 sm:p-3.5 rounded-md border flex flex-col justify-between gap-2.5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group select-none min-h-[145px] font-sans ${isSelected
-          ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
-          : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-md"
+        ? "bg-gradient-to-br from-[#00a389]/5 via-emerald-50/20 to-white border-[#00a389] shadow-md ring-2 ring-[#00a389]/20"
+        : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-md"
         }`}
     >
       {/* Top Row: Bundle No & Action Button (Lepas di Pojok Kanan Atas) */}
@@ -101,11 +95,10 @@ export const SenderInstalledBundleCard: React.FC<SenderInstalledBundleCardProps>
             title="Keluarkan Map Bundle ini dari Manifest"
           >
             {loading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+              <Loader2 className="w-2.5 h-2.5 animate-spin text-rose-600" />
             ) : (
-              <Minus className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+              <Minus className="w-2.5 h-2.5 text-rose-600 stroke-[2.5]" />
             )}
-            <span>Keluarkan</span>
           </button>
         )}
       </div>
@@ -148,9 +141,6 @@ export const SenderInstalledBundleCard: React.FC<SenderInstalledBundleCardProps>
           <div className="w-4.5 h-4.5 rounded-full bg-[#00a389] text-white flex items-center justify-center text-[9px] font-bold shrink-0 shadow-3xs font-sans">
             {initials}
           </div>
-          <span className="truncate text-slate-600 font-sans font-medium text-[11px]">
-            {creatorName}
-          </span>
         </div>
 
         {/* Right: Date dengan Ikon Kalender */}
@@ -171,4 +161,3 @@ export const SenderInstalledBundleCard: React.FC<SenderInstalledBundleCardProps>
   );
 });
 
-SenderInstalledBundleCard.displayName = "SenderInstalledBundleCard";

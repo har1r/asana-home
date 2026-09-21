@@ -5,22 +5,14 @@ import { FileSpreadsheet, Trash, Loader2 } from "lucide-react";
 
 interface SenderApplicationsToolbarProps {
   selectedBundleInManifest: any | null;
-  selectedManifest: any | null;
-  manifestStatus: string;
   bundleDisplayMode: "berkas" | "pemohon";
   onDisplayModeChange: (mode: "berkas" | "pemohon") => void;
-  onRemoveBundle?: (bundleId: string) => void;
-  loading?: boolean;
 }
 
 export const SenderApplicationsToolbar: React.FC<SenderApplicationsToolbarProps> = React.memo(({
   selectedBundleInManifest,
-  selectedManifest,
-  manifestStatus,
   bundleDisplayMode,
   onDisplayModeChange,
-  onRemoveBundle,
-  loading = false,
 }) => {
   const selectedBundleNo = selectedBundleInManifest?.nomorBundle || selectedBundleInManifest?.bundleNumber || "";
 
@@ -46,22 +38,20 @@ export const SenderApplicationsToolbar: React.FC<SenderApplicationsToolbarProps>
           <button
             type="button"
             onClick={() => onDisplayModeChange("berkas")}
-            className={`px-2.5 py-1 rounded-md text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${
-              bundleDisplayMode === "berkas"
-                ? "bg-white text-slate-800 shadow-xs font-medium"
-                : "text-slate-600 hover:text-slate-800"
-            }`}
+            className={`px-2.5 py-1 rounded-md text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${bundleDisplayMode === "berkas"
+              ? "bg-white text-slate-800 shadow-xs font-medium"
+              : "text-slate-600 hover:text-slate-800"
+              }`}
           >
             Nopel
           </button>
           <button
             type="button"
             onClick={() => onDisplayModeChange("pemohon")}
-            className={`px-2.5 py-1 rounded-md text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${
-              bundleDisplayMode === "pemohon"
-                ? "bg-white text-slate-800 shadow-xs font-medium"
-                : "text-slate-600 hover:text-slate-800"
-            }`}
+            className={`px-2.5 py-1 rounded-md text-[12px] font-normal font-sans capitalize transition-all cursor-pointer ${bundleDisplayMode === "pemohon"
+              ? "bg-white text-slate-800 shadow-xs font-medium"
+              : "text-slate-600 hover:text-slate-800"
+              }`}
           >
             Pemohon
           </button>
@@ -87,26 +77,8 @@ export const SenderApplicationsToolbar: React.FC<SenderApplicationsToolbarProps>
             <FileSpreadsheet className="w-4 h-4 text-slate-400" />
           </button>
         )}
-
-        {/* Remove Bundle Button (Saat bundle terpilih & status DRAFT) */}
-        {selectedBundleInManifest?.id && manifestStatus === "DRAFT" && onRemoveBundle && (
-          <button
-            type="button"
-            onClick={() => onRemoveBundle(selectedBundleInManifest.id)}
-            disabled={loading}
-            className="p-1.5 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-all cursor-pointer shadow-3xs flex items-center justify-center disabled:opacity-40 font-sans"
-            title="Keluarkan bundle dari manifest"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
-            ) : (
-              <Trash className="w-4 h-4 text-rose-600" />
-            )}
-          </button>
-        )}
       </div>
     </div>
   );
 });
 
-SenderApplicationsToolbar.displayName = "SenderApplicationsToolbar";

@@ -113,5 +113,3 @@ export const SenderInstalledBundleToolbar: React.FC<SenderInstalledBundleToolbar
     </div>
   );
 });
-
-SenderInstalledBundleToolbar.displayName = "SenderInstalledBundleToolbar";

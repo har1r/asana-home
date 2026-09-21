@@ -39,7 +39,7 @@ export const SenderManifestToolbarHistory: React.FC<SenderManifestToolbarHistory
 
   return (
     <div className="flex flex-col gap-3 font-sans select-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-end gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-start gap-3">
         {/* Search Form with Enter & Submit Button (No "Buat Manifest" button) */}
         <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-[340px] max-w-full font-sans">

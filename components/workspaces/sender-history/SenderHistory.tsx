@@ -216,12 +216,6 @@ export default function SenderHistory() {
 
         {/* Section 2: Toolbar & Tabel Detail Berkas Permohonan */}
         <div className="flex flex-col gap-2 shadow-3xs animate-fadeIn font-sans mt-2">
-          <div className="flex items-center justify-between">
-            <span className="text-base font-bold text-slate-700 tracking-tight">
-              Daftar Permohonan Bundle Terpasang
-            </span>
-          </div>
-
           <SenderApplicationsToolbarHistory
             selectedBundle={installedBundleState.selectedBundle}
             bundleDisplayMode={tableState.bundleDisplayMode}

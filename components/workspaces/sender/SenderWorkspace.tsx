@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, X, CheckCircle2, Boxes, RefreshCw } from "lucide-react";
+import { AlertTriangle, X, CheckCircle2, RefreshCw } from "lucide-react";
 import { RevisionAlertBanner } from "@/components/workspaces/shared/RevisionAlertBanner";
 import { BundleSnapshotDrawer } from "@/components/workspaces/shared/BundleSnapshotDrawer";
 import { DetailsModal } from "@/components/workspaces/shared/DetailsModal";
@@ -194,56 +194,42 @@ export default function SenderWorkspace() {
       {listLoading && (workspaceTab === "manage-shipping" || workspaceTab === "lock-manifest") && <SenderShippingSkeleton />}
 
       <div className={`flex flex-col gap-4 ${listLoading ? "hidden" : ""}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 select-none font-sans">
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="bg-slate-100/90 border border-slate-200/80 p-1 rounded-md flex items-center gap-1 shadow-2xs font-sans select-none">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab("create-manifest")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "create-manifest"
-                  ? "bg-white text-black shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                  }`}
-              >
-                <span>Buat Manifest</span>
-              </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full font-sans select-none">
+          {/* Container Tab Switcher */}
+          <div className="flex items-center gap-1 rounded-md border border-slate-200/80 bg-slate-100/90 p-1 shadow-xs">
+            {([
+              { id: "create-manifest", label: "Buat Manifest" },
+              { id: "manage-shipping", label: "Kelola Pengiriman" },
+              { id: "lock-manifest", label: "Kunci Manifest" },
+            ] as const).map((tab, index) => (
+              <React.Fragment key={tab.id}>
+                {index > 0 && <div className="h-4 w-px bg-slate-300/80" />}
 
-              <div className="w-px h-4 bg-slate-300/80" />
-
-              <button
-                type="button"
-                onClick={() => handleSwitchTab("manage-shipping")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "manage-shipping"
-                  ? "bg-white text-black shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                  }`}
-              >
-                <span>Kelola Pengiriman</span>
-              </button>
-
-              <div className="w-px h-4 bg-slate-300/80" />
-
-              <button
-                type="button"
-                onClick={() => handleSwitchTab("lock-manifest")}
-                className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${workspaceTab === "lock-manifest"
-                  ? "bg-white text-black shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                  }`}
-              >
-                <span>Kunci Manifest</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => fetchInitialData(true)}
-              disabled={isRefreshing || listLoading}
-              className="h-9 px-3.5 bg-white border border-slate-200/90 hover:border-slate-300 rounded-md flex items-center gap-2 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 shadow-3xs"
-              title="Refresh Seluruh Data Workspace"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#00a389]" : ""}`} />
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchTab(tab.id)}
+                  className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${workspaceTab === tab.id
+                    ? "bg-white text-black shadow-xs"
+                    : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                    }`}
+                >
+                  <span>{tab.label}</span>
+                </button>
+              </React.Fragment>
+            ))}
           </div>
+
+          {/* Tombol Refresh */}
+          <button
+            type="button"
+            onClick={() => fetchInitialData(true)}
+            disabled={isRefreshing || listLoading}
+            className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-slate-400/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition-all hover:border-slate-700 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+            title="Refresh Seluruh Data Workspace"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-[#00a389]" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
         </div>
 
         <div className="w-full border-b border-slate-200/80 my-0.5" />
@@ -371,7 +357,7 @@ export default function SenderWorkspace() {
                           className="fixed inset-0 z-20"
                           onClick={() => setIsManifestDropdownOpen(false)}
                         />
-                        <div className="absolute left-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
+                        <div className="absolute right-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
                           <div className="px-3 py-1.5 text-[11px] font-light text-slate-500 capitalize border-b border-slate-100 antialiased">
                             Pilih Target Manifest
                           </div>
@@ -473,7 +459,7 @@ export default function SenderWorkspace() {
                                 className="fixed inset-0 z-20"
                                 onClick={() => setIsManifestDropdownOpen(false)}
                               />
-                              <div className="absolute left-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
+                              <div className="absolute right-0 mt-1 w-72 bg-white border border-slate-200 rounded-md shadow-lg z-30 py-1 max-h-60 overflow-y-auto font-sans">
                                 <div className="px-3 py-1.5 text-[11px] font-light text-slate-500 capitalize border-b border-slate-100 antialiased">
                                   Pilih Target Manifest
                                 </div>
@@ -556,27 +542,10 @@ export default function SenderWorkspace() {
 
               {/* 2. Toolbar & Tabel Detail Berkas Aplikasi Permohonan */}
               <div className="flex flex-col gap-3 shadow-3xs animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <span className="text-[18px] font-bold text-slate-900 tracking-tight">Daftar Permohonan Bundle Terpasang</span>
-                </div>
                 <SenderApplicationsToolbar
                   selectedBundleInManifest={queueState.selectedBundleInManifest}
-                  selectedManifest={manifestState.selectedManifest}
-                  manifestStatus={manifestState.selectedManifest?.status || "DRAFT"}
                   bundleDisplayMode={tableState.bundleDisplayMode}
                   onDisplayModeChange={tableState.setBundleDisplayMode}
-                  onRemoveBundle={(id) =>
-                    queueState.handleRemoveBundle(
-                      id,
-                      bundleState.setEligibleBundlesList,
-                      manifestState.selectedManifest,
-                      manifestState.setManifestsList,
-                      manifestState.setSelectedManifest,
-                      showActionStatus,
-                      () => fetchInitialData(true)
-                    )
-                  }
-                  loading={manifestState.loading || queueState.queueLoading}
                 />
 
                 <SenderApplicationsTable
